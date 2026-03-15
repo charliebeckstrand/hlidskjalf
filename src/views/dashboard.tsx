@@ -15,6 +15,8 @@ const statusDisplay: Record<Status, { color: string; label: string }> = {
 	ready: { color: 'green', label: 'watching' },
 	error: { color: 'red', label: 'error' },
 	stopped: { color: 'gray', label: 'stopped' },
+	stale: { color: 'yellow', label: 'stale' },
+	timeout: { color: 'red', label: 'timeout' },
 }
 
 const HINTS = '\u2191/\u2193  j/k  select    q  quit'
