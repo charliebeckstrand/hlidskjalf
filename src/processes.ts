@@ -126,8 +126,13 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		this.children.set(workspace.name, child)
 		this.setStatus(workspace.name, 'building')
 
+		let buffer = ''
+
 		const onData = (data: Buffer) => {
-			for (const raw of data.toString().split('\n')) {
+			buffer += data.toString()
+			const lines = buffer.split('\n')
+			buffer = lines.pop()!
+			for (const raw of lines) {
 				const line = raw.trimEnd()
 				if (line) this.handleLine(workspace.name, line)
 			}
@@ -137,6 +142,9 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		child.stderr?.on('data', onData)
 
 		child.on('close', (code, signal) => {
+			if (buffer.trim()) this.handleLine(workspace.name, buffer.trimEnd())
+			buffer = ''
+
 			if (this.stopping) return
 
 			if (signal === 'SIGABRT') {
@@ -187,9 +195,11 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 				)
 			}
 			this.emit('change')
-			this.rebuildFsevents().then(() => {
-				if (!this.stopping) this.spawn(workspace)
-			})
+			this.rebuildFsevents()
+				.then(() => {
+					if (!this.stopping) this.spawn(workspace)
+				})
+				.catch(() => this.setStatus(workspace.name, 'error'))
 		} else {
 			if (proc) {
 				proc.logs.push(

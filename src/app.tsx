@@ -24,7 +24,12 @@ export function App({ options }: Props) {
 	const stop = useCallback(() => {
 		if (stoppingRef.current) return
 		stoppingRef.current = true
-		void runnerRef.current?.shutdown().finally(() => exit())
+		const runner = runnerRef.current
+		if (runner) {
+			void runner.shutdown().finally(() => exit())
+		} else {
+			exit()
+		}
 	}, [exit])
 
 	useEffect(() => {
@@ -41,9 +46,9 @@ export function App({ options }: Props) {
 				return
 			}
 
-			const sorted = (options.order === 'run' ? sortByDeps : sortByName)(workspaces)
-			const displayOrder = sorted.map((w) => w.name)
 			const startOrder = sortByDeps(workspaces)
+			const sorted = options.order === 'run' ? startOrder : sortByName(workspaces)
+			const displayOrder = sorted.map((w) => w.name)
 			const runner = createRunner(options.root)
 
 			runnerRef.current = runner

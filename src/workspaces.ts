@@ -37,8 +37,9 @@ export function discover(root: string): Workspace[] {
 
 		if (!existsSync(base)) continue
 
-		for (const entry of readdirSync(base)) {
-			const entryPath = join(base, entry)
+		for (const entry of readdirSync(base, { withFileTypes: true })) {
+			if (!entry.isDirectory()) continue
+			const entryPath = join(base, entry.name)
 			const pkg = readJson<PkgJson>(join(entryPath, 'package.json'))
 
 			if (!pkg?.name) continue
