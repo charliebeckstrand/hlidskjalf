@@ -23,7 +23,7 @@ function resolveKind(parentDir: string): WorkspaceKind {
 
 function workspaceDeps(pkg: PkgJson): string[] {
 	return Object.entries(pkg.dependencies ?? {})
-		.filter(([, v]) => v === 'workspace:*')
+		.filter(([, v]) => v.startsWith('workspace:'))
 		.map(([name]) => name)
 }
 

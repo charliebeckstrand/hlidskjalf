@@ -15,7 +15,6 @@ export function App({ options }: Props) {
 	const { exit } = useApp()
 
 	const [loading, setLoading] = useState(true)
-	const [message, setMessage] = useState('Starting...')
 	const [processes, setProcesses] = useState<Process[]>([])
 	const [cursor, setCursor] = useState(0)
 
@@ -24,16 +23,12 @@ export function App({ options }: Props) {
 
 	const stop = useCallback(() => {
 		if (stoppingRef.current) return
-
 		stoppingRef.current = true
-
-		void runnerRef.current?.shutdown().then(() => exit())
+		void runnerRef.current?.shutdown().finally(() => exit())
 	}, [exit])
 
 	useEffect(() => {
 		const run = async () => {
-			setMessage('Discovering workspaces...')
-
 			let workspaces = discover(options.root)
 
 			if (options.filter) {
@@ -42,32 +37,23 @@ export function App({ options }: Props) {
 
 			if (workspaces.length === 0) {
 				console.error('No matching workspaces found.')
-
 				exit()
-
 				return
 			}
 
+			const sorted = (options.order === 'run' ? sortByDeps : sortByName)(workspaces)
+			const displayOrder = sorted.map((w) => w.name)
 			const startOrder = sortByDeps(workspaces)
-
-			const displaySort = options.order === 'run' ? sortByDeps : sortByName
-
 			const runner = createRunner(options.root)
 
 			runnerRef.current = runner
 
-			// Show all workspaces as pending immediately
-			setProcesses(
-				displaySort(workspaces).map((w) => ({ workspace: w, status: 'pending', logs: [] })),
-			)
+			setProcesses(sorted.map((w) => ({ workspace: w, status: 'pending', logs: [] })))
 
 			runner.on('change', () => {
-				const sorted = displaySort(runner.list().map((p) => p.workspace))
-
 				setProcesses(
-					sorted.flatMap((w) => {
-						const p = runner.get(w.name)
-
+					displayOrder.flatMap((name) => {
+						const p = runner.get(name)
 						return p ? [p] : []
 					}),
 				)
@@ -75,7 +61,7 @@ export function App({ options }: Props) {
 
 			setLoading(false)
 
-			void runner.start(startOrder)
+			await runner.start(startOrder)
 		}
 
 		run().catch((err) => {
@@ -95,7 +81,6 @@ export function App({ options }: Props) {
 
 		if (input === 'q' || (key.ctrl && input === 'c')) {
 			stop()
-
 			return
 		}
 
@@ -106,7 +91,7 @@ export function App({ options }: Props) {
 		}
 	})
 
-	if (loading) return <Loading message={message} />
+	if (loading) return <Loading />
 
 	return <Dashboard processes={processes} selectedIndex={cursor} />
 }

@@ -1,6 +1,6 @@
 import type { Status } from './types.js'
 
-export interface ParsedLine {
+interface ParsedLine {
 	status?: Status
 	url?: string
 }

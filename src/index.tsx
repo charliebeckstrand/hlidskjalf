@@ -12,9 +12,7 @@ function parseArgs(argv: string[]): Options {
 		if (arg.startsWith('--filter=')) {
 			const value = arg.slice('--filter='.length).replace(/^\{(.+)\}$/, '$1')
 			filter.push(value)
-		}
-
-		if (arg.startsWith('--order=')) {
+		} else if (arg.startsWith('--order=')) {
 			const value = arg.slice('--order='.length)
 			if (value === 'run' || value === 'alphabetical') order = value
 		}
