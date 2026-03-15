@@ -5,8 +5,6 @@ export type Status = 'pending' | 'building' | 'watching' | 'ready' | 'error' | '
 export interface Workspace {
 	name: string
 	kind: WorkspaceKind
-	path: string
-	port?: number
 	deps: string[]
 }
 

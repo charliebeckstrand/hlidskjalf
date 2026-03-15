@@ -5,42 +5,32 @@ import { parseLine, stripAnsi } from './parser.js'
 import type { Process, Status, Workspace } from './types.js'
 
 const MAX_LOGS = 500
+const ERROR_RECOVERY_MS = 5000
+const MAX_CRASH_RETRIES = 3
 
 interface RunnerEvents {
 	change: []
 }
 
 export interface Runner extends EventEmitter<RunnerEvents> {
-	list(): Process[]
 	get(name: string): Process | undefined
 	start(workspaces: Workspace[]): Promise<void>
 	shutdown(): Promise<void>
 }
 
-const LOG_ERROR_RECOVERY_MS = 5000
-const MAX_CRASH_RETRIES = 3
-
 class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 	private children = new Map<string, ChildProcess>()
-
 	private state = new Map<string, Process>()
-
-	private logErrorTimers = new Map<string, ReturnType<typeof setTimeout>>()
+	private errorTimers = new Map<string, ReturnType<typeof setTimeout>>()
 	private lastGoodStatus = new Map<string, Status>()
 	private crashRetries = new Map<string, number>()
-
+	private pendingRebuilds = new Set<ChildProcess>()
 	private root: string
-
 	private stopping = false
 
 	constructor(root: string) {
 		super()
-
 		this.root = root
-	}
-
-	list(): Process[] {
-		return [...this.state.values()]
 	}
 
 	get(name: string): Process | undefined {
@@ -51,12 +41,10 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		const packages = workspaces.filter((w) => w.kind === 'package')
 		const apps = workspaces.filter((w) => w.kind === 'app')
 
-		// Seed all entries as pending
 		for (const workspace of workspaces) {
 			this.state.set(workspace.name, { workspace, status: 'pending', logs: [] })
 		}
 
-		// Packages first — apps may depend on their build output
 		for (const workspace of packages) {
 			this.spawn(workspace)
 		}
@@ -70,6 +58,38 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		}
 	}
 
+	async shutdown(): Promise<void> {
+		this.stopping = true
+
+		for (const timer of this.errorTimers.values()) clearTimeout(timer)
+		this.errorTimers.clear()
+
+		for (const child of this.pendingRebuilds) child.kill('SIGTERM')
+
+		const waiting: Promise<void>[] = []
+
+		for (const [, child] of this.children) {
+			if (child.exitCode !== null || child.signalCode !== null) continue
+
+			waiting.push(
+				new Promise((resolve) => {
+					const escalate = setTimeout(() => {
+						if (child.exitCode === null) child.kill('SIGKILL')
+					}, 5000)
+
+					child.on('close', () => {
+						clearTimeout(escalate)
+						resolve()
+					})
+
+					child.kill('SIGTERM')
+				}),
+			)
+		}
+
+		await Promise.all(waiting)
+	}
+
 	private waitForPackages(names: string[]): Promise<void> {
 		const remaining = new Set(names)
 
@@ -77,19 +97,16 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 			const check = () => {
 				for (const name of [...remaining]) {
 					const s = this.state.get(name)?.status
-
-					if (s === 'watching' || s === 'error') remaining.delete(name)
+					if (s === 'watching' || s === 'error' || s === 'stopped') remaining.delete(name)
 				}
 
 				if (remaining.size === 0) {
 					this.off('change', check)
-
 					resolve()
 				}
 			}
 
 			this.on('change', check)
-
 			check()
 		})
 	}
@@ -102,40 +119,17 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		})
 
 		this.children.set(workspace.name, child)
-
 		this.setStatus(workspace.name, 'building')
 
+		let buffer = ''
+
 		const onData = (data: Buffer) => {
-			for (const raw of data.toString().split('\n')) {
+			buffer += data.toString()
+			const lines = buffer.split('\n')
+			buffer = lines.pop()!
+			for (const raw of lines) {
 				const line = raw.trimEnd()
-
-				if (!line) continue
-
-				const proc = this.state.get(workspace.name)
-
-				if (!proc) continue
-
-				proc.logs.push(line)
-
-				if (proc.logs.length > MAX_LOGS) {
-					proc.logs = proc.logs.slice(-MAX_LOGS)
-				}
-
-				const parsed = parseLine(stripAnsi(line))
-
-				if (parsed.status) {
-					if (parsed.status === 'error') {
-						this.scheduleLogErrorRecovery(workspace.name)
-					} else {
-						this.lastGoodStatus.set(workspace.name, parsed.status)
-
-						this.clearLogErrorTimer(workspace.name)
-					}
-					this.setStatus(workspace.name, parsed.status)
-				}
-				if (parsed.url) proc.url = parsed.url
-
-				this.emit('change')
+				if (line) this.handleLine(workspace.name, line)
 			}
 		}
 
@@ -143,33 +137,13 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		child.stderr?.on('data', onData)
 
 		child.on('close', (code, signal) => {
+			if (buffer.trim()) this.handleLine(workspace.name, buffer.trimEnd())
+			buffer = ''
+
 			if (this.stopping) return
 
 			if (signal === 'SIGABRT') {
-				const retries = (this.crashRetries.get(workspace.name) ?? 0) + 1
-				this.crashRetries.set(workspace.name, retries)
-
-				const proc = this.state.get(workspace.name)
-
-				if (retries <= MAX_CRASH_RETRIES) {
-					if (proc) {
-						proc.logs.push(
-							`[hlidskjalf] fsevents crash detected (attempt ${retries}/${MAX_CRASH_RETRIES}) — rebuilding...`,
-						)
-						this.emit('change')
-					}
-					this.rebuildFsevents().then(() => {
-						if (!this.stopping) this.spawn(workspace)
-					})
-				} else {
-					if (proc) {
-						proc.logs.push(
-							`[hlidskjalf] fsevents still crashing after ${MAX_CRASH_RETRIES} attempts — giving up.`,
-						)
-						this.emit('change')
-					}
-					this.setStatus(workspace.name, 'error')
-				}
+				this.handleCrash(workspace)
 				return
 			}
 
@@ -179,83 +153,102 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		child.on('error', () => this.setStatus(workspace.name, 'error'))
 	}
 
+	private handleLine(name: string, line: string): void {
+		const proc = this.state.get(name)
+		if (!proc) return
+
+		proc.logs.push(line)
+		if (proc.logs.length > MAX_LOGS) proc.logs.splice(0, proc.logs.length - MAX_LOGS)
+
+		const { status, url } = parseLine(stripAnsi(line))
+
+		if (status) {
+			if (status === 'error') {
+				this.scheduleErrorRecovery(name)
+			} else {
+				this.lastGoodStatus.set(name, status)
+				this.clearErrorTimer(name)
+			}
+			proc.status = status
+		}
+
+		if (url) proc.url = url
+
+		this.emit('change')
+	}
+
+	private handleCrash(workspace: Workspace): void {
+		const retries = (this.crashRetries.get(workspace.name) ?? 0) + 1
+		this.crashRetries.set(workspace.name, retries)
+
+		const proc = this.state.get(workspace.name)
+
+		if (retries <= MAX_CRASH_RETRIES) {
+			if (proc) {
+				proc.logs.push(
+					`[hlidskjalf] fsevents crash detected (attempt ${retries}/${MAX_CRASH_RETRIES}) — rebuilding...`,
+				)
+			}
+			this.emit('change')
+			this.rebuildFsevents()
+				.then(() => {
+					if (!this.stopping) this.spawn(workspace)
+				})
+				.catch(() => this.setStatus(workspace.name, 'error'))
+		} else {
+			if (proc) {
+				proc.logs.push(
+					`[hlidskjalf] fsevents still crashing after ${MAX_CRASH_RETRIES} attempts — giving up.`,
+				)
+			}
+			this.setStatus(workspace.name, 'error')
+		}
+	}
+
 	private rebuildFsevents(): Promise<void> {
 		return new Promise((resolve) => {
 			const child = spawn('pnpm', ['rebuild', 'fsevents'], {
 				cwd: this.root,
 				stdio: 'pipe',
 			})
-			child.on('close', () => resolve())
-			child.on('error', () => resolve())
+			this.pendingRebuilds.add(child)
+			const done = () => {
+				this.pendingRebuilds.delete(child)
+				resolve()
+			}
+			child.on('close', done)
+			child.on('error', done)
 		})
 	}
 
-	private scheduleLogErrorRecovery(name: string): void {
-		const existing = this.logErrorTimers.get(name)
-
-		if (existing) clearTimeout(existing)
+	private scheduleErrorRecovery(name: string): void {
+		this.clearErrorTimer(name)
 
 		const timer = setTimeout(() => {
-			this.logErrorTimers.delete(name)
-
+			this.errorTimers.delete(name)
 			const proc = this.state.get(name)
-
 			if (proc?.status === 'error') {
 				this.setStatus(name, this.lastGoodStatus.get(name) ?? 'ready')
 			}
-		}, LOG_ERROR_RECOVERY_MS)
+		}, ERROR_RECOVERY_MS)
 
-		this.logErrorTimers.set(name, timer)
+		timer.unref()
+		this.errorTimers.set(name, timer)
 	}
 
-	private clearLogErrorTimer(name: string): void {
-		const timer = this.logErrorTimers.get(name)
-
+	private clearErrorTimer(name: string): void {
+		const timer = this.errorTimers.get(name)
 		if (timer) {
 			clearTimeout(timer)
-
-			this.logErrorTimers.delete(name)
+			this.errorTimers.delete(name)
 		}
 	}
 
 	private setStatus(name: string, status: Status): void {
 		const proc = this.state.get(name)
-
 		if (!proc) return
-
 		proc.status = status
-
 		this.emit('change')
-	}
-
-	async shutdown(): Promise<void> {
-		this.stopping = true
-
-		for (const timer of this.logErrorTimers.values()) {
-			clearTimeout(timer)
-		}
-
-		this.logErrorTimers.clear()
-
-		const waiting: Promise<void>[] = []
-
-		for (const [, child] of this.children) {
-			if (child.exitCode !== null || child.signalCode !== null) continue
-
-			waiting.push(
-				new Promise((resolve) => {
-					child.on('close', () => resolve())
-
-					child.kill('SIGTERM')
-
-					setTimeout(() => {
-						if (!child.killed) child.kill('SIGKILL')
-					}, 5000)
-				}),
-			)
-		}
-
-		await Promise.all(waiting)
 	}
 }
 

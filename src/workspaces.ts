@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
-import { basename, join } from 'node:path'
+import { join } from 'node:path'
 
 import type { Workspace, WorkspaceKind } from './types.js'
 
@@ -17,13 +17,9 @@ function readJson<T>(path: string): T | null {
 	}
 }
 
-function resolveKind(parentDir: string): WorkspaceKind {
-	return basename(parentDir) === 'apps' ? 'app' : 'package'
-}
-
 function workspaceDeps(pkg: PkgJson): string[] {
 	return Object.entries(pkg.dependencies ?? {})
-		.filter(([, v]) => v === 'workspace:*')
+		.filter(([, v]) => v.startsWith('workspace:'))
 		.map(([name]) => name)
 }
 
@@ -32,25 +28,23 @@ const kindOrder: Record<WorkspaceKind, number> = { package: 0, app: 1 }
 export function discover(root: string): Workspace[] {
 	const results: Workspace[] = []
 
-	for (const dir of ['packages', 'apps']) {
+	for (const dir of ['packages', 'apps'] as const) {
 		const base = join(root, dir)
+		const kind: WorkspaceKind = dir === 'apps' ? 'app' : 'package'
 
 		if (!existsSync(base)) continue
 
-		for (const entry of readdirSync(base)) {
-			const entryPath = join(base, entry)
-			const pkg = readJson<PkgJson>(join(entryPath, 'package.json'))
+		for (const entry of readdirSync(base, { withFileTypes: true })) {
+			if (!entry.isDirectory()) continue
+			const pkg = readJson<PkgJson>(join(base, entry.name, 'package.json'))
 
 			if (!pkg?.name) continue
 			if (pkg.name === 'hlidskjalf') continue
-
-			const manifest = readJson<{ port?: number }>(join(entryPath, 'manifest.json'))
+			if (!pkg.scripts?.dev) continue
 
 			results.push({
 				name: pkg.name,
-				kind: resolveKind(base),
-				path: entryPath,
-				port: manifest?.port,
+				kind,
 				deps: workspaceDeps(pkg),
 			})
 		}

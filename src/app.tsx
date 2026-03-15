@@ -15,7 +15,6 @@ export function App({ options }: Props) {
 	const { exit } = useApp()
 
 	const [loading, setLoading] = useState(true)
-	const [message, setMessage] = useState('Starting...')
 	const [processes, setProcesses] = useState<Process[]>([])
 	const [cursor, setCursor] = useState(0)
 
@@ -24,16 +23,17 @@ export function App({ options }: Props) {
 
 	const stop = useCallback(() => {
 		if (stoppingRef.current) return
-
 		stoppingRef.current = true
-
-		void runnerRef.current?.shutdown().then(() => exit())
+		const runner = runnerRef.current
+		if (runner) {
+			void runner.shutdown().finally(() => exit())
+		} else {
+			exit()
+		}
 	}, [exit])
 
 	useEffect(() => {
 		const run = async () => {
-			setMessage('Discovering workspaces...')
-
 			let workspaces = discover(options.root)
 
 			if (options.filter) {
@@ -42,32 +42,23 @@ export function App({ options }: Props) {
 
 			if (workspaces.length === 0) {
 				console.error('No matching workspaces found.')
-
 				exit()
-
 				return
 			}
 
 			const startOrder = sortByDeps(workspaces)
-
-			const displaySort = options.order === 'run' ? sortByDeps : sortByName
-
+			const sorted = options.order === 'run' ? startOrder : sortByName(workspaces)
+			const displayOrder = sorted.map((w) => w.name)
 			const runner = createRunner(options.root)
 
 			runnerRef.current = runner
 
-			// Show all workspaces as pending immediately
-			setProcesses(
-				displaySort(workspaces).map((w) => ({ workspace: w, status: 'pending', logs: [] })),
-			)
+			setProcesses(sorted.map((w) => ({ workspace: w, status: 'pending', logs: [] })))
 
 			runner.on('change', () => {
-				const sorted = displaySort(runner.list().map((p) => p.workspace))
-
 				setProcesses(
-					sorted.flatMap((w) => {
-						const p = runner.get(w.name)
-
+					displayOrder.flatMap((name) => {
+						const p = runner.get(name)
 						return p ? [p] : []
 					}),
 				)
@@ -75,10 +66,13 @@ export function App({ options }: Props) {
 
 			setLoading(false)
 
-			void runner.start(startOrder)
+			await runner.start(startOrder)
 		}
 
-		void run()
+		run().catch((err) => {
+			console.error('Fatal:', err)
+			exit()
+		})
 
 		process.on('SIGTERM', stop)
 
@@ -92,18 +86,17 @@ export function App({ options }: Props) {
 
 		if (input === 'q' || (key.ctrl && input === 'c')) {
 			stop()
-
 			return
 		}
 
 		if (key.upArrow || input === 'k') {
 			setCursor((i) => Math.max(0, i - 1))
 		} else if (key.downArrow || input === 'j') {
-			setCursor((i) => i + 1)
+			setCursor((i) => Math.min(processes.length - 1, i + 1))
 		}
 	})
 
-	if (loading) return <Loading message={message} />
+	if (loading) return <Loading />
 
 	return <Dashboard processes={processes} selectedIndex={cursor} />
 }
