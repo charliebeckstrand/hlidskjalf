@@ -50,13 +50,14 @@ export function stripAnsi(text: string): string {
 }
 
 /**
- * Strip dangerous terminal escape sequences that could manipulate the terminal
- * beyond simple color/style codes (e.g. title changes, cursor movement, hyperlinks,
- * bracketed paste, screen clears). Preserves SGR color/style codes for display.
+ * Strip all escape sequences EXCEPT SGR color/style codes (\x1b[...m).
+ * Uses a whitelist approach: only SGR passes through. Everything else is stripped,
+ * including cursor movement, screen clears, title changes, hyperlinks, bracketed
+ * paste, character set selection, and single-character ESC sequences (e.g. \x1bc reset).
  */
 export function sanitizeForDisplay(text: string): string {
-	const DANGEROUS_ESCAPES =
+	const NON_SGR_ESCAPES =
 		// biome-ignore lint/suspicious/noControlCharactersInRegex: needed to strip terminal escape sequences
-		/\x1b(?:\][^\x07\x1b]*(?:\x07|\x1b\\)|\[[0-9;]*[A-HJKSTfnlh]|\[[\d;]*[pq]|\[\?[0-9;]*[hlsru]|\[=[0-9]*[A-Za-z]|\([\w])/g
-	return text.replace(DANGEROUS_ESCAPES, '')
+		/\x1b(?:\][^\x07\x1b]*(?:\x07|\x1b\\)|\[[?>=]*[\d;]*[A-Za-ln-z@~`]|\([A-Za-z]|[^[(\]\x1b])/g
+	return text.replace(NON_SGR_ESCAPES, '')
 }
