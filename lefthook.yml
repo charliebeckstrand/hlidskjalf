@@ -1,0 +1,5 @@
+pre-commit:
+  commands:
+    lint:
+      glob: "*.{ts,tsx}"
+      run: npx biome check --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}

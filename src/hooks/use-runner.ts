@@ -1,0 +1,86 @@
+import { useApp } from 'ink'
+import { useCallback, useEffect, useRef, useState } from 'react'
+
+import type { Runner } from '../processes.js'
+import { createRunner } from '../processes.js'
+import type { Options, Process } from '../types.js'
+import { discover, filterWorkspaces, sortByDeps, sortByName } from '../workspaces.js'
+
+interface UseRunnerResult {
+	processes: Process[]
+	loading: boolean
+	stop: () => void
+}
+
+export function useRunner(options: Options): UseRunnerResult {
+	const { exit } = useApp()
+
+	const [loading, setLoading] = useState(true)
+	const [processes, setProcesses] = useState<Process[]>([])
+
+	const runnerRef = useRef<Runner | null>(null)
+	const stoppingRef = useRef(false)
+
+	const stop = useCallback(() => {
+		if (stoppingRef.current) return
+		stoppingRef.current = true
+
+		const runner = runnerRef.current
+		if (runner) {
+			void runner.shutdown().finally(() => exit())
+		} else {
+			exit()
+		}
+	}, [exit])
+
+	useEffect(() => {
+		const run = async () => {
+			let workspaces = discover(options.root)
+
+			if (options.filter) {
+				workspaces = filterWorkspaces(workspaces, options.filter)
+			}
+
+			if (workspaces.length === 0) {
+				console.error('No matching workspaces found.')
+				exit()
+				return
+			}
+
+			const startOrder = sortByDeps(workspaces)
+			const sorted = options.order === 'run' ? startOrder : sortByName(workspaces)
+			const displayOrder = sorted.map((w) => w.name)
+			const runner = createRunner(options.root)
+
+			runnerRef.current = runner
+
+			setProcesses(sorted.map((w) => ({ workspace: w, status: 'pending', logs: [] })))
+
+			runner.on('change', () => {
+				setProcesses(
+					displayOrder.flatMap((name) => {
+						const p = runner.get(name)
+						return p ? [p] : []
+					}),
+				)
+			})
+
+			setLoading(false)
+
+			await runner.start(startOrder)
+		}
+
+		run().catch((err) => {
+			console.error('Fatal:', err)
+			exit()
+		})
+
+		process.on('SIGTERM', stop)
+
+		return () => {
+			process.off('SIGTERM', stop)
+		}
+	}, [exit, options.filter, options.order, options.root, stop])
+
+	return { processes, loading, stop }
+}
