@@ -1,6 +1,6 @@
 # hlidskjalf
 
-A terminal dashboard for monitoring Turborepo dev processes, built with [Ink](https://npm.im/ink).
+A terminal CLI for monitoring Turborepo dev processes, built with [Ink](https://npm.im/ink).
 
 ## Usage
 
