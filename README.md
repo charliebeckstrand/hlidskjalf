@@ -1,6 +1,6 @@
 # hlidskjalf
 
-A Terminal User Interface for monitoring Turborepo tasks, built with [Ink](https://npm.im/ink).
+A Terminal User Interface for visualizing Turborepo tasks, built with [Ink](https://npm.im/ink).
 
 ## Usage
 
