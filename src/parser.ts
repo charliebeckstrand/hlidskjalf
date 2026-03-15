@@ -48,3 +48,15 @@ export function stripAnsi(text: string): string {
 	// biome-ignore lint/suspicious/noControlCharactersInRegex: needed to strip ANSI escape codes
 	return text.replace(/\x1b(?:\[[0-9;]*[A-Za-z]|\].*?(?:\x07|\x1b\\))/g, '')
 }
+
+/**
+ * Strip dangerous terminal escape sequences that could manipulate the terminal
+ * beyond simple color/style codes (e.g. title changes, cursor movement, hyperlinks,
+ * bracketed paste, screen clears). Preserves SGR color/style codes for display.
+ */
+export function sanitizeForDisplay(text: string): string {
+	const DANGEROUS_ESCAPES =
+		// biome-ignore lint/suspicious/noControlCharactersInRegex: needed to strip terminal escape sequences
+		/\x1b(?:\][^\x07\x1b]*(?:\x07|\x1b\\)|\[[0-9;]*[A-HJKSTfnlh]|\[[\d;]*[pq]|\[\?[0-9;]*[hlsru]|\[=[0-9]*[A-Za-z]|\([\w])/g
+	return text.replace(DANGEROUS_ESCAPES, '')
+}

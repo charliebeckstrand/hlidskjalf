@@ -1,7 +1,7 @@
 import { type ChildProcess, spawn } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 
-import { parseLine, stripAnsi } from './parser.js'
+import { parseLine, sanitizeForDisplay, stripAnsi } from './parser.js'
 import type { Process, Status, Workspace } from './types.js'
 
 const MAX_LOGS = 500
@@ -11,6 +11,7 @@ const RESTART_DELAY_MS = 1000
 const STARTUP_TIMEOUT_MS = 120_000
 const HEARTBEAT_INTERVAL_MS = 10_000
 const STALE_THRESHOLD_MS = 60_000
+const MAX_BUFFER_SIZE = 65_536
 
 /** Allowlisted environment variable prefixes/names passed to child processes */
 const ENV_ALLOWLIST = new Set([
@@ -238,6 +239,13 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		const onData = (data: Buffer) => {
 			buffer += data.toString()
+
+			if (!buffer.includes('\n') && buffer.length > MAX_BUFFER_SIZE) {
+				this.handleLine(workspace.name, buffer)
+				buffer = ''
+				return
+			}
+
 			const lines = buffer.split('\n')
 			buffer = lines.pop() ?? ''
 			for (const raw of lines) {
@@ -275,7 +283,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		const { process: proc } = entry
 
-		proc.logs.push(line)
+		proc.logs.push(sanitizeForDisplay(line))
 		if (proc.logs.length > MAX_LOGS) proc.logs.splice(0, proc.logs.length - MAX_LOGS)
 
 		entry.lastOutputAt = Date.now()
@@ -359,6 +367,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 			const child = spawn('pnpm', ['rebuild', 'fsevents'], {
 				cwd: this.root,
 				stdio: 'pipe',
+				env: safeEnv(),
 			})
 			this.pendingRebuilds.add(child)
 			const done = () => {

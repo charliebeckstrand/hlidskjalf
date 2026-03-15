@@ -1,5 +1,5 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 
 import type { Workspace, WorkspaceKind } from './types.js'
 
@@ -43,7 +43,7 @@ function readJson(path: string): PkgJson | null {
 
 function workspaceDeps(pkg: PkgJson): string[] {
 	return Object.entries(pkg.dependencies ?? {})
-		.filter(([, v]) => v.startsWith('workspace:'))
+		.filter(([name, v]) => v.startsWith('workspace:') && isValidPackageName(name))
 		.map(([name]) => name)
 }
 
@@ -58,14 +58,25 @@ export function discover(root: string): Workspace[] {
 		['services', 'service'],
 	]
 
+	const resolvedRoot = resolve(root)
+
 	for (const [dir, kind] of dirs) {
-		const base = join(root, dir)
+		const base = join(resolvedRoot, dir)
 
 		if (!existsSync(base)) continue
 
 		for (const entry of readdirSync(base, { withFileTypes: true })) {
 			if (!entry.isDirectory()) continue
-			const pkg = readJson(join(base, entry.name, 'package.json'))
+
+			const entryPath = join(base, entry.name)
+			try {
+				const realPath = realpathSync(entryPath)
+				if (!realPath.startsWith(resolvedRoot)) continue
+			} catch {
+				continue
+			}
+
+			const pkg = readJson(join(entryPath, 'package.json'))
 
 			if (!pkg?.name) continue
 			if (!isValidPackageName(pkg.name)) continue
