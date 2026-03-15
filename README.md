@@ -24,5 +24,5 @@ pnpm dev
 
 | Option | Example | Description |
 | --- | --- | --- |
-| `--filter` | `--filter=web` | Include specific workspaces. Repeatable. Append `...` for transitive deps. |
-| `--order` | `--order=run` | Sort by `alphabetical` (default) or `run` (dependency order). |
+| `filter` | `--filter=web` | Include specific workspaces. Repeatable. Append `...` for transitive deps. |
+| `order` | `--order=run` | Sort by `alphabetical` (default) or `run` (dependency order). |
