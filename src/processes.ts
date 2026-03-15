@@ -13,7 +13,6 @@ interface RunnerEvents {
 }
 
 export interface Runner extends EventEmitter<RunnerEvents> {
-	list(): Process[]
 	get(name: string): Process | undefined
 	start(workspaces: Workspace[]): Promise<void>
 	shutdown(): Promise<void>
@@ -32,10 +31,6 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 	constructor(root: string) {
 		super()
 		this.root = root
-	}
-
-	list(): Process[] {
-		return [...this.state.values()]
 	}
 
 	get(name: string): Process | undefined {
