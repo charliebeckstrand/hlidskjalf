@@ -197,10 +197,18 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 			this.handleUnexpectedExit(workspace, code, signal)
 		})
 
-		child.on('error', () => this.setStatus(workspace.name, 'error'))
+		child.on('error', () => {
+			const timer = this.startupTimers.get(workspace.name)
+			if (timer) {
+				clearTimeout(timer)
+				this.startupTimers.delete(workspace.name)
+			}
+			this.setStatus(workspace.name, 'error')
+		})
 	}
 
 	private handleLine(name: string, line: string): void {
+		if (this.stopping) return
 		const proc = this.state.get(name)
 		if (!proc) return
 
