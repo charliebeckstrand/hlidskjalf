@@ -1,6 +1,6 @@
 {
 	"name": "hlidskjalf",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"description": "Terminal UI for monitoring Turborepo workspaces",
 	"type": "module",
 	"license": "MIT",
