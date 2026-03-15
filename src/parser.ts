@@ -44,10 +44,7 @@ export function parseLine(line: string): ParsedLine {
 	return {}
 }
 
-export function stripAnsi(text: string): string {
-	// biome-ignore lint/suspicious/noControlCharactersInRegex: needed to strip ANSI escape codes
-	return text.replace(/\x1b(?:\[[0-9;]*[A-Za-z]|\].*?(?:\x07|\x1b\\))/g, '')
-}
+export { stripVTControlCharacters as stripAnsi } from 'node:util'
 
 /**
  * Strip all escape sequences EXCEPT SGR color/style codes (\x1b[...m).
