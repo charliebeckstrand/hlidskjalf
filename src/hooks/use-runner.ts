@@ -27,7 +27,10 @@ export function useRunner(options: Options): UseRunnerResult {
 
 		const runner = runnerRef.current
 		if (runner) {
-			void runner.shutdown().finally(() => exit())
+			runner
+				.shutdown()
+				.catch(() => {})
+				.finally(() => exit())
 		} else {
 			exit()
 		}

@@ -12,6 +12,47 @@ const STARTUP_TIMEOUT_MS = 120_000
 const HEARTBEAT_INTERVAL_MS = 10_000
 const STALE_THRESHOLD_MS = 60_000
 
+/** Allowlisted environment variable prefixes/names passed to child processes */
+const ENV_ALLOWLIST = new Set([
+	'HOME',
+	'USER',
+	'LOGNAME',
+	'SHELL',
+	'PATH',
+	'LANG',
+	'LC_ALL',
+	'LC_CTYPE',
+	'TERM',
+	'TERM_PROGRAM',
+	'COLORTERM',
+	'NODE_ENV',
+	'NODE_OPTIONS',
+	'NODE_PATH',
+	'NPM_CONFIG_REGISTRY',
+	'PNPM_HOME',
+	'COREPACK_HOME',
+	'XDG_CONFIG_HOME',
+	'XDG_DATA_HOME',
+	'XDG_CACHE_HOME',
+	'TMPDIR',
+	'TMP',
+	'TEMP',
+	'EDITOR',
+	'DISPLAY',
+	'HOSTNAME',
+])
+
+function safeEnv(): Record<string, string | undefined> {
+	const filtered: Record<string, string | undefined> = {}
+	for (const key of Object.keys(process.env)) {
+		if (ENV_ALLOWLIST.has(key)) {
+			filtered[key] = process.env[key]
+		}
+	}
+	filtered.FORCE_COLOR = '1'
+	return filtered
+}
+
 interface ProcessEntry {
 	process: Process
 	child: ChildProcess | null
@@ -171,7 +212,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		const child = spawn('pnpm', ['--filter', workspace.name, 'run', 'dev'], {
 			cwd: this.root,
 			stdio: 'pipe',
-			env: { ...process.env, FORCE_COLOR: '1' },
+			env: safeEnv(),
 		})
 
 		const entry = this.entry(workspace.name)

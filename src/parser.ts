@@ -5,14 +5,20 @@ interface ParsedLine {
 	url?: string
 }
 
+/** Maximum line length to parse — prevents ReDoS on extremely long lines */
+const MAX_PARSE_LENGTH = 4096
+
+/** Validates that a URL is a safe localhost/network URL */
+const SAFE_URL = /^https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0):\d{1,5}\/?$/
+
 // Skip DTS lines — secondary build phase, should not affect status
 const DTS = /\bDTS\b/
 
 const matchers: { pattern: RegExp; status: Status }[] = [
 	{ pattern: /running on (https?:\/\/\S+)/, status: 'ready' },
 	{ pattern: /listening on (https?:\/\/\S+)/, status: 'ready' },
-	{ pattern: /started.*(https?:\/\/localhost:\d+)/, status: 'ready' },
-	{ pattern: /\bVITE\b.*\bready in\b/i, status: 'ready' },
+	{ pattern: /started.*?(https?:\/\/localhost:\d+)/, status: 'ready' },
+	{ pattern: /\bVITE\b.*?\bready in\b/i, status: 'ready' },
 	{ pattern: /\bLocal:\s+(https?:\/\/\S+)/, status: 'ready' },
 	// ⚡ may include U+FE0F variation selector
 	{ pattern: /⚡\uFE0F?\s*Build success/, status: 'watching' },
@@ -23,11 +29,16 @@ const matchers: { pattern: RegExp; status: Status }[] = [
 ]
 
 export function parseLine(line: string): ParsedLine {
-	if (DTS.test(line)) return {}
+	const truncated = line.length > MAX_PARSE_LENGTH ? line.slice(0, MAX_PARSE_LENGTH) : line
+
+	if (DTS.test(truncated)) return {}
 
 	for (const { pattern, status } of matchers) {
-		const match = line.match(pattern)
-		if (match) return { status, url: match[1] }
+		const match = truncated.match(pattern)
+		if (match) {
+			const url = match[1] && SAFE_URL.test(match[1]) ? match[1] : undefined
+			return { status, url }
+		}
 	}
 
 	return {}
