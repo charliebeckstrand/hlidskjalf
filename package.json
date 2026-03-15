@@ -4,14 +4,23 @@
 	"description": "Terminal UI for monitoring Turborepo workspaces",
 	"type": "module",
 	"license": "MIT",
-	"keywords": ["turborepo", "monorepo", "terminal", "tui", "dev", "pnpm"],
+	"keywords": [
+		"turborepo",
+		"monorepo",
+		"terminal",
+		"tui",
+		"dev",
+		"pnpm"
+	],
 	"engines": {
 		"node": ">=22"
 	},
 	"bin": {
-		"hlidskjalf": "./dist/index.js"
+		"hlidskjalf": "dist/index.js"
 	},
-	"files": ["dist"],
+	"files": [
+		"dist"
+	],
 	"scripts": {
 		"build": "tsup",
 		"dev": "tsup --watch",
