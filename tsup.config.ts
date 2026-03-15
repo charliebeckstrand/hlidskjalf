@@ -6,5 +6,10 @@ export default defineConfig({
 	target: 'node22',
 	outDir: 'dist',
 	clean: true,
+	treeshake: true,
 	banner: { js: '#!/usr/bin/env node' },
+	esbuildOptions(options) {
+		options.minifySyntax = true
+		options.minifyWhitespace = true
+	},
 })

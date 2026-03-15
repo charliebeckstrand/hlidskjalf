@@ -1,6 +1,6 @@
 export type WorkspaceKind = 'package' | 'app' | 'service'
 
-export type Status = 'pending' | 'building' | 'watching' | 'ready' | 'error' | 'stopped'
+export type Status = 'pending' | 'building' | 'watching' | 'ready' | 'error' | 'stopped' | 'stale' | 'timeout'
 
 export interface Workspace {
 	name: string
