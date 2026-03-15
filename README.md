@@ -24,5 +24,5 @@ pnpm dev
 
 | Option | Example | Description |
 | --- | --- | --- |
-| `--filter` | `--filter=web...` | Only include matching workspaces. Can be passed multiple times. Append `...` to include transitive dependencies. |
-| `--order` | `--order=run` | `alphabetical` (default) or `run` (dependency order). |
+| `--filter` | `--filter=web` | Include specific workspaces. Repeatable. Append `...` for transitive deps. |
+| `--order` | `--order=run` | Sort by `alphabetical` (default) or `run` (dependency order). |
