@@ -1,0 +1,32 @@
+{
+	"name": "hlidskjalf",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"bin": {
+		"hlidskjalf": "./dist/index.js"
+	},
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		}
+	},
+	"scripts": {
+		"build": "tsup",
+		"dev": "tsup --watch",
+		"lint": "biome check --config-path=../.. .",
+		"lint:fix": "biome check --config-path=../.. --write .",
+		"format": "biome format --config-path=../.. --write ."
+	},
+	"dependencies": {
+		"ink": "^5.2.1",
+		"react": "^18.3.1"
+	},
+	"devDependencies": {
+		"@types/node": "^22.15.33",
+		"@types/react": "^18.3.23",
+		"tsup": "^8.5.1",
+		"typescript": "^5.9.3"
+	}
+}
