@@ -4,7 +4,7 @@ A Terminal User Interface for visualizing Turborepo tasks, built with [Ink](http
 
 ## Usage
 
-Add it to your root `package.json`:
+Add to your root `package.json`:
 
 ```json
 {
