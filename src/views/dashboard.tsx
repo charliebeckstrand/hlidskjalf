@@ -53,7 +53,7 @@ export function Dashboard({ processes, selectedIndex }: Props) {
 			<Box>
 				<Box flexGrow={1}>
 					<Text color={allReady ? 'yellow' : 'gray'}>{allReady ? '\u{1F3D4}' : '\u25e6'}</Text>
-					<Text bold>{allReady ? '  Midgard' : ' Midgard'}</Text>
+					<Text bold>{allReady ? '  Hlidskjalf' : ' Hlidskjalf'}</Text>
 				</Box>
 				{showHints && <Text dimColor>{HINTS}</Text>}
 			</Box>

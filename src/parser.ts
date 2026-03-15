@@ -8,12 +8,12 @@ interface ParsedLine {
 // Skip DTS lines — secondary build phase, should not affect status
 const DTS = /\bDTS\b/
 
-const matchers: Array<{ pattern: RegExp; status: Status; captureUrl?: boolean }> = [
-	{ pattern: /running on (https?:\/\/\S+)/, status: 'ready', captureUrl: true },
-	{ pattern: /listening on (https?:\/\/\S+)/, status: 'ready', captureUrl: true },
-	{ pattern: /started.*(https?:\/\/localhost:\d+)/, status: 'ready', captureUrl: true },
+const matchers: { pattern: RegExp; status: Status }[] = [
+	{ pattern: /running on (https?:\/\/\S+)/, status: 'ready' },
+	{ pattern: /listening on (https?:\/\/\S+)/, status: 'ready' },
+	{ pattern: /started.*(https?:\/\/localhost:\d+)/, status: 'ready' },
 	{ pattern: /\bVITE\b.*\bready in\b/i, status: 'ready' },
-	{ pattern: /\bLocal:\s+(https?:\/\/\S+)/, status: 'ready', captureUrl: true },
+	{ pattern: /\bLocal:\s+(https?:\/\/\S+)/, status: 'ready' },
 	// ⚡ may include U+FE0F variation selector
 	{ pattern: /⚡\uFE0F?\s*Build success/, status: 'watching' },
 	{ pattern: /Build start/, status: 'building' },
@@ -25,12 +25,9 @@ const matchers: Array<{ pattern: RegExp; status: Status; captureUrl?: boolean }>
 export function parseLine(line: string): ParsedLine {
 	if (DTS.test(line)) return {}
 
-	for (const { pattern, status, captureUrl } of matchers) {
+	for (const { pattern, status } of matchers) {
 		const match = line.match(pattern)
-
-		if (match) {
-			return { status, url: captureUrl ? match[1] : undefined }
-		}
+		if (match) return { status, url: match[1] }
 	}
 
 	return {}

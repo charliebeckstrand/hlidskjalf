@@ -8,7 +8,7 @@ export function Loading() {
 		<Box flexDirection="column">
 			<Box>
 				<Text color="gray">{'◦ '}</Text>
-				<Text bold>Midgard</Text>
+				<Text bold>Hlidskjalf</Text>
 			</Box>
 			<Text dimColor>{'─'.repeat(cols)}</Text>
 			<Box marginTop={1} marginLeft={1}>

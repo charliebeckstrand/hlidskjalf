@@ -1,6 +1,6 @@
 # hlidskjalf
 
-A single terminal window for every dev server in your Turborepo.
+A terminal dashboard for monitoring Turborepo dev processes, built with [Ink](https://npm.im/ink).
 
 ## Usage
 
