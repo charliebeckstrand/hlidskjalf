@@ -39,7 +39,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 	async start(workspaces: Workspace[]): Promise<void> {
 		const packages = workspaces.filter((w) => w.kind === 'package')
-		const apps = workspaces.filter((w) => w.kind === 'app')
+		const apps = workspaces.filter((w) => w.kind !== 'package')
 
 		for (const workspace of workspaces) {
 			this.state.set(workspace.name, { workspace, status: 'pending', logs: [] })
