@@ -1,14 +1,16 @@
 import { Box, Text, useStdout } from 'ink'
+import { useMemo } from 'react'
 
 import type { Process, Status, WorkspaceKind } from '../types.js'
+import { Header } from './header.js'
 
-const kindLabel: Record<WorkspaceKind, string> = {
+const kindLabel = {
 	package: 'pkg',
 	app: 'app',
 	service: 'svc',
-}
+} satisfies Record<WorkspaceKind, string>
 
-const statusDisplay: Record<Status, { color: string; label: string }> = {
+const statusDisplay = {
 	pending: { color: 'gray', label: 'pending' },
 	building: { color: 'yellow', label: 'building' },
 	watching: { color: 'green', label: 'watching' },
@@ -17,7 +19,7 @@ const statusDisplay: Record<Status, { color: string; label: string }> = {
 	stopped: { color: 'gray', label: 'stopped' },
 	stale: { color: 'yellow', label: 'stale' },
 	timeout: { color: 'red', label: 'timeout' },
-}
+} satisfies Record<Status, { color: string; label: string }>
 
 const HINTS = '\u2191/\u2193  j/k  select    q  quit'
 
@@ -26,42 +28,88 @@ interface Props {
 	selectedIndex: number
 }
 
+function ProcessRow({
+	process: proc,
+	selected,
+	nameWidth,
+}: {
+	process: Process
+	selected: boolean
+	nameWidth: number
+}) {
+	const { color, label } = statusDisplay[proc.status]
+
+	return (
+		<Box>
+			<Text color={selected ? 'cyan' : undefined}>{selected ? '\u25b8' : ' '}</Text>
+			<Box width={nameWidth}>
+				<Text color={selected ? 'cyan' : undefined} bold={selected} wrap="truncate">
+					{proc.workspace.name}
+				</Text>
+			</Box>
+			<Box width={6}>
+				<Text dimColor>{kindLabel[proc.workspace.kind]}</Text>
+			</Box>
+			<Box width={14}>
+				<Text color={color}>
+					{'● '}
+					{label}
+				</Text>
+			</Box>
+			<Text dimColor>{proc.url ?? ''}</Text>
+		</Box>
+	)
+}
+
+function LogPanel({ process: proc, height }: { process: Process; height: number }) {
+	const logLines = proc.logs.slice(-height)
+	const fillCount = height - logLines.length
+
+	return (
+		<Box flexDirection="column">
+			<Box marginLeft={1}>
+				<Text bold>Logs: {proc.workspace.name}</Text>
+			</Box>
+			{logLines.map((line, i) => (
+				// biome-ignore lint/suspicious/noArrayIndexKey: log lines have no stable identity
+				<Text key={i} wrap="truncate">
+					{' '}
+					{line}
+				</Text>
+			))}
+			{Array.from({ length: fillCount }, (_, i) => (
+				// biome-ignore lint/suspicious/noArrayIndexKey: fill lines have no stable identity
+				<Text key={`fill-${i}`}> </Text>
+			))}
+		</Box>
+	)
+}
+
 export function Dashboard({ processes, selectedIndex }: Props) {
 	const { stdout } = useStdout()
 
 	const cols = stdout?.columns ?? 80
 	const rows = stdout?.rows ?? 24
 
-	const allReady =
-		processes.length > 0 && processes.every((p) => p.status === 'ready' || p.status === 'watching')
+	const allReady = useMemo(
+		() =>
+			processes.length > 0 &&
+			processes.every((p) => p.status === 'ready' || p.status === 'watching'),
+		[processes],
+	)
 
-	// +2 padding so text doesn't butt against the next column
-	const nameWidth = Math.max(14, ...processes.map((p) => p.workspace.name.length + 2))
+	const nameWidth = useMemo(
+		() => Math.max(14, ...processes.map((p) => p.workspace.name.length + 2)),
+		[processes],
+	)
 
-	// Rows consumed by header, separator, table header, process rows, separator, log header
 	const logHeight = Math.max(3, rows - processes.length - 5)
-
 	const safeIndex = Math.min(selectedIndex, Math.max(0, processes.length - 1))
-
 	const selected = processes[safeIndex]
-
-	const logLines = selected?.logs.slice(-logHeight) ?? []
-
-	// Only show hints when there's enough room — title is ~10 chars wide
-	const showHints = cols >= 10 + HINTS.length + 4
 
 	return (
 		<Box flexDirection="column">
-			{/* Header */}
-			<Box>
-				<Box flexGrow={1}>
-					<Text color={allReady ? 'green' : 'gray'}>{'● '}</Text>
-					<Text bold>Hlidskjalf</Text>
-				</Box>
-				{showHints && <Text dimColor>{HINTS}</Text>}
-			</Box>
-
-			<Text dimColor>{'─'.repeat(cols)}</Text>
+			<Header ready={allReady} columns={cols} hints={HINTS} />
 
 			{/* Table header */}
 			<Box marginLeft={1}>
@@ -86,53 +134,19 @@ export function Dashboard({ processes, selectedIndex }: Props) {
 			</Box>
 
 			{/* Process rows */}
-			{processes.map((proc, i) => {
-				const isSelected = i === safeIndex
-				const { color, label } = statusDisplay[proc.status]
-
-				return (
-					<Box key={proc.workspace.name}>
-						<Text color={isSelected ? 'cyan' : undefined}>{isSelected ? '\u25b8' : ' '}</Text>
-						<Box width={nameWidth}>
-							<Text color={isSelected ? 'cyan' : undefined} bold={isSelected} wrap="truncate">
-								{proc.workspace.name}
-							</Text>
-						</Box>
-						<Box width={6}>
-							<Text dimColor>{kindLabel[proc.workspace.kind]}</Text>
-						</Box>
-						<Box width={14}>
-							<Text color={color}>
-								{'● '}
-								{label}
-							</Text>
-						</Box>
-						<Text dimColor>{proc.url ?? ''}</Text>
-					</Box>
-				)
-			})}
+			{processes.map((proc, i) => (
+				<ProcessRow
+					key={proc.workspace.name}
+					process={proc}
+					selected={i === safeIndex}
+					nameWidth={nameWidth}
+				/>
+			))}
 
 			<Text dimColor>{'─'.repeat(cols)}</Text>
 
 			{/* Log panel */}
-			{selected && (
-				<Box flexDirection="column">
-					<Box marginLeft={1}>
-						<Text bold>Logs: {selected.workspace.name}</Text>
-					</Box>
-					{logLines.map((line, i) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: log lines have no stable identity
-						<Text key={i} wrap="truncate">
-							{' '}
-							{line}
-						</Text>
-					))}
-					{Array.from({ length: logHeight - logLines.length }, (_, i) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: fill lines have no stable identity
-						<Text key={`fill-${i}`}> </Text>
-					))}
-				</Box>
-			)}
+			{selected && <LogPanel process={selected} height={logHeight} />}
 		</Box>
 	)
 }

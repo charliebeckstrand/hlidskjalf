@@ -24,17 +24,19 @@
 	"scripts": {
 		"build": "tsup",
 		"dev": "tsup --watch",
-		"lint": "biome check --config-path=../.. .",
-		"lint:fix": "biome check --config-path=../.. --write .",
-		"format": "biome format --config-path=../.. --write ."
+		"lint": "biome check .",
+		"lint:fix": "biome check --write .",
+		"format": "biome format --write ."
 	},
 	"dependencies": {
 		"ink": "^5.2.1",
 		"react": "^18.3.1"
 	},
 	"devDependencies": {
+		"@biomejs/biome": "^2.4.7",
 		"@types/node": "^22.15.33",
 		"@types/react": "^18.3.23",
+		"lefthook": "^2.1.4",
 		"tsup": "^8.5.1",
 		"typescript": "^5.9.3"
 	}

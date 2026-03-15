@@ -23,7 +23,7 @@ function workspaceDeps(pkg: PkgJson): string[] {
 		.map(([name]) => name)
 }
 
-const kindOrder: Record<WorkspaceKind, number> = { package: 0, app: 1, service: 1 }
+const kindOrder = { package: 0, app: 1, service: 1 } satisfies Record<WorkspaceKind, number>
 
 export function discover(root: string): Workspace[] {
 	const results: Workspace[] = []
