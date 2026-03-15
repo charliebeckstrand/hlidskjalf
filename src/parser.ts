@@ -38,5 +38,5 @@ export function parseLine(line: string): ParsedLine {
 
 export function stripAnsi(text: string): string {
 	// biome-ignore lint/suspicious/noControlCharactersInRegex: needed to strip ANSI escape codes
-	return text.replace(/\x1b\[[0-9;]*m/g, '')
+	return text.replace(/\x1b(?:\[[0-9;]*[A-Za-z]|\].*?(?:\x07|\x1b\\))/g, '')
 }

@@ -43,6 +43,7 @@ export function discover(root: string): Workspace[] {
 
 			if (!pkg?.name) continue
 			if (pkg.name === 'hlidskjalf') continue
+			if (!pkg.scripts?.dev) continue
 
 			const manifest = readJson<{ port?: number }>(join(entryPath, 'manifest.json'))
 

@@ -78,7 +78,10 @@ export function App({ options }: Props) {
 			void runner.start(startOrder)
 		}
 
-		void run()
+		run().catch((err) => {
+			console.error('Fatal:', err)
+			exit()
+		})
 
 		process.on('SIGTERM', stop)
 
@@ -99,7 +102,7 @@ export function App({ options }: Props) {
 		if (key.upArrow || input === 'k') {
 			setCursor((i) => Math.max(0, i - 1))
 		} else if (key.downArrow || input === 'j') {
-			setCursor((i) => i + 1)
+			setCursor((i) => Math.min(processes.length - 1, i + 1))
 		}
 	})
 

@@ -29,6 +29,8 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 	private lastGoodStatus = new Map<string, Status>()
 	private crashRetries = new Map<string, number>()
 
+	private pendingRebuilds = new Set<ChildProcess>()
+
 	private root: string
 
 	private stopping = false
@@ -78,7 +80,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 				for (const name of [...remaining]) {
 					const s = this.state.get(name)?.status
 
-					if (s === 'watching' || s === 'error') remaining.delete(name)
+					if (s === 'watching' || s === 'error' || s === 'stopped') remaining.delete(name)
 				}
 
 				if (remaining.size === 0) {
@@ -185,8 +187,15 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 				cwd: this.root,
 				stdio: 'pipe',
 			})
-			child.on('close', () => resolve())
-			child.on('error', () => resolve())
+			this.pendingRebuilds.add(child)
+			child.on('close', () => {
+				this.pendingRebuilds.delete(child)
+				resolve()
+			})
+			child.on('error', () => {
+				this.pendingRebuilds.delete(child)
+				resolve()
+			})
 		})
 	}
 
@@ -204,6 +213,8 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 				this.setStatus(name, this.lastGoodStatus.get(name) ?? 'ready')
 			}
 		}, LOG_ERROR_RECOVERY_MS)
+
+		timer.unref()
 
 		this.logErrorTimers.set(name, timer)
 	}
@@ -237,6 +248,10 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		this.logErrorTimers.clear()
 
+		for (const child of this.pendingRebuilds) {
+			child.kill('SIGTERM')
+		}
+
 		const waiting: Promise<void>[] = []
 
 		for (const [, child] of this.children) {
@@ -244,13 +259,16 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 			waiting.push(
 				new Promise((resolve) => {
-					child.on('close', () => resolve())
+					const escalate = setTimeout(() => {
+						if (child.exitCode === null) child.kill('SIGKILL')
+					}, 5000)
+
+					child.on('close', () => {
+						clearTimeout(escalate)
+						resolve()
+					})
 
 					child.kill('SIGTERM')
-
-					setTimeout(() => {
-						if (!child.killed) child.kill('SIGKILL')
-					}, 5000)
 				}),
 			)
 		}

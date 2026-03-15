@@ -1,11 +1,17 @@
 {
 	"name": "hlidskjalf",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Terminal UI for monitoring Turborepo workspaces",
 	"type": "module",
+	"license": "MIT",
+	"keywords": ["turborepo", "monorepo", "terminal", "tui", "dev", "pnpm"],
+	"engines": {
+		"node": ">=22"
+	},
 	"bin": {
 		"hlidskjalf": "./dist/index.js"
 	},
+	"files": ["dist"],
 	"exports": {
 		".": {
 			"import": "./dist/index.js",
