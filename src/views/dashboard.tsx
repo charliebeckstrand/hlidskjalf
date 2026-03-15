@@ -11,7 +11,7 @@ const statusDisplay: Record<Status, { color: string; label: string }> = {
 	pending: { color: 'gray', label: 'pending' },
 	building: { color: 'yellow', label: 'building' },
 	watching: { color: 'green', label: 'watching' },
-	ready: { color: 'green', label: 'ready' },
+	ready: { color: 'green', label: 'watching' },
 	error: { color: 'red', label: 'error' },
 	stopped: { color: 'gray', label: 'stopped' },
 }
@@ -52,8 +52,8 @@ export function Dashboard({ processes, selectedIndex }: Props) {
 			{/* Header */}
 			<Box>
 				<Box flexGrow={1}>
-					<Text color={allReady ? 'yellow' : 'gray'}>{allReady ? '\u{1F3D4}' : '\u25e6'}</Text>
-					<Text bold>{allReady ? '  Hlidskjalf' : ' Hlidskjalf'}</Text>
+					<Text color={allReady ? 'green' : 'gray'}>{'● '}</Text>
+					<Text bold>Hlidskjalf</Text>
 				</Box>
 				{showHints && <Text dimColor>{HINTS}</Text>}
 			</Box>
