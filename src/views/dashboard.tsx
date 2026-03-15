@@ -5,6 +5,7 @@ import type { Process, Status, WorkspaceKind } from '../types.js'
 const kindLabel: Record<WorkspaceKind, string> = {
 	package: 'pkg',
 	app: 'app',
+	service: 'svc',
 }
 
 const statusDisplay: Record<Status, { color: string; label: string }> = {

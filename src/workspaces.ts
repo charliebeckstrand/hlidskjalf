@@ -23,14 +23,19 @@ function workspaceDeps(pkg: PkgJson): string[] {
 		.map(([name]) => name)
 }
 
-const kindOrder: Record<WorkspaceKind, number> = { package: 0, app: 1 }
+const kindOrder: Record<WorkspaceKind, number> = { package: 0, app: 1, service: 1 }
 
 export function discover(root: string): Workspace[] {
 	const results: Workspace[] = []
 
-	for (const dir of ['packages', 'apps'] as const) {
+	const dirs: [string, WorkspaceKind][] = [
+		['packages', 'package'],
+		['apps', 'app'],
+		['services', 'service'],
+	]
+
+	for (const [dir, kind] of dirs) {
 		const base = join(root, dir)
-		const kind: WorkspaceKind = dir === 'apps' ? 'app' : 'package'
 
 		if (!existsSync(base)) continue
 
