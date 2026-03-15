@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { join, resolve, sep } from 'node:path'
 
 import type { Workspace, WorkspaceKind } from './types.js'
 
@@ -71,7 +71,7 @@ export function discover(root: string): Workspace[] {
 			const entryPath = join(base, entry.name)
 			try {
 				const realPath = realpathSync(entryPath)
-				if (!realPath.startsWith(resolvedRoot)) continue
+				if (!realPath.startsWith(resolvedRoot + sep)) continue
 			} catch {
 				continue
 			}

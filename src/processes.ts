@@ -12,6 +12,7 @@ const STARTUP_TIMEOUT_MS = 120_000
 const HEARTBEAT_INTERVAL_MS = 10_000
 const STALE_THRESHOLD_MS = 60_000
 const MAX_BUFFER_SIZE = 65_536
+const MAX_LINE_LENGTH = 8192
 
 /** Allowlisted environment variable prefixes/names passed to child processes */
 const ENV_ALLOWLIST = new Set([
@@ -276,11 +277,12 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		})
 	}
 
-	private handleLine(name: string, line: string): void {
+	private handleLine(name: string, raw: string): void {
 		if (this.stopping) return
 		const entry = this.entry(name)
 		if (!entry) return
 
+		const line = raw.length > MAX_LINE_LENGTH ? raw.slice(0, MAX_LINE_LENGTH) : raw
 		const { process: proc } = entry
 
 		proc.logs.push(sanitizeForDisplay(line))
