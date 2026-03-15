@@ -8,4 +8,8 @@ export default defineConfig({
 	clean: true,
 	treeshake: true,
 	banner: { js: '#!/usr/bin/env node' },
+	esbuildOptions(options) {
+		options.minifySyntax = true
+		options.minifyWhitespace = true
+	},
 })
