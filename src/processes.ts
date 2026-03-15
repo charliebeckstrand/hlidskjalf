@@ -1,7 +1,7 @@
 import { type ChildProcess, spawn } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 
-import { parseLine, stripAnsi } from './parser.js'
+import { parseLine, sanitizeForDisplay, stripAnsi } from './parser.js'
 import type { Process, Status, Workspace } from './types.js'
 
 const MAX_LOGS = 500
@@ -11,6 +11,49 @@ const RESTART_DELAY_MS = 1000
 const STARTUP_TIMEOUT_MS = 120_000
 const HEARTBEAT_INTERVAL_MS = 10_000
 const STALE_THRESHOLD_MS = 60_000
+const MAX_BUFFER_SIZE = 65_536
+const MAX_LINE_LENGTH = 8192
+
+/** Allowlisted environment variable prefixes/names passed to child processes */
+const ENV_ALLOWLIST = new Set([
+	'HOME',
+	'USER',
+	'LOGNAME',
+	'SHELL',
+	'PATH',
+	'LANG',
+	'LC_ALL',
+	'LC_CTYPE',
+	'TERM',
+	'TERM_PROGRAM',
+	'COLORTERM',
+	'NODE_ENV',
+	'NODE_OPTIONS',
+	'NODE_PATH',
+	'NPM_CONFIG_REGISTRY',
+	'PNPM_HOME',
+	'COREPACK_HOME',
+	'XDG_CONFIG_HOME',
+	'XDG_DATA_HOME',
+	'XDG_CACHE_HOME',
+	'TMPDIR',
+	'TMP',
+	'TEMP',
+	'EDITOR',
+	'DISPLAY',
+	'HOSTNAME',
+])
+
+function safeEnv(): Record<string, string | undefined> {
+	const filtered: Record<string, string | undefined> = {}
+	for (const key of Object.keys(process.env)) {
+		if (ENV_ALLOWLIST.has(key)) {
+			filtered[key] = process.env[key]
+		}
+	}
+	filtered.FORCE_COLOR = '1'
+	return filtered
+}
 
 interface ProcessEntry {
 	process: Process
@@ -171,7 +214,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		const child = spawn('pnpm', ['--filter', workspace.name, 'run', 'dev'], {
 			cwd: this.root,
 			stdio: 'pipe',
-			env: { ...process.env, FORCE_COLOR: '1' },
+			env: safeEnv(),
 		})
 
 		const entry = this.entry(workspace.name)
@@ -197,6 +240,13 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		const onData = (data: Buffer) => {
 			buffer += data.toString()
+
+			if (!buffer.includes('\n') && buffer.length > MAX_BUFFER_SIZE) {
+				this.handleLine(workspace.name, buffer)
+				buffer = ''
+				return
+			}
+
 			const lines = buffer.split('\n')
 			buffer = lines.pop() ?? ''
 			for (const raw of lines) {
@@ -227,14 +277,15 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		})
 	}
 
-	private handleLine(name: string, line: string): void {
+	private handleLine(name: string, raw: string): void {
 		if (this.stopping) return
 		const entry = this.entry(name)
 		if (!entry) return
 
+		const line = raw.length > MAX_LINE_LENGTH ? raw.slice(0, MAX_LINE_LENGTH) : raw
 		const { process: proc } = entry
 
-		proc.logs.push(line)
+		proc.logs.push(sanitizeForDisplay(line))
 		if (proc.logs.length > MAX_LOGS) proc.logs.splice(0, proc.logs.length - MAX_LOGS)
 
 		entry.lastOutputAt = Date.now()
@@ -318,6 +369,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 			const child = spawn('pnpm', ['rebuild', 'fsevents'], {
 				cwd: this.root,
 				stdio: 'pipe',
+				env: safeEnv(),
 			})
 			this.pendingRebuilds.add(child)
 			const done = () => {

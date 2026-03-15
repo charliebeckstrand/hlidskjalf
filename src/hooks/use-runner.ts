@@ -27,7 +27,10 @@ export function useRunner(options: Options): UseRunnerResult {
 
 		const runner = runnerRef.current
 		if (runner) {
-			void runner.shutdown().finally(() => exit())
+			runner
+				.shutdown()
+				.catch(() => {})
+				.finally(() => exit())
 		} else {
 			exit()
 		}
@@ -71,7 +74,7 @@ export function useRunner(options: Options): UseRunnerResult {
 		}
 
 		run().catch((err) => {
-			console.error('Fatal:', err)
+			console.error('Fatal:', err instanceof Error ? err.message : 'unexpected error')
 			exit()
 		})
 

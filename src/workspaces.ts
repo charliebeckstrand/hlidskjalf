@@ -1,5 +1,5 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs'
+import { join, resolve, sep } from 'node:path'
 
 import type { Workspace, WorkspaceKind } from './types.js'
 
@@ -9,9 +9,33 @@ interface PkgJson {
 	dependencies?: Record<string, string>
 }
 
-function readJson<T>(path: string): T | null {
+/** Valid npm package name pattern (scoped or unscoped) */
+const VALID_PKG_NAME = /^(@[a-z0-9\-~][a-z0-9\-._~]*\/)?[a-z0-9\-~][a-z0-9\-._~]*$/
+
+export function isValidPackageName(name: string): boolean {
+	return VALID_PKG_NAME.test(name) && name.length <= 214
+}
+
+function readJson(path: string): PkgJson | null {
 	try {
-		return JSON.parse(readFileSync(path, 'utf-8')) as T
+		const raw: unknown = JSON.parse(readFileSync(path, 'utf-8'))
+		if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null
+
+		const obj = raw as Record<string, unknown>
+
+		const name = typeof obj.name === 'string' ? obj.name : undefined
+		const scripts =
+			typeof obj.scripts === 'object' && obj.scripts !== null && !Array.isArray(obj.scripts)
+				? (obj.scripts as Record<string, string>)
+				: undefined
+		const dependencies =
+			typeof obj.dependencies === 'object' &&
+			obj.dependencies !== null &&
+			!Array.isArray(obj.dependencies)
+				? (obj.dependencies as Record<string, string>)
+				: undefined
+
+		return { name, scripts, dependencies }
 	} catch {
 		return null
 	}
@@ -19,7 +43,7 @@ function readJson<T>(path: string): T | null {
 
 function workspaceDeps(pkg: PkgJson): string[] {
 	return Object.entries(pkg.dependencies ?? {})
-		.filter(([, v]) => v.startsWith('workspace:'))
+		.filter(([name, v]) => v.startsWith('workspace:') && isValidPackageName(name))
 		.map(([name]) => name)
 }
 
@@ -34,16 +58,28 @@ export function discover(root: string): Workspace[] {
 		['services', 'service'],
 	]
 
+	const resolvedRoot = resolve(root)
+
 	for (const [dir, kind] of dirs) {
-		const base = join(root, dir)
+		const base = join(resolvedRoot, dir)
 
 		if (!existsSync(base)) continue
 
 		for (const entry of readdirSync(base, { withFileTypes: true })) {
 			if (!entry.isDirectory()) continue
-			const pkg = readJson<PkgJson>(join(base, entry.name, 'package.json'))
+
+			const entryPath = join(base, entry.name)
+			try {
+				const realPath = realpathSync(entryPath)
+				if (!realPath.startsWith(resolvedRoot + sep)) continue
+			} catch {
+				continue
+			}
+
+			const pkg = readJson(join(entryPath, 'package.json'))
 
 			if (!pkg?.name) continue
+			if (!isValidPackageName(pkg.name)) continue
 			if (pkg.name === 'hlidskjalf') continue
 			if (!pkg.scripts?.dev) continue
 
