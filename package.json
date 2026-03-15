@@ -1,7 +1,7 @@
 {
 	"name": "hlidskjalf",
-	"version": "0.0.3",
-	"description": "Terminal UI for monitoring Turborepo workspaces",
+	"version": "0.0.5",
+	"description": "A Terminal User Interface for monitoring Turborepo tasks, built with Ink.",
 	"type": "module",
 	"license": "MIT",
 	"keywords": [
