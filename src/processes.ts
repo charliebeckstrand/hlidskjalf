@@ -10,7 +10,7 @@ const MAX_RESTART_RETRIES = 3
 const RESTART_DELAY_MS = 1000
 const STARTUP_TIMEOUT_MS = 120_000
 const HEARTBEAT_INTERVAL_MS = 10_000
-const STALE_THRESHOLD_MS = 60_000
+const STALE_THRESHOLD_MS = 300_000
 const MAX_BUFFER_SIZE = 65_536
 const MAX_LINE_LENGTH = 8192
 
@@ -289,6 +289,10 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		if (proc.logs.length > MAX_LOGS) proc.logs.splice(0, proc.logs.length - MAX_LOGS)
 
 		entry.lastOutputAt = Date.now()
+
+		if (proc.status === 'stale') {
+			proc.status = entry.lastGoodStatus ?? 'ready'
+		}
 
 		const { status, url } = parseLine(stripAnsi(line))
 
