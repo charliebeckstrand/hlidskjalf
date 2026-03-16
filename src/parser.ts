@@ -8,8 +8,13 @@ interface ParsedLine {
 /** Maximum line length to parse — prevents ReDoS on extremely long lines */
 const MAX_PARSE_LENGTH = 4096
 
-/** Validates that a URL is a safe localhost/network URL */
-const SAFE_URL = /^https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0):\d{1,5}\/?$/
+/** Matches a localhost URL, capturing the origin (scheme + host + port) */
+const SAFE_URL = /^(https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0):\d{1,5})/
+
+/** Strip trailing punctuation that gets captured by \S+ */
+function cleanUrl(raw: string): string {
+	return raw.replace(/[.,;:!?)}\]]+$/, '')
+}
 
 // Skip DTS lines — secondary build phase, should not affect status
 const DTS = /\bDTS\b/
@@ -36,7 +41,9 @@ export function parseLine(line: string): ParsedLine {
 	for (const { pattern, status } of matchers) {
 		const match = truncated.match(pattern)
 		if (match) {
-			const url = match[1] && SAFE_URL.test(match[1]) ? match[1] : undefined
+			const cleaned = match[1] ? cleanUrl(match[1]) : undefined
+			const urlMatch = cleaned?.match(SAFE_URL)
+			const url = urlMatch ? urlMatch[1] : undefined
 			return { status, url }
 		}
 	}
