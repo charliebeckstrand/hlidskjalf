@@ -10,7 +10,7 @@ const MAX_RESTART_RETRIES = 3
 const RESTART_DELAY_MS = 1000
 const STARTUP_TIMEOUT_MS = 120_000
 const HEARTBEAT_INTERVAL_MS = 10_000
-const STALE_THRESHOLD_MS = 300_000
+const IDLE_THRESHOLD_MS = 300_000
 const MAX_BUFFER_SIZE = 65_536
 const MAX_LINE_LENGTH = 8192
 
@@ -290,7 +290,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		entry.lastOutputAt = Date.now()
 
-		if (proc.status === 'stale') {
+		if (proc.status === 'idle') {
 			proc.status = entry.lastGoodStatus ?? 'ready'
 		}
 
@@ -390,8 +390,8 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 			const now = Date.now()
 			for (const [name, entry] of this.entries) {
 				if (entry.process.status !== 'watching' && entry.process.status !== 'ready') continue
-				if (entry.lastOutputAt && now - entry.lastOutputAt > STALE_THRESHOLD_MS) {
-					this.setStatus(name, 'stale')
+				if (entry.lastOutputAt && now - entry.lastOutputAt > IDLE_THRESHOLD_MS) {
+					this.setStatus(name, 'idle')
 				}
 			}
 		}, HEARTBEAT_INTERVAL_MS)
