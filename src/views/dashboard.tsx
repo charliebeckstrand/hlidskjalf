@@ -66,7 +66,7 @@ function LogPanel({ process: proc, height }: { process: Process; height: number 
 	const fillCount = height - logLines.length
 
 	return (
-		<Box flexDirection="column">
+		<Box flexDirection="column" height={height + 1} overflow="hidden">
 			<Box marginLeft={1}>
 				<Text bold>Logs: {proc.workspace.name}</Text>
 			</Box>
