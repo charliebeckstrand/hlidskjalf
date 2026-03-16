@@ -1,5 +1,7 @@
 import { Box, Text } from 'ink'
 
+import { colors } from '../theme.js'
+
 interface Props {
 	ready?: boolean
 	columns: number
@@ -10,15 +12,25 @@ export function Header({ ready = false, columns, hints }: Props) {
 	const showHints = hints && columns >= 10 + hints.length + 4
 
 	return (
-		<>
+		<Box
+			flexDirection="column"
+			paddingX={1}
+			paddingTop={1}
+			borderStyle="single"
+			borderColor={colors.separator}
+			borderTop={false}
+			borderLeft={false}
+			borderRight={false}
+		>
 			<Box>
-				<Box flexGrow={1}>
-					<Text color={ready ? 'green' : 'gray'}>{'● '}</Text>
-					<Text bold>Hlidskjalf</Text>
+				<Box flexGrow={1} gap={1}>
+					<Text color={ready ? colors.success : colors.accent}>{'●'}</Text>
+					<Text color={colors.accentBright} bold>
+						Hlidskjalf
+					</Text>
 				</Box>
-				{showHints && <Text dimColor>{hints}</Text>}
+				{showHints && <Text color={colors.dim}>{hints}</Text>}
 			</Box>
-			<Text dimColor>{'─'.repeat(columns)}</Text>
-		</>
+		</Box>
 	)
 }

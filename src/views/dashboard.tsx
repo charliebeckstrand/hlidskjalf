@@ -1,7 +1,8 @@
 import { Box, Text, useStdout } from 'ink'
 import { useMemo } from 'react'
 
-import type { Process, Status, WorkspaceKind } from '../types.js'
+import { colors, statusDisplay } from '../theme.js'
+import type { Process, WorkspaceKind } from '../types.js'
 import { Header } from './header.js'
 
 const kindLabel = {
@@ -10,18 +11,7 @@ const kindLabel = {
 	service: 'svc',
 } satisfies Record<WorkspaceKind, string>
 
-const statusDisplay = {
-	pending: { color: 'gray', label: 'pending' },
-	building: { color: 'yellow', label: 'building' },
-	watching: { color: 'green', label: 'watching' },
-	ready: { color: 'green', label: 'watching' },
-	error: { color: 'red', label: 'error' },
-	stopped: { color: 'gray', label: 'stopped' },
-	idle: { color: 'yellow', label: 'idle' },
-	timeout: { color: 'red', label: 'timeout' },
-} satisfies Record<Status, { color: string; label: string }>
-
-const HINTS = '\u2191/\u2193  j/k  select    q  quit'
+const HINTS = '↑/↓  j/k  select    q  quit'
 
 interface Props {
 	processes: Process[]
@@ -37,26 +27,26 @@ function ProcessRow({
 	selected: boolean
 	nameWidth: number
 }) {
-	const { color, label } = statusDisplay[proc.status]
+	const { color, label, icon } = statusDisplay[proc.status]
 
 	return (
-		<Box>
-			<Text color={selected ? 'cyan' : undefined}>{selected ? '\u25b8' : ' '}</Text>
+		<Box paddingX={1}>
+			<Text color={selected ? colors.highlight : colors.dim}>{selected ? '▸' : ' '}</Text>
+			<Text> </Text>
 			<Box width={nameWidth}>
-				<Text color={selected ? 'cyan' : undefined} bold={selected} wrap="truncate">
+				<Text color={selected ? colors.highlight : undefined} bold={selected} wrap="truncate">
 					{proc.workspace.name}
 				</Text>
 			</Box>
 			<Box width={6}>
-				<Text dimColor>{kindLabel[proc.workspace.kind]}</Text>
+				<Text color={colors.muted}>{kindLabel[proc.workspace.kind]}</Text>
 			</Box>
 			<Box width={14}>
 				<Text color={color}>
-					{'● '}
-					{label}
+					{icon} {label}
 				</Text>
 			</Box>
-			<Text dimColor>{proc.url ?? ''}</Text>
+			<Text color={colors.url}>{proc.url ?? ''}</Text>
 		</Box>
 	)
 }
@@ -66,14 +56,26 @@ function LogPanel({ process: proc, height }: { process: Process; height: number 
 	const fillCount = height - logLines.length
 
 	return (
-		<Box flexDirection="column" height={height + 1} overflow="hidden">
-			<Box marginLeft={1}>
-				<Text bold>Logs: {proc.workspace.name}</Text>
+		<Box
+			flexDirection="column"
+			height={height + 3}
+			overflow="hidden"
+			marginX={1}
+			marginTop={1}
+			borderStyle="round"
+			borderColor={colors.separator}
+			paddingX={1}
+		>
+			<Box marginBottom={1}>
+				<Text color={colors.accentBright} bold>
+					Logs
+				</Text>
+				<Text color={colors.dim}>{' › '}</Text>
+				<Text bold>{proc.workspace.name}</Text>
 			</Box>
 			{logLines.map((line, i) => (
 				// biome-ignore lint/suspicious/noArrayIndexKey: log lines have no stable identity
 				<Text key={i} wrap="truncate">
-					{' '}
 					{line}
 				</Text>
 			))}
@@ -103,7 +105,7 @@ export function Dashboard({ processes, selectedIndex }: Props) {
 		[processes],
 	)
 
-	const logHeight = Math.max(3, rows - processes.length - 5)
+	const logHeight = Math.max(3, rows - processes.length - 7)
 	const safeIndex = Math.min(selectedIndex, Math.max(0, processes.length - 1))
 	const selected = processes[safeIndex]
 
@@ -112,23 +114,23 @@ export function Dashboard({ processes, selectedIndex }: Props) {
 			<Header ready={allReady} columns={cols} hints={HINTS} />
 
 			{/* Table header */}
-			<Box marginLeft={1}>
+			<Box paddingX={1} marginLeft={1} marginTop={1}>
 				<Box width={nameWidth}>
-					<Text dimColor bold>
+					<Text color={colors.muted} bold>
 						Name
 					</Text>
 				</Box>
 				<Box width={6}>
-					<Text dimColor bold>
+					<Text color={colors.muted} bold>
 						Kind
 					</Text>
 				</Box>
 				<Box width={14}>
-					<Text dimColor bold>
+					<Text color={colors.muted} bold>
 						Status
 					</Text>
 				</Box>
-				<Text dimColor bold>
+				<Text color={colors.muted} bold>
 					URL
 				</Text>
 			</Box>
@@ -142,8 +144,6 @@ export function Dashboard({ processes, selectedIndex }: Props) {
 					nameWidth={nameWidth}
 				/>
 			))}
-
-			<Text dimColor>{'─'.repeat(cols)}</Text>
 
 			{/* Log panel */}
 			{selected && <LogPanel process={selected} height={logHeight} />}

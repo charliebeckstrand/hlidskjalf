@@ -1,5 +1,6 @@
 import { Box, Text, useStdout } from 'ink'
 
+import { colors } from '../theme.js'
 import { Header } from './header.js'
 
 export function Loading() {
@@ -9,8 +10,9 @@ export function Loading() {
 	return (
 		<Box flexDirection="column">
 			<Header columns={cols} />
-			<Box marginTop={1} marginLeft={1}>
-				<Text dimColor>Discovering workspaces...</Text>
+			<Box marginTop={1} paddingX={2}>
+				<Text color={colors.accent}>◑ </Text>
+				<Text color={colors.muted}>Discovering workspaces...</Text>
 			</Box>
 		</Box>
 	)
