@@ -17,7 +17,7 @@ const statusDisplay = {
 	ready: { color: 'green', label: 'watching' },
 	error: { color: 'red', label: 'error' },
 	stopped: { color: 'gray', label: 'stopped' },
-	stale: { color: 'yellow', label: 'stale' },
+	idle: { color: 'yellow', label: 'idle' },
 	timeout: { color: 'red', label: 'timeout' },
 } satisfies Record<Status, { color: string; label: string }>
 

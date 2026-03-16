@@ -7,7 +7,7 @@ export type Status =
 	| 'ready'
 	| 'error'
 	| 'stopped'
-	| 'stale'
+	| 'idle'
 	| 'timeout'
 
 export interface Workspace {
