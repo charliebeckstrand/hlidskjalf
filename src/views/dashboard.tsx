@@ -16,6 +16,7 @@ const HINTS = '↑/↓  j/k  select    q  quit'
 interface Props {
 	processes: Process[]
 	selectedIndex: number
+	title: string
 }
 
 function ProcessRow({
@@ -87,7 +88,7 @@ function LogPanel({ process: proc, height }: { process: Process; height: number 
 	)
 }
 
-export function Dashboard({ processes, selectedIndex }: Props) {
+export function Dashboard({ processes, selectedIndex, title }: Props) {
 	const { stdout } = useStdout()
 
 	const cols = stdout?.columns ?? 80
@@ -111,7 +112,7 @@ export function Dashboard({ processes, selectedIndex }: Props) {
 
 	return (
 		<Box flexDirection="column">
-			<Header ready={allReady} columns={cols} hints={HINTS} />
+			<Header title={title} ready={allReady} columns={cols} hints={HINTS} />
 
 			{/* Table header */}
 			<Box paddingX={1} marginLeft={1} marginTop={1}>

@@ -18,7 +18,7 @@ export function App({ options }: Props) {
 		if (input === 'q' || (key.ctrl && input === 'c')) stop()
 	})
 
-	if (loading) return <Loading />
+	if (loading) return <Loading title={options.title} />
 
-	return <Dashboard processes={processes} selectedIndex={cursor} />
+	return <Dashboard processes={processes} selectedIndex={cursor} title={options.title} />
 }

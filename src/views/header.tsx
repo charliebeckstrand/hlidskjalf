@@ -3,12 +3,13 @@ import { Box, Text } from 'ink'
 import { colors } from '../theme.js'
 
 interface Props {
+	title: string
 	ready?: boolean
 	columns: number
 	hints?: string
 }
 
-export function Header({ ready = false, columns, hints }: Props) {
+export function Header({ title, ready = false, columns, hints }: Props) {
 	const showHints = hints && columns >= 10 + hints.length + 4
 
 	return (
@@ -26,7 +27,7 @@ export function Header({ ready = false, columns, hints }: Props) {
 				<Box flexGrow={1} gap={1}>
 					<Text color={ready ? colors.success : colors.accent}>{'●'}</Text>
 					<Text color={colors.accentBright} bold>
-						Hlidskjalf
+						{title}
 					</Text>
 				</Box>
 				{showHints && <Text color={colors.dim}>{hints}</Text>}
