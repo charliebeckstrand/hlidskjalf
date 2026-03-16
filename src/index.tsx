@@ -11,6 +11,7 @@ const { values } = parseArgs({
 	options: {
 		filter: { type: 'string', multiple: true },
 		order: { type: 'string', default: 'alphabetical' },
+		title: { type: 'string', default: 'Hlidskjalf' },
 	},
 })
 
@@ -25,10 +26,13 @@ const filter = rawFilter?.filter((v) => {
 })
 const order = values.order === 'run' ? 'run' : 'alphabetical'
 
+const title = values.title ?? 'Hlidskjalf'
+
 const options: Options = {
 	root: process.cwd(),
 	order: order satisfies SortOrder,
 	filter: filter?.length ? filter : undefined,
+	title,
 }
 
 const { waitUntilExit } = render(<App options={options} />, { exitOnCtrlC: false })

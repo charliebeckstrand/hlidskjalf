@@ -29,4 +29,5 @@ export interface Options {
 	root: string
 	filter?: string[]
 	order: SortOrder
+	title: string
 }
