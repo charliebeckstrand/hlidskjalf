@@ -29,6 +29,7 @@ const matchers: { pattern: RegExp; status: Status }[] = [
 	{ pattern: /⚡\uFE0F?\s*Build success/, status: 'watching' },
 	{ pattern: /Build start/, status: 'building' },
 	{ pattern: /Watching for changes/, status: 'watching' },
+	{ pattern: /\[ERROR\]/, status: 'error' },
 	{ pattern: /[Ee]rror[\s:]/, status: 'error' },
 	{ pattern: /process exit/, status: 'error' },
 ]
