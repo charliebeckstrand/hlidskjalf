@@ -1,5 +1,7 @@
 import { type ChildProcess, spawn } from 'node:child_process'
 import { EventEmitter } from 'node:events'
+import http from 'node:http'
+import https from 'node:https'
 
 import { parseLine, sanitizeForDisplay, stripAnsi } from './parser.js'
 import type { Process, Status, Workspace } from './types.js'
@@ -389,13 +391,51 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		this.heartbeatInterval = setInterval(() => {
 			const now = Date.now()
 			for (const [name, entry] of this.entries) {
-				if (entry.process.status !== 'watching' && entry.process.status !== 'ready') continue
+				const { status } = entry.process
+				const url = entry.process.url
+
+				if (status === 'idle' && url) {
+					this.probeUrl(url).then((alive) => {
+						if (alive) {
+							entry.lastOutputAt = Date.now()
+							this.setStatus(name, entry.lastGoodStatus ?? 'ready')
+						}
+					})
+					continue
+				}
+
+				if (status !== 'watching' && status !== 'ready') continue
 				if (entry.lastOutputAt && now - entry.lastOutputAt > IDLE_THRESHOLD_MS) {
-					this.setStatus(name, 'idle')
+					if (url) {
+						this.probeUrl(url).then((alive) => {
+							if (alive) {
+								entry.lastOutputAt = Date.now()
+							} else {
+								this.setStatus(name, 'idle')
+							}
+						})
+					} else {
+						this.setStatus(name, 'idle')
+					}
 				}
 			}
 		}, HEARTBEAT_INTERVAL_MS)
 		this.heartbeatInterval.unref()
+	}
+
+	private probeUrl(url: string): Promise<boolean> {
+		return new Promise((resolve) => {
+			const client = url.startsWith('https') ? https : http
+			const req = client.get(url, { timeout: 3000 }, (res) => {
+				res.resume()
+				resolve(true)
+			})
+			req.on('error', () => resolve(false))
+			req.on('timeout', () => {
+				req.destroy()
+				resolve(false)
+			})
+		})
 	}
 
 	private scheduleErrorRecovery(name: string): void {
