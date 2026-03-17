@@ -1,0 +1,43 @@
+{
+	"name": "turbolens",
+	"version": "0.1.0",
+	"description": "A Terminal User Interface for exploring and managing Turborepo cache, built with Ink.",
+	"type": "module",
+	"license": "MIT",
+	"keywords": [
+		"turborepo",
+		"cache",
+		"monorepo",
+		"terminal",
+		"tui",
+		"turbo"
+	],
+	"engines": {
+		"node": ">=22"
+	},
+	"bin": {
+		"turbolens": "dist/index.js"
+	},
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"scripts": {
+		"build": "tsup",
+		"dev": "tsup --watch",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write .",
+		"format": "biome format --write ."
+	},
+	"dependencies": {
+		"ink": "^5.2.1",
+		"react": "^18.3.1"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.4.7",
+		"@types/node": "^22.15.33",
+		"@types/react": "^18.3.23",
+		"tsup": "^8.5.1",
+		"typescript": "^5.9.3"
+	}
+}
