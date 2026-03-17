@@ -106,7 +106,7 @@ export function Dashboard({ processes, selectedIndex, title }: Props) {
 		[processes],
 	)
 
-	const logHeight = Math.max(3, rows - processes.length - 10)
+	const logHeight = Math.max(3, rows - processes.length - 11)
 	const safeIndex = Math.min(selectedIndex, Math.max(0, processes.length - 1))
 	const selected = processes[safeIndex]
 
