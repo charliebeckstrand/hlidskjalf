@@ -2,7 +2,7 @@
 
 A Terminal User Interface for visualizing Turborepo tasks, built with [Ink](https://npm.im/ink).
 
-<img src="[screenshot.png](https://raw.githubusercontent.com/charliebeckstrand/hlidskjalf/main/screenshot.png)" alt="Screenshot" width="513" />
+<img src="https://raw.githubusercontent.com/charliebeckstrand/hlidskjalf/main/screenshot.png" alt="Screenshot" width="513" />
 
 ## Usage
 
