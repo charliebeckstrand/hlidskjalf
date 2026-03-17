@@ -115,7 +115,7 @@ export function Dashboard({ processes, selectedIndex, title }: Props) {
 			<Header title={title} ready={allReady} columns={cols} hints={HINTS} />
 
 			{/* Table header */}
-			<Box paddingX={1} marginLeft={2} marginTop={1} marginBottom={1}>
+			<Box paddingX={1} marginLeft={2} marginTop={1}>
 				<Box width={nameWidth}>
 					<Text color={colors.muted} bold>
 						Name

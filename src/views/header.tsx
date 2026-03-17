@@ -17,6 +17,7 @@ export function Header({ title, ready = false, columns, hints }: Props) {
 			flexDirection="column"
 			paddingX={1}
 			paddingTop={1}
+			paddingBottom={1}
 			borderStyle="single"
 			borderColor={colors.separator}
 			borderTop={false}
