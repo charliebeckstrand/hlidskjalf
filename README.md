@@ -2,6 +2,8 @@
 
 A Terminal User Interface for visualizing Turborepo tasks, built with [Ink](https://npm.im/ink).
 
+![Screenshot](screenshot.png)
+
 ## Usage
 
 Add to your root `package.json`:
