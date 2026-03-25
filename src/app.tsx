@@ -11,11 +11,24 @@ interface Props {
 }
 
 export function App({ options }: Props) {
-	const { processes, loading, stop } = useRunner(options)
+	const { processes, loading, stop, stopProcess, restartProcess } = useRunner(options)
 	const cursor = useCursor(processes.length, !loading)
 
 	useInput((input, key) => {
 		if (input === 'q' || (key.ctrl && input === 'c')) stop()
+
+		const selected = processes[cursor]
+		if (!selected) return
+
+		if (input === 's') {
+			if (selected.status === 'stopped') {
+				restartProcess(selected.workspace.name)
+			} else {
+				stopProcess(selected.workspace.name)
+			}
+		}
+
+		if (input === 'r') restartProcess(selected.workspace.name)
 	})
 
 	if (loading) return <Loading title={options.title} />

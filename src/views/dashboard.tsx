@@ -11,7 +11,7 @@ const kindLabel = {
 	service: 'svc',
 } satisfies Record<WorkspaceKind, string>
 
-const HINTS = '↑/↓  j/k  select    q  quit'
+const HINTS = '↑/↓  j/k  select    s  stop/start    r  restart    q  quit'
 
 interface Props {
 	processes: Process[]
