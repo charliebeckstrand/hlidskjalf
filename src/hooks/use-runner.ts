@@ -10,6 +10,8 @@ interface UseRunnerResult {
 	processes: Process[]
 	loading: boolean
 	stop: () => void
+	stopProcess: (name: string) => void
+	restartProcess: (name: string) => void
 }
 
 export function useRunner(options: Options): UseRunnerResult {
@@ -85,5 +87,13 @@ export function useRunner(options: Options): UseRunnerResult {
 		}
 	}, [exit, options.filter, options.order, options.root, stop])
 
-	return { processes, loading, stop }
+	const stopProcess = useCallback((name: string) => {
+		runnerRef.current?.stopProcess(name)
+	}, [])
+
+	const restartProcess = useCallback((name: string) => {
+		runnerRef.current?.restartProcess(name)
+	}, [])
+
+	return { processes, loading, stop, stopProcess, restartProcess }
 }

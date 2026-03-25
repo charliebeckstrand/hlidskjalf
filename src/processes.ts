@@ -76,6 +76,8 @@ export interface Runner extends EventEmitter<RunnerEvents> {
 	get(name: string): Process | undefined
 	start(workspaces: Workspace[]): Promise<void>
 	shutdown(): Promise<void>
+	stopProcess(name: string): void
+	restartProcess(name: string): void
 }
 
 class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
@@ -471,6 +473,102 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 			this.notifyDependents(name)
 		}
 
+		this.emit('change')
+	}
+
+	stopProcess(name: string): void {
+		if (this.stopping) return
+		const entry = this.entry(name)
+		if (!entry) return
+
+		if (entry.restartTimer) {
+			clearTimeout(entry.restartTimer)
+			entry.restartTimer = null
+		}
+		if (entry.errorTimer) {
+			clearTimeout(entry.errorTimer)
+			entry.errorTimer = null
+		}
+		if (entry.startupTimer) {
+			clearTimeout(entry.startupTimer)
+			entry.startupTimer = null
+		}
+
+		const { child } = entry
+		if (!child || child.exitCode !== null || child.signalCode !== null) {
+			this.setStatus(name, 'stopped')
+			return
+		}
+
+		// Prevent handleUnexpectedExit from restarting
+		entry.restartRetries = MAX_RESTART_RETRIES + 1
+
+		const escalate = setTimeout(() => {
+			if (child.exitCode === null) child.kill('SIGKILL')
+		}, 5000)
+		escalate.unref()
+
+		child.on('close', () => {
+			clearTimeout(escalate)
+			entry.child = null
+			entry.restartRetries = 0
+			this.setStatus(name, 'stopped')
+		})
+
+		child.kill('SIGTERM')
+		entry.process.logs.push('[hlidskjalf] stopping process...')
+		this.emit('change')
+	}
+
+	restartProcess(name: string): void {
+		if (this.stopping) return
+		const entry = this.entry(name)
+		if (!entry) return
+
+		const workspace = entry.process.workspace
+
+		const doRestart = () => {
+			entry.restartRetries = 0
+			entry.process.url = undefined
+			entry.process.logs.push('[hlidskjalf] restarting process...')
+			this.spawn(workspace)
+		}
+
+		const { child } = entry
+		if (!child || child.exitCode !== null || child.signalCode !== null) {
+			doRestart()
+			return
+		}
+
+		// Prevent handleUnexpectedExit from restarting
+		entry.restartRetries = MAX_RESTART_RETRIES + 1
+
+		if (entry.restartTimer) {
+			clearTimeout(entry.restartTimer)
+			entry.restartTimer = null
+		}
+		if (entry.errorTimer) {
+			clearTimeout(entry.errorTimer)
+			entry.errorTimer = null
+		}
+		if (entry.startupTimer) {
+			clearTimeout(entry.startupTimer)
+			entry.startupTimer = null
+		}
+
+		const escalate = setTimeout(() => {
+			if (child.exitCode === null) child.kill('SIGKILL')
+		}, 5000)
+		escalate.unref()
+
+		child.on('close', () => {
+			clearTimeout(escalate)
+			entry.child = null
+			doRestart()
+		})
+
+		child.kill('SIGTERM')
+		entry.process.logs.push('[hlidskjalf] stopping process for restart...')
 		this.emit('change')
 	}
 
