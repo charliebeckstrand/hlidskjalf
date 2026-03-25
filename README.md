@@ -2,6 +2,7 @@
 
 ![NPM Version](https://img.shields.io/npm/v/hlidskjalf)
 ![NPM Last Update](https://img.shields.io/npm/last-update/hlidskjalf)
+![GitHub License](https://img.shields.io/github/license/charliebeckstrand/hlidskjalf)
 
 A Terminal User Interface for visualizing Turborepo tasks, built with [Ink](https://npm.im/ink).
 
