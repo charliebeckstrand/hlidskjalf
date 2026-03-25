@@ -33,3 +33,7 @@ pnpm dev
 | `filter` | Include specific workspaces (`--filter=web`). Append `...` for transitive deps (`--filter=web...`). |
 | `order` | Sort by `alphabetical` (default) or `run` (`--order=run`) dependency order. |
 | `title` | Custom title for the header (`--title="My App"`). Defaults to `Hlidskjalf`. |
+
+## License
+
+MIT
