@@ -1,10 +1,12 @@
 import { type ChildProcess, spawn } from 'node:child_process'
 import { EventEmitter } from 'node:events'
+import fs from 'node:fs'
 import http from 'node:http'
 import https from 'node:https'
+import os from 'node:os'
 
 import { parseLine, sanitizeForDisplay, stripAnsi } from './parser.js'
-import type { Metrics, Process, Status, Workspace } from './types.js'
+import type { Process, Status, Workspace } from './types.js'
 
 const MAX_LOGS = 500
 const ERROR_RECOVERY_MS = 5000
@@ -90,11 +92,14 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 	private stopping = false
 	private allWorkspaces: Workspace[] = []
 	private metricsEnabled: boolean
+	private prevCpuSnapshot = new Map<string, { ticks: number; time: number }>()
+	private numCpus: number
 
 	constructor(root: string, metrics = false) {
 		super()
 		this.root = root
 		this.metricsEnabled = metrics
+		this.numCpus = os.cpus().length
 	}
 
 	get(name: string): Process | undefined {
@@ -585,6 +590,8 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 	}
 
 	private collectMetrics(): void {
+		if (this.stopping) return
+
 		const rootPids = new Map<number, string>()
 		for (const [name, entry] of this.entries) {
 			const pid = entry.child?.pid
@@ -595,80 +602,104 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		if (rootPids.size === 0) return
 
-		const child = spawn('ps', ['-e', '-o', 'pid,ppid,%cpu,rss', '--no-headers'], {
-			stdio: 'pipe',
-		})
-
-		let output = ''
-		child.stdout?.on('data', (data: Buffer) => {
-			output += data.toString()
-		})
-
-		child.on('close', () => {
-			if (this.stopping) return
-
-			const parsed = this.aggregateTreeMetrics(output, rootPids)
-			let changed = false
-
-			for (const [name, metrics] of parsed) {
-				const entry = this.entry(name)
-				if (entry) {
-					entry.process.metrics = metrics
-					changed = true
-				}
-			}
-
-			if (changed) this.emit('change')
-		})
-
-		child.on('error', () => {})
-	}
-
-	private aggregateTreeMetrics(
-		output: string,
-		rootPids: Map<number, string>,
-	): Map<string, Metrics> {
-		const children = new Map<number, number[]>()
-		const procStats = new Map<number, { cpu: number; mem: number }>()
-
-		for (const line of output.trim().split('\n')) {
-			const parts = line.trim().split(/\s+/)
-			if (parts.length < 4) continue
-			const pid = Number.parseInt(parts[0], 10)
-			const ppid = Number.parseInt(parts[1], 10)
-			const cpu = Number.parseFloat(parts[2])
-			const rssKb = Number.parseInt(parts[3], 10)
-			if (Number.isNaN(pid) || Number.isNaN(ppid)) continue
-			if (!Number.isNaN(cpu) && !Number.isNaN(rssKb)) {
-				procStats.set(pid, { cpu, mem: rssKb * 1024 })
-			}
-			let kids = children.get(ppid)
-			if (!kids) {
-				kids = []
-				children.set(ppid, kids)
-			}
-			kids.push(pid)
-		}
-
-		const result = new Map<string, Metrics>()
+		const tree = this.readProcTree()
+		const now = Date.now()
+		let changed = false
 
 		for (const [rootPid, name] of rootPids) {
-			let totalCpu = 0
+			const pids = this.collectDescendants(rootPid, tree.children)
+			let totalTicks = 0
 			let totalMem = 0
-			const stack = [rootPid]
 
-			while (stack.length > 0) {
-				const pid = stack.pop() as number
-				const stats = procStats.get(pid)
-				if (stats) {
-					totalCpu += stats.cpu
-					totalMem += stats.mem
+			for (const pid of pids) {
+				const stat = tree.stats.get(pid)
+				if (stat) {
+					totalTicks += stat.utime + stat.stime
+					totalMem += stat.rss
 				}
-				const kids = children.get(pid)
-				if (kids) stack.push(...kids)
 			}
 
-			result.set(name, { cpu: totalCpu, mem: totalMem })
+			const prev = this.prevCpuSnapshot.get(name)
+			let cpuPercent = 0
+
+			if (prev) {
+				const elapsedMs = now - prev.time
+				if (elapsedMs > 0) {
+					const tickDelta = totalTicks - prev.ticks
+					const elapsedSec = elapsedMs / 1000
+					const ticksPerSec = 100
+					cpuPercent = (tickDelta / ticksPerSec / elapsedSec / this.numCpus) * 100
+					if (cpuPercent < 0) cpuPercent = 0
+				}
+			}
+
+			this.prevCpuSnapshot.set(name, { ticks: totalTicks, time: now })
+
+			const entry = this.entry(name)
+			if (entry) {
+				entry.process.metrics = { cpu: cpuPercent, mem: totalMem }
+				changed = true
+			}
+		}
+
+		if (changed) this.emit('change')
+	}
+
+	private readProcTree(): {
+		children: Map<number, number[]>
+		stats: Map<number, { utime: number; stime: number; rss: number }>
+	} {
+		const children = new Map<number, number[]>()
+		const stats = new Map<number, { utime: number; stime: number; rss: number }>()
+		const pageSize = 4096
+
+		let entries: string[]
+		try {
+			entries = fs.readdirSync('/proc')
+		} catch {
+			return { children, stats }
+		}
+
+		for (const entry of entries) {
+			if (!/^\d+$/.test(entry)) continue
+			const pid = Number.parseInt(entry, 10)
+
+			try {
+				const stat = fs.readFileSync(`/proc/${pid}/stat`, 'utf8')
+				const closeParen = stat.lastIndexOf(')')
+				if (closeParen === -1) continue
+				const fields = stat.slice(closeParen + 2).split(' ')
+				const ppid = Number.parseInt(fields[1], 10)
+				const utime = Number.parseInt(fields[11], 10)
+				const stime = Number.parseInt(fields[12], 10)
+				const rss = Number.parseInt(fields[21], 10) * pageSize
+
+				if (Number.isNaN(ppid)) continue
+				stats.set(pid, { utime, stime, rss })
+
+				let kids = children.get(ppid)
+				if (!kids) {
+					kids = []
+					children.set(ppid, kids)
+				}
+				kids.push(pid)
+			} catch {
+				// process vanished between readdir and readFile
+			}
+		}
+
+		return { children, stats }
+	}
+
+	private collectDescendants(rootPid: number, children: Map<number, number[]>): number[] {
+		const result: number[] = []
+		const stack = [rootPid]
+
+		while (stack.length > 0) {
+			const pid = stack.pop() as number
+			result.push(pid)
+			const kids = children.get(pid)
+			if (kids) stack.push(...kids)
 		}
 
 		return result
