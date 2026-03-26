@@ -2,7 +2,7 @@ import { Box, Text, useStdout } from 'ink'
 import { useMemo } from 'react'
 
 import { colors, statusDisplay } from '../theme.js'
-import type { Process, WorkspaceKind } from '../types.js'
+import type { Metrics, Process, WorkspaceKind } from '../types.js'
 import { Header } from './header.js'
 
 const kindLabel = {
@@ -13,20 +13,39 @@ const kindLabel = {
 
 const HINTS = '↑/↓  j/k  select    s  stop/start    r  restart    q  quit'
 
+function formatCpu(cpu: number): string {
+	return `${cpu.toFixed(1)}%`
+}
+
+function formatMem(bytes: number): string {
+	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} K`
+	if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} M`
+	return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} G`
+}
+
+function memColor(bytes: number): string {
+	if (bytes > 512 * 1024 * 1024) return colors.error
+	if (bytes > 256 * 1024 * 1024) return colors.warning
+	return colors.muted
+}
+
 interface Props {
 	processes: Process[]
 	selectedIndex: number
 	title: string
+	metrics?: boolean
 }
 
 function ProcessRow({
 	process: proc,
 	selected,
 	nameWidth,
+	showMetrics,
 }: {
 	process: Process
 	selected: boolean
 	nameWidth: number
+	showMetrics: boolean
 }) {
 	const { color, label, icon } = statusDisplay[proc.status]
 
@@ -47,8 +66,35 @@ function ProcessRow({
 					{icon} {label}
 				</Text>
 			</Box>
+			{showMetrics && <MetricsCells metrics={proc.metrics} />}
 			<Text color={colors.url}>{proc.url ?? ''}</Text>
 		</Box>
+	)
+}
+
+function MetricsCells({ metrics }: { metrics?: Metrics }) {
+	if (!metrics) {
+		return (
+			<>
+				<Box width={8}>
+					<Text color={colors.dim}>{'—'}</Text>
+				</Box>
+				<Box width={9}>
+					<Text color={colors.dim}>{'—'}</Text>
+				</Box>
+			</>
+		)
+	}
+
+	return (
+		<>
+			<Box width={8}>
+				<Text color={metrics.cpu > 80 ? colors.error : colors.muted}>{formatCpu(metrics.cpu)}</Text>
+			</Box>
+			<Box width={9}>
+				<Text color={memColor(metrics.mem)}>{formatMem(metrics.mem)}</Text>
+			</Box>
+		</>
 	)
 }
 
@@ -88,7 +134,7 @@ function LogPanel({ process: proc, height }: { process: Process; height: number 
 	)
 }
 
-export function Dashboard({ processes, selectedIndex, title }: Props) {
+export function Dashboard({ processes, selectedIndex, title, metrics = false }: Props) {
 	const { stdout } = useStdout()
 
 	const cols = stdout?.columns ?? 80
@@ -131,6 +177,20 @@ export function Dashboard({ processes, selectedIndex, title }: Props) {
 						Status
 					</Text>
 				</Box>
+				{metrics && (
+					<>
+						<Box width={8}>
+							<Text color={colors.muted} bold>
+								CPU
+							</Text>
+						</Box>
+						<Box width={9}>
+							<Text color={colors.muted} bold>
+								MEM
+							</Text>
+						</Box>
+					</>
+				)}
 				<Text color={colors.muted} bold>
 					URL
 				</Text>
@@ -143,6 +203,7 @@ export function Dashboard({ processes, selectedIndex, title }: Props) {
 					process={proc}
 					selected={i === safeIndex}
 					nameWidth={nameWidth}
+					showMetrics={metrics}
 				/>
 			))}
 

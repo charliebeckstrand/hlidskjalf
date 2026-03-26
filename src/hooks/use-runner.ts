@@ -55,7 +55,7 @@ export function useRunner(options: Options): UseRunnerResult {
 			const startOrder = sortByDeps(workspaces)
 			const sorted = options.order === 'run' ? startOrder : sortByName(workspaces)
 			const displayOrder = sorted.map((w) => w.name)
-			const runner = createRunner(options.root)
+			const runner = createRunner(options.root, options.metrics)
 
 			runnerRef.current = runner
 
@@ -85,7 +85,7 @@ export function useRunner(options: Options): UseRunnerResult {
 		return () => {
 			process.off('SIGTERM', stop)
 		}
-	}, [exit, options.filter, options.order, options.root, stop])
+	}, [exit, options.filter, options.metrics, options.order, options.root, stop])
 
 	const stopProcess = useCallback((name: string) => {
 		runnerRef.current?.stopProcess(name)

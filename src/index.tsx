@@ -12,6 +12,7 @@ const { values } = parseArgs({
 		filter: { type: 'string', multiple: true },
 		order: { type: 'string', default: 'alphabetical' },
 		title: { type: 'string', default: 'Hlidskjalf' },
+		metrics: { type: 'boolean', default: false },
 	},
 })
 
@@ -33,6 +34,7 @@ const options: Options = {
 	order: order satisfies SortOrder,
 	filter: filter?.length ? filter : undefined,
 	title,
+	metrics: values.metrics ?? false,
 }
 
 const { waitUntilExit } = render(<App options={options} />, { exitOnCtrlC: false })

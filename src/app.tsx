@@ -33,5 +33,12 @@ export function App({ options }: Props) {
 
 	if (loading) return <Loading title={options.title} />
 
-	return <Dashboard processes={processes} selectedIndex={cursor} title={options.title} />
+	return (
+		<Dashboard
+			processes={processes}
+			selectedIndex={cursor}
+			title={options.title}
+			metrics={options.metrics}
+		/>
+	)
 }
