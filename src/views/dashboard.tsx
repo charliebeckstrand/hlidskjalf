@@ -43,11 +43,13 @@ function ProcessRow({
 	selected,
 	nameWidth,
 	showMetrics,
+	urlWidth,
 }: {
 	process: Process
 	selected: boolean
 	nameWidth: number
 	showMetrics: boolean
+	urlWidth: number
 }) {
 	const { color, label, icon } = statusDisplay[proc.status]
 
@@ -69,7 +71,13 @@ function ProcessRow({
 				</Text>
 			</Box>
 			{showMetrics && <MetricsCells metrics={proc.metrics} />}
-			<Text color={colors.url}>{proc.url ?? ''}</Text>
+			{proc.url && urlWidth > 0 && (
+				<Box width={urlWidth}>
+					<Text color={colors.url} wrap="truncate">
+						{proc.url}
+					</Text>
+				</Box>
+			)}
 		</Box>
 	)
 }
@@ -155,6 +163,9 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 		[processes],
 	)
 
+	// 2 (paddingX) + 2 (indicator + space) + nameWidth + 6 (kind) + 14 (status) + optional 17 (cpu+mem)
+	const urlWidth = cols - nameWidth - 24 - (metrics ? 17 : 0)
+
 	const logHeight = Math.max(3, rows - processes.length - 11)
 
 	const safeIndex = Math.min(selectedIndex, Math.max(0, processes.length - 1))
@@ -209,6 +220,7 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 					selected={i === safeIndex}
 					nameWidth={nameWidth}
 					showMetrics={metrics}
+					urlWidth={urlWidth}
 				/>
 			))}
 
