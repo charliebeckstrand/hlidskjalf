@@ -493,7 +493,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 			const req = client.get(url, { timeout: 3000 }, (res) => {
 				res.resume()
-				
+
 				resolve(true)
 			})
 

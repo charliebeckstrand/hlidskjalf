@@ -159,7 +159,7 @@ describe('parseLine', () => {
 		})
 
 		it('truncates very long lines', () => {
-			const longLine = 'Error: ' + 'x'.repeat(10000)
+			const longLine = `Error: ${'x'.repeat(10000)}`
 
 			const result = parseLine(longLine)
 

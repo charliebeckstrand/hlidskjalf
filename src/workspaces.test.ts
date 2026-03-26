@@ -1,9 +1,15 @@
 import fs from 'node:fs'
 import { join } from 'node:path'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import type { Workspace } from './types.js'
-import { discover, filterWorkspaces, isValidPackageName, sortByDeps, sortByName } from './workspaces.js'
+import {
+	discover,
+	filterWorkspaces,
+	isValidPackageName,
+	sortByDeps,
+	sortByName,
+} from './workspaces.js'
 
 describe('isValidPackageName', () => {
 	it('accepts simple names', () => {
@@ -234,11 +240,7 @@ describe('discover', () => {
 		fs.rmSync(tmpDir, { recursive: true, force: true })
 	})
 
-	function createWorkspace(
-		dir: string,
-		name: string,
-		pkg: Record<string, unknown>,
-	): void {
+	function createWorkspace(dir: string, name: string, pkg: Record<string, unknown>): void {
 		const wsDir = join(tmpDir, dir, name)
 		fs.mkdirSync(wsDir, { recursive: true })
 		fs.writeFileSync(join(wsDir, 'package.json'), JSON.stringify(pkg))
@@ -252,9 +254,7 @@ describe('discover', () => {
 
 		const result = discover(tmpDir)
 
-		expect(result).toEqual([
-			{ name: 'utils', kind: 'package', deps: [] },
-		])
+		expect(result).toEqual([{ name: 'utils', kind: 'package', deps: [] }])
 	})
 
 	it('discovers apps', () => {
@@ -265,9 +265,7 @@ describe('discover', () => {
 
 		const result = discover(tmpDir)
 
-		expect(result).toEqual([
-			{ name: 'web', kind: 'app', deps: [] },
-		])
+		expect(result).toEqual([{ name: 'web', kind: 'app', deps: [] }])
 	})
 
 	it('discovers services', () => {
@@ -278,9 +276,7 @@ describe('discover', () => {
 
 		const result = discover(tmpDir)
 
-		expect(result).toEqual([
-			{ name: 'api', kind: 'service', deps: [] },
-		])
+		expect(result).toEqual([{ name: 'api', kind: 'service', deps: [] }])
 	})
 
 	it('skips workspaces without dev script', () => {
