@@ -20,12 +20,14 @@ function formatCpu(cpu: number): string {
 function formatMem(bytes: number): string {
 	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} K`
 	if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} M`
+
 	return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} G`
 }
 
 function memColor(bytes: number): string {
 	if (bytes > 512 * 1024 * 1024) return colors.error
 	if (bytes > 256 * 1024 * 1024) return colors.warning
+
 	return colors.muted
 }
 
@@ -100,6 +102,7 @@ function MetricsCells({ metrics }: { metrics?: Metrics }) {
 
 function LogPanel({ process: proc, height }: { process: Process; height: number }) {
 	const logLines = proc.logs.slice(-height)
+
 	const fillCount = height - logLines.length
 
 	return (
@@ -153,7 +156,9 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 	)
 
 	const logHeight = Math.max(3, rows - processes.length - 11)
+
 	const safeIndex = Math.min(selectedIndex, Math.max(0, processes.length - 1))
+
 	const selected = processes[safeIndex]
 
 	return (

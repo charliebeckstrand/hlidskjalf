@@ -25,9 +25,11 @@ export function useRunner(options: Options): UseRunnerResult {
 
 	const stop = useCallback(() => {
 		if (stoppingRef.current) return
+
 		stoppingRef.current = true
 
 		const runner = runnerRef.current
+
 		if (runner) {
 			runner
 				.shutdown()
@@ -48,13 +50,18 @@ export function useRunner(options: Options): UseRunnerResult {
 
 			if (workspaces.length === 0) {
 				console.error('No matching workspaces found.')
+
 				exit()
+
 				return
 			}
 
 			const startOrder = sortByDeps(workspaces)
+
 			const sorted = options.order === 'run' ? startOrder : sortByName(workspaces)
+
 			const displayOrder = sorted.map((w) => w.name)
+
 			const runner = createRunner(options.root, options.metrics)
 
 			runnerRef.current = runner
@@ -65,6 +72,7 @@ export function useRunner(options: Options): UseRunnerResult {
 				setProcesses(
 					displayOrder.flatMap((name) => {
 						const p = runner.get(name)
+
 						return p ? [p] : []
 					}),
 				)
@@ -77,6 +85,7 @@ export function useRunner(options: Options): UseRunnerResult {
 
 		run().catch((err) => {
 			console.error('Fatal:', err instanceof Error ? err.message : 'unexpected error')
+
 			exit()
 		})
 

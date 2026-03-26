@@ -51,12 +51,15 @@ const ENV_ALLOWLIST = new Set([
 
 function safeEnv(): Record<string, string | undefined> {
 	const filtered: Record<string, string | undefined> = {}
+
 	for (const key of Object.keys(process.env)) {
 		if (ENV_ALLOWLIST.has(key)) {
 			filtered[key] = process.env[key]
 		}
 	}
+
 	filtered.FORCE_COLOR = '1'
+
 	return filtered
 }
 
@@ -136,6 +139,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		const failedPackages = new Set<string>()
 		for (const pkg of packages) {
 			const s = this.entries.get(pkg.name)?.process.status
+
 			if (s === 'error' || s === 'stopped' || s === 'timeout') {
 				failedPackages.add(pkg.name)
 			}
@@ -143,19 +147,24 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		for (const workspace of apps) {
 			const failedDeps = workspace.deps.filter((d) => failedPackages.has(d))
+
 			if (failedDeps.length > 0) {
 				const entry = this.entries.get(workspace.name)
+
 				if (entry) {
 					entry.process.logs.push(
 						`[hlidskjalf] warning: dependency ${failedDeps.join(', ')} failed — starting anyway`,
 					)
+
 					this.emit('change')
 				}
 			}
+
 			this.spawn(workspace)
 		}
 
 		this.startHeartbeat()
+
 		if (this.metricsEnabled) this.startMetrics()
 	}
 
@@ -177,6 +186,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		for (const entry of this.entries.values()) {
 			const { child } = entry
+
 			if (!child || child.exitCode !== null || child.signalCode !== null) continue
 
 			waiting.push(
@@ -209,6 +219,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 			const check = () => {
 				for (const name of [...remaining]) {
 					const s = this.entry(name)?.process.status
+
 					if (s === 'watching' || s === 'error' || s === 'stopped' || s === 'timeout') {
 						remaining.delete(name)
 					}
@@ -216,11 +227,13 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 				if (remaining.size === 0) {
 					this.off('change', check)
+
 					resolve()
 				}
 			}
 
 			this.on('change', check)
+
 			check()
 		})
 	}
@@ -239,14 +252,18 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		const startupTimer = setTimeout(() => {
 			const e = this.entry(workspace.name)
+
 			if (e) {
 				e.startupTimer = null
+
 				if (e.process.status !== 'watching' && e.process.status !== 'ready') {
 					e.process.logs.push(`[hlidskjalf] startup timeout after ${STARTUP_TIMEOUT_MS / 1000}s`)
+
 					this.setStatus(workspace.name, 'timeout')
 				}
 			}
 		}, STARTUP_TIMEOUT_MS)
+
 		startupTimer.unref()
 
 		if (entry) entry.startupTimer = startupTimer
@@ -258,14 +275,19 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 			if (!buffer.includes('\n') && buffer.length > MAX_BUFFER_SIZE) {
 				this.handleLine(workspace.name, buffer)
+
 				buffer = ''
+
 				return
 			}
 
 			const lines = buffer.split('\n')
+
 			buffer = lines.pop() ?? ''
+
 			for (const raw of lines) {
 				const line = raw.trimEnd()
+
 				if (line) this.handleLine(workspace.name, line)
 			}
 		}
@@ -284,23 +306,30 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		child.on('error', () => {
 			const e = this.entry(workspace.name)
+
 			if (e?.startupTimer) {
 				clearTimeout(e.startupTimer)
+
 				e.startupTimer = null
 			}
+
 			this.setStatus(workspace.name, 'error')
 		})
 	}
 
 	private handleLine(name: string, raw: string): void {
 		if (this.stopping) return
+
 		const entry = this.entry(name)
+
 		if (!entry) return
 
 		const line = raw.length > MAX_LINE_LENGTH ? raw.slice(0, MAX_LINE_LENGTH) : raw
+
 		const { process: proc } = entry
 
 		proc.logs.push(sanitizeForDisplay(line))
+
 		if (proc.logs.length > MAX_LOGS) proc.logs.splice(0, proc.logs.length - MAX_LOGS)
 
 		entry.lastOutputAt = Date.now()
@@ -316,12 +345,15 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 				this.scheduleErrorRecovery(name)
 			} else {
 				entry.lastGoodStatus = status
+
 				this.clearErrorTimer(name)
+
 				entry.restartRetries = 0
 
 				if (status === 'watching' || status === 'ready') {
 					if (entry.startupTimer) {
 						clearTimeout(entry.startupTimer)
+
 						entry.startupTimer = null
 					}
 				}
@@ -348,13 +380,16 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		if (!entry) return
 
 		entry.restartRetries += 1
+
 		const { restartRetries } = entry
 
 		if (restartRetries > MAX_RESTART_RETRIES) {
 			entry.process.logs.push(
 				`[hlidskjalf] process exited ${MAX_RESTART_RETRIES} times — giving up.`,
 			)
+
 			this.setStatus(workspace.name, 'error')
+
 			return
 		}
 
@@ -371,13 +406,16 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 					if (!this.stopping) this.spawn(workspace)
 				})
 				.catch(() => this.setStatus(workspace.name, 'error'))
+
 			return
 		}
 
 		const timer = setTimeout(() => {
 			if (entry) entry.restartTimer = null
+
 			if (!this.stopping) this.spawn(workspace)
 		}, delay)
+
 		timer.unref()
 
 		entry.restartTimer = timer
@@ -390,11 +428,15 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 				stdio: 'pipe',
 				env: safeEnv(),
 			})
+
 			this.pendingRebuilds.add(child)
+
 			const done = () => {
 				this.pendingRebuilds.delete(child)
+
 				resolve()
 			}
+
 			child.on('close', done)
 			child.on('error', done)
 		})
@@ -403,8 +445,10 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 	private startHeartbeat(): void {
 		this.heartbeatInterval = setInterval(() => {
 			const now = Date.now()
+
 			for (const [name, entry] of this.entries) {
 				const { status } = entry.process
+
 				const url = entry.process.url
 
 				if (status === 'idle' && url) {
@@ -414,10 +458,12 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 							this.setStatus(name, entry.lastGoodStatus ?? 'ready')
 						}
 					})
+
 					continue
 				}
 
 				if (status !== 'watching' && status !== 'ready') continue
+
 				if (entry.lastOutputAt && now - entry.lastOutputAt > IDLE_THRESHOLD_MS) {
 					if (url) {
 						this.probeUrl(url).then((alive) => {
@@ -439,13 +485,17 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 	private probeUrl(url: string): Promise<boolean> {
 		return new Promise((resolve) => {
 			const client = url.startsWith('https') ? https : http
+
 			const req = client.get(url, { timeout: 3000 }, (res) => {
 				res.resume()
 				resolve(true)
 			})
+
 			req.on('error', () => resolve(false))
+
 			req.on('timeout', () => {
 				req.destroy()
+
 				resolve(false)
 			})
 		})
@@ -454,30 +504,37 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 	private scheduleErrorRecovery(name: string): void {
 		this.clearErrorTimer(name)
 		const entry = this.entry(name)
+
 		if (!entry) return
 
 		const timer = setTimeout(() => {
 			entry.errorTimer = null
+
 			if (entry.process.status === 'error') {
 				this.setStatus(name, entry.lastGoodStatus ?? 'ready')
 			}
 		}, ERROR_RECOVERY_MS)
 
 		timer.unref()
+
 		entry.errorTimer = timer
 	}
 
 	private clearErrorTimer(name: string): void {
 		const entry = this.entry(name)
+
 		if (entry?.errorTimer) {
 			clearTimeout(entry.errorTimer)
+
 			entry.errorTimer = null
 		}
 	}
 
 	private setStatus(name: string, status: Status): void {
 		const entry = this.entry(name)
+
 		if (!entry) return
+
 		entry.process.status = status
 
 		if (status === 'error' && entry.process.workspace.kind === 'package') {
@@ -489,25 +546,32 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 	stopProcess(name: string): void {
 		if (this.stopping) return
+
 		const entry = this.entry(name)
+
 		if (!entry) return
 
 		if (entry.restartTimer) {
 			clearTimeout(entry.restartTimer)
+
 			entry.restartTimer = null
 		}
 		if (entry.errorTimer) {
 			clearTimeout(entry.errorTimer)
+
 			entry.errorTimer = null
 		}
 		if (entry.startupTimer) {
 			clearTimeout(entry.startupTimer)
+
 			entry.startupTimer = null
 		}
 
 		const { child } = entry
+
 		if (!child || child.exitCode !== null || child.signalCode !== null) {
 			this.setStatus(name, 'stopped')
+
 			return
 		}
 
@@ -517,37 +581,50 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		const escalate = setTimeout(() => {
 			if (child.exitCode === null) child.kill('SIGKILL')
 		}, 5000)
+
 		escalate.unref()
 
 		child.on('close', () => {
 			clearTimeout(escalate)
+
 			entry.child = null
+
 			entry.restartRetries = 0
+
 			this.setStatus(name, 'stopped')
 		})
 
 		child.kill('SIGTERM')
+
 		entry.process.logs.push('[hlidskjalf] stopping process...')
+
 		this.emit('change')
 	}
 
 	restartProcess(name: string): void {
 		if (this.stopping) return
+
 		const entry = this.entry(name)
+
 		if (!entry) return
 
 		const workspace = entry.process.workspace
 
 		const doRestart = () => {
 			entry.restartRetries = 0
+
 			entry.process.url = undefined
+
 			entry.process.logs.push('[hlidskjalf] restarting process...')
+
 			this.spawn(workspace)
 		}
 
 		const { child } = entry
+
 		if (!child || child.exitCode !== null || child.signalCode !== null) {
 			doRestart()
+
 			return
 		}
 
@@ -556,36 +633,46 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		if (entry.restartTimer) {
 			clearTimeout(entry.restartTimer)
+
 			entry.restartTimer = null
 		}
 		if (entry.errorTimer) {
 			clearTimeout(entry.errorTimer)
+
 			entry.errorTimer = null
 		}
 		if (entry.startupTimer) {
 			clearTimeout(entry.startupTimer)
+
 			entry.startupTimer = null
 		}
 
 		const escalate = setTimeout(() => {
 			if (child.exitCode === null) child.kill('SIGKILL')
 		}, 5000)
+
 		escalate.unref()
 
 		child.on('close', () => {
 			clearTimeout(escalate)
+
 			entry.child = null
+
 			doRestart()
 		})
 
 		child.kill('SIGTERM')
+
 		entry.process.logs.push('[hlidskjalf] stopping process for restart...')
+
 		this.emit('change')
 	}
 
 	private startMetrics(): void {
 		this.collectMetrics()
+
 		this.metricsInterval = setInterval(() => this.collectMetrics(), METRICS_INTERVAL_MS)
+
 		this.metricsInterval.unref()
 	}
 
@@ -593,8 +680,10 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		if (this.stopping) return
 
 		const rootPids = new Map<number, string>()
+
 		for (const [name, entry] of this.entries) {
 			const pid = entry.child?.pid
+
 			if (pid && entry.child?.exitCode === null) {
 				rootPids.set(pid, name)
 			}
@@ -613,6 +702,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 			for (const pid of pids) {
 				const stat = tree.stats.get(pid)
+
 				if (stat) {
 					totalTicks += stat.utime + stat.stime
 					totalMem += stat.rss
@@ -708,7 +798,9 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 	private notifyDependents(failedName: string): void {
 		for (const workspace of this.allWorkspaces) {
 			if (!workspace.deps.includes(failedName)) continue
+
 			const entry = this.entry(workspace.name)
+
 			if (entry) {
 				entry.process.logs.push(
 					`[hlidskjalf] warning: dependency ${failedName} entered error state`,

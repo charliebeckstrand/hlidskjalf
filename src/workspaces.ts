@@ -24,10 +24,12 @@ function readJson(path: string): PkgJson | null {
 		const obj = raw as Record<string, unknown>
 
 		const name = typeof obj.name === 'string' ? obj.name : undefined
+
 		const scripts =
 			typeof obj.scripts === 'object' && obj.scripts !== null && !Array.isArray(obj.scripts)
 				? (obj.scripts as Record<string, string>)
 				: undefined
+
 		const dependencies =
 			typeof obj.dependencies === 'object' &&
 			obj.dependencies !== null &&
@@ -69,8 +71,10 @@ export function discover(root: string): Workspace[] {
 			if (!entry.isDirectory()) continue
 
 			const entryPath = join(base, entry.name)
+
 			try {
 				const realPath = realpathSync(entryPath)
+
 				if (!realPath.startsWith(resolvedRoot + sep)) continue
 			} catch {
 				continue
@@ -79,8 +83,11 @@ export function discover(root: string): Workspace[] {
 			const pkg = readJson(join(entryPath, 'package.json'))
 
 			if (!pkg?.name) continue
+
 			if (!isValidPackageName(pkg.name)) continue
+
 			if (pkg.name === 'hlidskjalf') continue
+
 			if (!pkg.scripts?.dev) continue
 
 			results.push({
@@ -117,10 +124,12 @@ export function sortByName(workspaces: Workspace[]): Workspace[] {
 
 export function filterWorkspaces(workspaces: Workspace[], patterns: string[]): Workspace[] {
 	const byName = new Map(workspaces.map((w) => [w.name, w]))
+
 	const matches = new Set<string>()
 
 	for (const pattern of patterns) {
 		const transitive = pattern.endsWith('...')
+
 		const name = transitive ? pattern.slice(0, -3) : pattern
 
 		if (byName.has(name)) matches.add(name)
@@ -139,6 +148,7 @@ function collectDeps(name: string, byName: Map<string, Workspace>, collected: Se
 	for (const dep of workspace.deps) {
 		if (byName.has(dep) && !collected.has(dep)) {
 			collected.add(dep)
+
 			collectDeps(dep, byName, collected)
 		}
 	}
