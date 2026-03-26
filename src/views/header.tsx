@@ -24,14 +24,20 @@ export function Header({ title, ready = false, columns, hints }: Props) {
 			borderLeft={false}
 			borderRight={false}
 		>
-			<Box>
-				<Box flexGrow={1} gap={1}>
+			<Box gap={2}>
+				<Box flexShrink={0} gap={1}>
 					<Text color={ready ? colors.success : colors.accent}>{'●'}</Text>
 					<Text color={colors.accentBright} bold>
 						{title}
 					</Text>
 				</Box>
-				{showHints && <Text color={colors.dim}>{hints}</Text>}
+				{showHints && (
+					<Box flexGrow={1} justifyContent="flex-end">
+						<Text color={colors.dim} wrap="truncate-end">
+							{hints}
+						</Text>
+					</Box>
+				)}
 			</Box>
 		</Box>
 	)
