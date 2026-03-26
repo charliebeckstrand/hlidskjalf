@@ -1,6 +1,6 @@
 {
 	"name": "hlidskjalf",
-	"version": "0.2.3",
+	"version": "0.2.4",
 	"description": "A Terminal User Interface for monitoring Turborepo tasks, built with Ink",
 	"type": "module",
 	"author": "Charlie Beckstrand",
