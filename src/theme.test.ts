@@ -42,6 +42,7 @@ describe('statusDisplay', () => {
 	it('each entry has color, label, and icon', () => {
 		for (const status of allStatuses) {
 			const entry = statusDisplay[status]
+
 			expect(entry).toHaveProperty('color')
 			expect(entry).toHaveProperty('label')
 			expect(entry).toHaveProperty('icon')

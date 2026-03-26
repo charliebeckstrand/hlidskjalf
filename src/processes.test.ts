@@ -5,6 +5,7 @@ import { createRunner } from './processes.js'
 describe('createRunner', () => {
 	it('returns a runner with the expected interface', () => {
 		const runner = createRunner('/tmp/test-root')
+
 		expect(runner).toHaveProperty('get')
 		expect(runner).toHaveProperty('start')
 		expect(runner).toHaveProperty('shutdown')
@@ -19,6 +20,7 @@ describe('createRunner', () => {
 
 	it('is an EventEmitter', () => {
 		const runner = createRunner('/tmp/test-root')
+
 		expect(typeof runner.on).toBe('function')
 		expect(typeof runner.emit).toBe('function')
 		expect(typeof runner.off).toBe('function')
@@ -26,6 +28,7 @@ describe('createRunner', () => {
 
 	it('get returns undefined for unknown process', () => {
 		const runner = createRunner('/tmp/test-root')
+
 		expect(runner.get('nonexistent')).toBeUndefined()
 	})
 })
