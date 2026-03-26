@@ -148,7 +148,7 @@ function collectDeps(name: string, byName: Map<string, Workspace>, collected: Se
 	for (const dep of workspace.deps) {
 		if (byName.has(dep) && !collected.has(dep)) {
 			collected.add(dep)
-			
+
 			collectDeps(dep, byName, collected)
 		}
 	}

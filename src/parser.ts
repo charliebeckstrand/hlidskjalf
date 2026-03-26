@@ -44,11 +44,11 @@ export function parseLine(line: string): ParsedLine {
 
 		if (match) {
 			const cleaned = match[1] ? cleanUrl(match[1]) : undefined
-			
+
 			const urlMatch = cleaned?.match(SAFE_URL)
-			
+
 			const url = urlMatch ? urlMatch[1] : undefined
-			
+
 			return { status, url }
 		}
 	}

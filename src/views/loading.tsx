@@ -5,7 +5,7 @@ import { Header } from './header.js'
 
 export function Loading({ title }: { title: string }) {
 	const { stdout } = useStdout()
-	
+
 	const cols = stdout?.columns ?? 80
 
 	return (

@@ -156,9 +156,9 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 	)
 
 	const logHeight = Math.max(3, rows - processes.length - 11)
-	
+
 	const safeIndex = Math.min(selectedIndex, Math.max(0, processes.length - 1))
-	
+
 	const selected = processes[safeIndex]
 
 	return (

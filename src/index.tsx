@@ -22,7 +22,7 @@ const filter = rawFilter?.filter((v) => {
 
 	if (!isValidPackageName(name)) {
 		console.error(`Ignoring invalid filter: ${name}`)
-		
+
 		return false
 	}
 

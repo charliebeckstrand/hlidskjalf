@@ -19,7 +19,7 @@ export function App({ options }: Props) {
 		if (input === 'q' || (key.ctrl && input === 'c')) stop()
 
 		const selected = processes[cursor]
-		
+
 		if (!selected) return
 
 		if (input === 's') {
