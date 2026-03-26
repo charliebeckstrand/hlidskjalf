@@ -18,10 +18,13 @@ function formatCpu(cpu: number): string {
 }
 
 function formatMem(bytes: number): string {
-	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} K`
-	if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} M`
+	let s: string
 
-	return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} G`
+	if (bytes < 1024 * 1024) s = `${(bytes / 1024).toFixed(0)} K`
+	else if (bytes < 1024 * 1024 * 1024) s = `${(bytes / (1024 * 1024)).toFixed(1)} M`
+	else s = `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} G`
+
+	return s.padStart(7)
 }
 
 function memColor(bytes: number): string {
