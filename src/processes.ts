@@ -4,7 +4,7 @@ import http from 'node:http'
 import https from 'node:https'
 
 import { parseLine, sanitizeForDisplay, stripAnsi } from './parser.js'
-import type { Process, Status, Workspace } from './types.js'
+import type { Metrics, Process, Status, Workspace } from './types.js'
 
 const MAX_LOGS = 500
 const ERROR_RECOVERY_MS = 5000
@@ -12,6 +12,7 @@ const MAX_RESTART_RETRIES = 3
 const RESTART_DELAY_MS = 1000
 const STARTUP_TIMEOUT_MS = 120_000
 const HEARTBEAT_INTERVAL_MS = 10_000
+const METRICS_INTERVAL_MS = 3_000
 const IDLE_THRESHOLD_MS = 300_000
 const MAX_BUFFER_SIZE = 65_536
 const MAX_LINE_LENGTH = 8192
@@ -84,13 +85,16 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 	private entries = new Map<string, ProcessEntry>()
 	private pendingRebuilds = new Set<ChildProcess>()
 	private heartbeatInterval: ReturnType<typeof setInterval> | null = null
+	private metricsInterval: ReturnType<typeof setInterval> | null = null
 	private root: string
 	private stopping = false
 	private allWorkspaces: Workspace[] = []
+	private metricsEnabled: boolean
 
-	constructor(root: string) {
+	constructor(root: string, metrics = false) {
 		super()
 		this.root = root
+		this.metricsEnabled = metrics
 	}
 
 	get(name: string): Process | undefined {
@@ -147,12 +151,14 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		}
 
 		this.startHeartbeat()
+		if (this.metricsEnabled) this.startMetrics()
 	}
 
 	async shutdown(): Promise<void> {
 		this.stopping = true
 
 		if (this.heartbeatInterval) clearInterval(this.heartbeatInterval)
+		if (this.metricsInterval) clearInterval(this.metricsInterval)
 
 		for (const entry of this.entries.values()) {
 			if (entry.errorTimer) clearTimeout(entry.errorTimer)
@@ -572,6 +578,69 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		this.emit('change')
 	}
 
+	private startMetrics(): void {
+		this.collectMetrics()
+		this.metricsInterval = setInterval(() => this.collectMetrics(), METRICS_INTERVAL_MS)
+		this.metricsInterval.unref()
+	}
+
+	private collectMetrics(): void {
+		const pidToName = new Map<number, string>()
+		for (const [name, entry] of this.entries) {
+			const pid = entry.child?.pid
+			if (pid && entry.child?.exitCode === null) {
+				pidToName.set(pid, name)
+			}
+		}
+
+		if (pidToName.size === 0) return
+
+		const pids = [...pidToName.keys()].join(',')
+		const child = spawn('ps', ['-p', pids, '-o', 'pid,%cpu,rss', '--no-headers'], {
+			stdio: 'pipe',
+		})
+
+		let output = ''
+		child.stdout?.on('data', (data: Buffer) => {
+			output += data.toString()
+		})
+
+		child.on('close', () => {
+			if (this.stopping) return
+
+			const parsed = this.parseMetrics(output)
+			let changed = false
+
+			for (const [pid, metrics] of parsed) {
+				const name = pidToName.get(pid)
+				if (!name) continue
+				const entry = this.entry(name)
+				if (entry) {
+					entry.process.metrics = metrics
+					changed = true
+				}
+			}
+
+			if (changed) this.emit('change')
+		})
+
+		child.on('error', () => {})
+	}
+
+	private parseMetrics(output: string): Map<number, Metrics> {
+		const result = new Map<number, Metrics>()
+		for (const line of output.trim().split('\n')) {
+			const parts = line.trim().split(/\s+/)
+			if (parts.length < 3) continue
+			const pid = Number.parseInt(parts[0], 10)
+			const cpu = Number.parseFloat(parts[1])
+			const rssKb = Number.parseInt(parts[2], 10)
+			if (Number.isNaN(pid) || Number.isNaN(cpu) || Number.isNaN(rssKb)) continue
+			result.set(pid, { cpu, mem: rssKb * 1024 })
+		}
+		return result
+	}
+
 	private notifyDependents(failedName: string): void {
 		for (const workspace of this.allWorkspaces) {
 			if (!workspace.deps.includes(failedName)) continue
@@ -585,6 +654,6 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 	}
 }
 
-export function createRunner(root: string): Runner {
-	return new ProcessRunner(root)
+export function createRunner(root: string, metrics = false): Runner {
+	return new ProcessRunner(root, metrics)
 }

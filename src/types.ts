@@ -16,11 +16,17 @@ export interface Workspace {
 	deps: string[]
 }
 
+export interface Metrics {
+	cpu: number
+	mem: number
+}
+
 export interface Process {
 	workspace: Workspace
 	status: Status
 	url?: string
 	logs: string[]
+	metrics?: Metrics
 }
 
 export type SortOrder = 'alphabetical' | 'run'
@@ -30,4 +36,5 @@ export interface Options {
 	filter?: string[]
 	order: SortOrder
 	title: string
+	metrics: boolean
 }
