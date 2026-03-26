@@ -585,18 +585,17 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 	}
 
 	private collectMetrics(): void {
-		const pidToName = new Map<number, string>()
+		const rootPids = new Map<number, string>()
 		for (const [name, entry] of this.entries) {
 			const pid = entry.child?.pid
 			if (pid && entry.child?.exitCode === null) {
-				pidToName.set(pid, name)
+				rootPids.set(pid, name)
 			}
 		}
 
-		if (pidToName.size === 0) return
+		if (rootPids.size === 0) return
 
-		const pids = [...pidToName.keys()].join(',')
-		const child = spawn('ps', ['-p', pids, '-o', 'pid,%cpu,rss', '--no-headers'], {
+		const child = spawn('ps', ['-e', '-o', 'pid,ppid,%cpu,rss', '--no-headers'], {
 			stdio: 'pipe',
 		})
 
@@ -608,12 +607,10 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		child.on('close', () => {
 			if (this.stopping) return
 
-			const parsed = this.parseMetrics(output)
+			const parsed = this.aggregateTreeMetrics(output, rootPids)
 			let changed = false
 
-			for (const [pid, metrics] of parsed) {
-				const name = pidToName.get(pid)
-				if (!name) continue
+			for (const [name, metrics] of parsed) {
 				const entry = this.entry(name)
 				if (entry) {
 					entry.process.metrics = metrics
@@ -627,17 +624,53 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		child.on('error', () => {})
 	}
 
-	private parseMetrics(output: string): Map<number, Metrics> {
-		const result = new Map<number, Metrics>()
+	private aggregateTreeMetrics(
+		output: string,
+		rootPids: Map<number, string>,
+	): Map<string, Metrics> {
+		const children = new Map<number, number[]>()
+		const procStats = new Map<number, { cpu: number; mem: number }>()
+
 		for (const line of output.trim().split('\n')) {
 			const parts = line.trim().split(/\s+/)
-			if (parts.length < 3) continue
+			if (parts.length < 4) continue
 			const pid = Number.parseInt(parts[0], 10)
-			const cpu = Number.parseFloat(parts[1])
-			const rssKb = Number.parseInt(parts[2], 10)
-			if (Number.isNaN(pid) || Number.isNaN(cpu) || Number.isNaN(rssKb)) continue
-			result.set(pid, { cpu, mem: rssKb * 1024 })
+			const ppid = Number.parseInt(parts[1], 10)
+			const cpu = Number.parseFloat(parts[2])
+			const rssKb = Number.parseInt(parts[3], 10)
+			if (Number.isNaN(pid) || Number.isNaN(ppid)) continue
+			if (!Number.isNaN(cpu) && !Number.isNaN(rssKb)) {
+				procStats.set(pid, { cpu, mem: rssKb * 1024 })
+			}
+			let kids = children.get(ppid)
+			if (!kids) {
+				kids = []
+				children.set(ppid, kids)
+			}
+			kids.push(pid)
 		}
+
+		const result = new Map<string, Metrics>()
+
+		for (const [rootPid, name] of rootPids) {
+			let totalCpu = 0
+			let totalMem = 0
+			const stack = [rootPid]
+
+			while (stack.length > 0) {
+				const pid = stack.pop() as number
+				const stats = procStats.get(pid)
+				if (stats) {
+					totalCpu += stats.cpu
+					totalMem += stats.mem
+				}
+				const kids = children.get(pid)
+				if (kids) stack.push(...kids)
+			}
+
+			result.set(name, { cpu: totalCpu, mem: totalMem })
+		}
+
 		return result
 	}
 
