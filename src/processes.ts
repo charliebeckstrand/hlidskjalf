@@ -1,4 +1,4 @@
-import { type ChildProcess, spawn } from 'node:child_process'
+import { type ChildProcess, execFileSync, spawn } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import fs from 'node:fs'
 import http from 'node:http'
@@ -493,7 +493,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 			const req = client.get(url, { timeout: 3000 }, (res) => {
 				res.resume()
-				
+
 				resolve(true)
 			})
 
@@ -697,6 +697,14 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		if (rootPids.size === 0) return
 
+		if (process.platform === 'linux') {
+			this.collectMetricsProc(rootPids)
+		} else {
+			this.collectMetricsPs(rootPids)
+		}
+	}
+
+	private collectMetricsProc(rootPids: Map<number, string>): void {
 		const tree = this.readProcTree()
 		const now = Date.now()
 		let changed = false
@@ -741,6 +749,75 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		if (changed) this.emit('change')
 	}
 
+	private collectMetricsPs(rootPids: Map<number, string>): void {
+		let output: string
+
+		try {
+			output = execFileSync('ps', ['-eo', 'pid,ppid,pcpu,rss'], {
+				encoding: 'utf8',
+				timeout: 5000,
+			})
+		} catch {
+			return
+		}
+
+		const children = new Map<number, number[]>()
+		const stats = new Map<number, { cpu: number; rss: number }>()
+
+		for (const line of output.trim().split('\n').slice(1)) {
+			const parts = line.trim().split(/\s+/)
+
+			if (parts.length < 4) continue
+
+			const pid = Number.parseInt(parts[0], 10)
+			const ppid = Number.parseInt(parts[1], 10)
+			const cpu = Number.parseFloat(parts[2])
+			const rssKb = Number.parseInt(parts[3], 10)
+
+			if (Number.isNaN(pid) || Number.isNaN(ppid)) continue
+
+			stats.set(pid, {
+				cpu: Number.isNaN(cpu) ? 0 : cpu,
+				rss: (Number.isNaN(rssKb) ? 0 : rssKb) * 1024,
+			})
+
+			let kids = children.get(ppid)
+
+			if (!kids) {
+				kids = []
+				children.set(ppid, kids)
+			}
+
+			kids.push(pid)
+		}
+
+		let changed = false
+
+		for (const [rootPid, name] of rootPids) {
+			const pids = this.collectDescendants(rootPid, children)
+			let totalCpu = 0
+			let totalMem = 0
+
+			for (const pid of pids) {
+				const stat = stats.get(pid)
+
+				if (stat) {
+					totalCpu += stat.cpu
+					totalMem += stat.rss
+				}
+			}
+
+			const entry = this.entry(name)
+
+			if (entry) {
+				entry.process.metrics = { cpu: totalCpu, mem: totalMem }
+				changed = true
+			}
+		}
+
+		if (changed) this.emit('change')
+	}
+
 	private readProcTree(): {
 		children: Map<number, number[]>
 		stats: Map<number, { utime: number; stime: number; rss: number }>
@@ -750,6 +827,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		const pageSize = 4096
 
 		let entries: string[]
+
 		try {
 			entries = fs.readdirSync('/proc')
 		} catch {
