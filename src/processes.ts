@@ -100,8 +100,11 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 	constructor(root: string, metrics = false) {
 		super()
+
 		this.root = root
+
 		this.metricsEnabled = metrics
+
 		this.numCpus = os.cpus().length
 	}
 
@@ -246,6 +249,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		})
 
 		const entry = this.entry(workspace.name)
+
 		if (entry) entry.child = child
 
 		this.setStatus(workspace.name, 'building')
@@ -373,6 +377,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 	): void {
 		if (code === 0) {
 			this.setStatus(workspace.name, 'stopped')
+
 			return
 		}
 
@@ -488,6 +493,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 			const req = client.get(url, { timeout: 3000 }, (res) => {
 				res.resume()
+				
 				resolve(true)
 			})
 
