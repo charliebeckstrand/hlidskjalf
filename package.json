@@ -13,6 +13,7 @@
 		"dev",
 		"pnpm"
 	],
+	"packageManager": "pnpm@10.29.3",
 	"engines": {
 		"node": ">=22"
 	},
