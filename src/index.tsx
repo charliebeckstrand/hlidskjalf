@@ -19,10 +19,13 @@ const { values } = parseArgs({
 const rawFilter = values.filter?.map((v) => v.replace(/^\{(.+)\}$/, '$1'))
 const filter = rawFilter?.filter((v) => {
 	const name = v.endsWith('...') ? v.slice(0, -3) : v
+
 	if (!isValidPackageName(name)) {
 		console.error(`Ignoring invalid filter: ${name}`)
+		
 		return false
 	}
+
 	return true
 })
 const order = values.order === 'run' ? 'run' : 'alphabetical'
