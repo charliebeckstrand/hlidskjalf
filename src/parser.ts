@@ -22,6 +22,7 @@ const DTS = /\bDTS\b/
 const matchers: { pattern: RegExp; status: Status }[] = [
 	{ pattern: /running on (https?:\/\/\S+)/, status: 'ready' },
 	{ pattern: /listening on (https?:\/\/\S+)/, status: 'ready' },
+	{ pattern: /listening at (https?:\/\/\S+)/, status: 'ready' },
 	{ pattern: /started.*?(https?:\/\/localhost:\d+)/, status: 'ready' },
 	{ pattern: /\bVITE\b.*?\bready in\b/i, status: 'ready' },
 	{ pattern: /\bLocal:\s+(https?:\/\/\S+)/, status: 'ready' },
@@ -29,6 +30,9 @@ const matchers: { pattern: RegExp; status: Status }[] = [
 	{ pattern: /⚡\uFE0F?\s*Build success/, status: 'watching' },
 	{ pattern: /Build start/, status: 'building' },
 	{ pattern: /Watching for changes/, status: 'watching' },
+	// Bare readiness signal — no URL on the line (e.g. Pino logs the port on a separate line).
+	// Keep below URL-bearing matchers so URL extraction still wins when both could match.
+	{ pattern: /\blistening\b/i, status: 'ready' },
 	{ pattern: /\[ERROR\]/, status: 'error' },
 	{ pattern: /[Ee]rror[\s:]/, status: 'error' },
 	{ pattern: /process exit/, status: 'error' },

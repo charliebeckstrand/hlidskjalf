@@ -39,6 +39,24 @@ describe('parseLine', () => {
 
 			expect(result).toEqual({ status: 'ready', url: 'http://localhost:5173' })
 		})
+
+		it('detects "listening at" with URL (Fastify-style)', () => {
+			const result = parseLine('Server listening at http://127.0.0.1:3000')
+
+			expect(result).toEqual({ status: 'ready', url: 'http://127.0.0.1:3000' })
+		})
+
+		it('detects bare "listening" without URL (Pino-style)', () => {
+			const result = parseLine('[11:31:59.315] INFO: bifrost listening')
+
+			expect(result).toEqual({ status: 'ready' })
+		})
+
+		it('detects bare "listening" case-insensitively', () => {
+			const result = parseLine('Listening')
+
+			expect(result).toEqual({ status: 'ready' })
+		})
 	})
 
 	describe('watching status', () => {
