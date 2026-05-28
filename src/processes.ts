@@ -769,10 +769,10 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 			if (parts.length < 4) continue
 
-			const pid = Number.parseInt(parts[0], 10)
-			const ppid = Number.parseInt(parts[1], 10)
-			const cpu = Number.parseFloat(parts[2])
-			const rssKb = Number.parseInt(parts[3], 10)
+			const pid = Number.parseInt(parts[0] ?? '', 10)
+			const ppid = Number.parseInt(parts[1] ?? '', 10)
+			const cpu = Number.parseFloat(parts[2] ?? '')
+			const rssKb = Number.parseInt(parts[3] ?? '', 10)
 
 			if (Number.isNaN(pid) || Number.isNaN(ppid)) continue
 
@@ -843,10 +843,10 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 				const closeParen = stat.lastIndexOf(')')
 				if (closeParen === -1) continue
 				const fields = stat.slice(closeParen + 2).split(' ')
-				const ppid = Number.parseInt(fields[1], 10)
-				const utime = Number.parseInt(fields[11], 10)
-				const stime = Number.parseInt(fields[12], 10)
-				const rss = Number.parseInt(fields[21], 10) * pageSize
+				const ppid = Number.parseInt(fields[1] ?? '', 10)
+				const utime = Number.parseInt(fields[11] ?? '', 10)
+				const stime = Number.parseInt(fields[12] ?? '', 10)
+				const rss = Number.parseInt(fields[21] ?? '', 10) * pageSize
 
 				if (Number.isNaN(ppid)) continue
 				stats.set(pid, { utime, stime, rss })
