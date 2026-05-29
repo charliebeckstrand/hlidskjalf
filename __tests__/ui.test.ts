@@ -10,7 +10,11 @@ import {
 	formatMem,
 	hyperlink,
 	memColor,
+	parseTheme,
+	setTheme,
 	statusDisplay,
+	THEME_ALIASES,
+	themes,
 	truncateEnd,
 } from '../src/ui.js'
 
@@ -58,6 +62,48 @@ describe('colors & statusDisplay', () => {
 		expect(statusDisplay.watching.color).toBe(colors.success)
 
 		expect(statusDisplay.ready.color).toBe(colors.success)
+	})
+})
+
+describe('themes', () => {
+	// setTheme mutates the shared palette; restore the default so other suites are unaffected.
+	afterEach(() => setTheme('bifrost'))
+
+	it('every built-in palette fills every slot with a hex colour', () => {
+		const slots = Object.keys(themes.bifrost)
+
+		for (const palette of Object.values(themes)) {
+			expect(Object.keys(palette)).toEqual(slots)
+
+			for (const value of Object.values(palette)) {
+				expect(value).toMatch(/^#[0-9A-Fa-f]{6}$/)
+			}
+		}
+	})
+
+	it('parses known theme names and rejects everything else', () => {
+		for (const name of Object.keys(themes)) expect(parseTheme(name)).toBe(name)
+
+		expect(parseTheme('midgard')).toBeUndefined()
+
+		expect(parseTheme(undefined)).toBeUndefined()
+
+		expect(parseTheme(42)).toBeUndefined()
+	})
+
+	it('resolves elemental aliases to their canonical realm', () => {
+		for (const [alias, realm] of Object.entries(THEME_ALIASES))
+			expect(parseTheme(alias)).toBe(realm)
+	})
+
+	it('setTheme swaps the active palette and rebuilds the status map', () => {
+		setTheme('niflheim')
+
+		expect(colors.accent).toBe(themes.niflheim.accent)
+
+		expect(statusDisplay.error.color).toBe(themes.niflheim.error)
+
+		expect(statusDisplay.watching.color).toBe(themes.niflheim.success)
 	})
 })
 

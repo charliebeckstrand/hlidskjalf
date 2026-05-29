@@ -3,7 +3,7 @@ import { render } from 'ink'
 import { App } from './app.js'
 import { loadConfig } from './config.js'
 import type { Options, SortOrder } from './types.js'
-import { enterAltScreen } from './ui.js'
+import { DEFAULT_THEME, enterAltScreen, parseTheme, setTheme, THEME_ALIASES, themes } from './ui.js'
 import { normalizeFilters } from './workspaces.js'
 
 // `--no-watch` / `--no-metrics` aren't valid parseArgs tokens, so pull them out up
@@ -30,6 +30,7 @@ const { values } = parseArgs({
 		title: { type: 'string' },
 		metrics: { type: 'boolean' },
 		watch: { type: 'boolean' },
+		theme: { type: 'string' },
 	},
 })
 
@@ -49,6 +50,18 @@ const title = values.title ?? config.title ?? 'Hlidskjalf'
 const metrics = explicit.metrics ?? values.metrics ?? config.metrics ?? false
 const watch = explicit.watch ?? values.watch ?? config.watch ?? true
 
+// A `--theme` flag that isn't a known palette shouldn't crash the dashboard — warn and
+// fall through to the configured theme, then the built-in default.
+const flagTheme = parseTheme(values.theme)
+
+if (values.theme !== undefined && flagTheme === undefined) {
+	const accepted = [...Object.keys(themes), ...Object.keys(THEME_ALIASES)].join(', ')
+	console.error(`Ignoring --theme "${values.theme}": expected one of ${accepted}.`)
+}
+const theme = flagTheme ?? config.theme ?? DEFAULT_THEME
+
+setTheme(theme)
+
 const options: Options = {
 	root,
 	order,
@@ -56,6 +69,7 @@ const options: Options = {
 	title,
 	metrics,
 	watch,
+	theme,
 }
 
 // Render on the alternate screen so the dashboard never accumulates in the scrollback;

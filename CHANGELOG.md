@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1]
+
+### Added
+
+- **Colour themes** — pick a palette with `--theme` or a `theme` key in the config.
+  Four built-ins named for the realms of Norse cosmology: `bifrost` (default),
+  `niflheim` (ice), `muspelheim` (fire), and `yggdrasil` (earth). Each realm also
+  answers to an elemental alias — `ice`, `fire`, and `earth`.
+  Status colours stay legible across every theme.
+
 ## [0.4.0]
 
 ### Changed

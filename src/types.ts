@@ -1,3 +1,5 @@
+import type { ThemeName } from './ui.js'
+
 export type WorkspaceKind = 'package' | 'app' | 'service'
 
 export type Status =
@@ -38,4 +40,5 @@ export interface Options {
 	title: string
 	metrics: boolean
 	watch: boolean
+	theme: ThemeName
 }

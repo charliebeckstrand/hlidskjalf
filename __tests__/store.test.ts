@@ -129,6 +129,7 @@ function makeStore(opts: Partial<Options> = {}): Store {
 		title: 'Test',
 		metrics: false,
 		watch: false,
+		theme: 'bifrost',
 		...opts,
 	})
 }
