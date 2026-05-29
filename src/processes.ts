@@ -5,6 +5,13 @@ import http from 'node:http'
 import https from 'node:https'
 import os from 'node:os'
 
+import {
+	collectDescendants,
+	cpuPercentFromTicks,
+	parseProcStat,
+	parsePsOutput,
+	safeEnv,
+} from './metrics.js'
 import { parseLine, sanitizeForDisplay, stripAnsi } from './parser.js'
 import type { Process, Status, Workspace } from './types.js'
 
@@ -19,50 +26,6 @@ const IDLE_THRESHOLD_MS = 300_000
 const MAX_BUFFER_SIZE = 65_536
 const MAX_LINE_LENGTH = 8192
 
-/** Allowlisted environment variable prefixes/names passed to child processes */
-const ENV_ALLOWLIST = new Set([
-	'HOME',
-	'USER',
-	'LOGNAME',
-	'SHELL',
-	'PATH',
-	'LANG',
-	'LC_ALL',
-	'LC_CTYPE',
-	'TERM',
-	'TERM_PROGRAM',
-	'COLORTERM',
-	'NODE_ENV',
-	'NODE_OPTIONS',
-	'NODE_PATH',
-	'NPM_CONFIG_REGISTRY',
-	'PNPM_HOME',
-	'COREPACK_HOME',
-	'XDG_CONFIG_HOME',
-	'XDG_DATA_HOME',
-	'XDG_CACHE_HOME',
-	'TMPDIR',
-	'TMP',
-	'TEMP',
-	'EDITOR',
-	'DISPLAY',
-	'HOSTNAME',
-])
-
-function safeEnv(): Record<string, string | undefined> {
-	const filtered: Record<string, string | undefined> = {}
-
-	for (const key of Object.keys(process.env)) {
-		if (ENV_ALLOWLIST.has(key)) {
-			filtered[key] = process.env[key]
-		}
-	}
-
-	filtered.FORCE_COLOR = '1'
-
-	return filtered
-}
-
 interface ProcessEntry {
 	process: Process
 	child: ChildProcess | null
@@ -72,6 +35,8 @@ interface ProcessEntry {
 	lastGoodStatus: Status | null
 	restartRetries: number
 	lastOutputAt: number
+	/** Set when stop/restart deliberately kills the child, so its close event is not treated as a crash. */
+	intentionalExit: boolean
 }
 
 interface RunnerEvents {
@@ -128,6 +93,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 				lastGoodStatus: null,
 				restartRetries: 0,
 				lastOutputAt: 0,
+				intentionalExit: false,
 			})
 		}
 
@@ -250,7 +216,10 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		const entry = this.entry(workspace.name)
 
-		if (entry) entry.child = child
+		if (entry) {
+			entry.child = child
+			entry.intentionalExit = false
+		}
 
 		this.setStatus(workspace.name, 'building')
 
@@ -304,6 +273,9 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 			buffer = ''
 
 			if (this.stopping) return
+
+			// A deliberate stop/restart handles its own teardown; don't treat it as a crash.
+			if (this.entry(workspace.name)?.intentionalExit) return
 
 			this.handleUnexpectedExit(workspace, code, signal)
 		})
@@ -581,8 +553,8 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 			return
 		}
 
-		// Prevent handleUnexpectedExit from restarting
-		entry.restartRetries = MAX_RESTART_RETRIES + 1
+		// Mark the upcoming close as deliberate so it isn't treated as a crash.
+		entry.intentionalExit = true
 
 		const escalate = setTimeout(() => {
 			if (child.exitCode === null) child.kill('SIGKILL')
@@ -634,8 +606,8 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 			return
 		}
 
-		// Prevent handleUnexpectedExit from restarting
-		entry.restartRetries = MAX_RESTART_RETRIES + 1
+		// Mark the upcoming close as deliberate so it isn't treated as a crash.
+		entry.intentionalExit = true
 
 		if (entry.restartTimer) {
 			clearTimeout(entry.restartTimer)
@@ -710,7 +682,8 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		let changed = false
 
 		for (const [rootPid, name] of rootPids) {
-			const pids = this.collectDescendants(rootPid, tree.children)
+			const pids = collectDescendants(rootPid, tree.children)
+
 			let totalTicks = 0
 			let totalMem = 0
 
@@ -724,22 +697,17 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 			}
 
 			const prev = this.prevCpuSnapshot.get(name)
+
 			let cpuPercent = 0
 
 			if (prev) {
-				const elapsedMs = now - prev.time
-				if (elapsedMs > 0) {
-					const tickDelta = totalTicks - prev.ticks
-					const elapsedSec = elapsedMs / 1000
-					const ticksPerSec = 100
-					cpuPercent = (tickDelta / ticksPerSec / elapsedSec / this.numCpus) * 100
-					if (cpuPercent < 0) cpuPercent = 0
-				}
+				cpuPercent = cpuPercentFromTicks(totalTicks - prev.ticks, now - prev.time, this.numCpus)
 			}
 
 			this.prevCpuSnapshot.set(name, { ticks: totalTicks, time: now })
 
 			const entry = this.entry(name)
+
 			if (entry) {
 				entry.process.metrics = { cpu: cpuPercent, mem: totalMem }
 				changed = true
@@ -761,40 +729,13 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 			return
 		}
 
-		const children = new Map<number, number[]>()
-		const stats = new Map<number, { cpu: number; rss: number }>()
-
-		for (const line of output.trim().split('\n').slice(1)) {
-			const parts = line.trim().split(/\s+/)
-
-			if (parts.length < 4) continue
-
-			const pid = Number.parseInt(parts[0], 10)
-			const ppid = Number.parseInt(parts[1], 10)
-			const cpu = Number.parseFloat(parts[2])
-			const rssKb = Number.parseInt(parts[3], 10)
-
-			if (Number.isNaN(pid) || Number.isNaN(ppid)) continue
-
-			stats.set(pid, {
-				cpu: Number.isNaN(cpu) ? 0 : cpu,
-				rss: (Number.isNaN(rssKb) ? 0 : rssKb) * 1024,
-			})
-
-			let kids = children.get(ppid)
-
-			if (!kids) {
-				kids = []
-				children.set(ppid, kids)
-			}
-
-			kids.push(pid)
-		}
+		const { children, stats } = parsePsOutput(output)
 
 		let changed = false
 
 		for (const [rootPid, name] of rootPids) {
-			const pids = this.collectDescendants(rootPid, children)
+			const pids = collectDescendants(rootPid, children)
+
 			let totalCpu = 0
 			let totalMem = 0
 
@@ -824,7 +765,6 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 	} {
 		const children = new Map<number, number[]>()
 		const stats = new Map<number, { utime: number; stime: number; rss: number }>()
-		const pageSize = 4096
 
 		let entries: string[]
 
@@ -836,26 +776,26 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		for (const entry of entries) {
 			if (!/^\d+$/.test(entry)) continue
+
 			const pid = Number.parseInt(entry, 10)
 
 			try {
-				const stat = fs.readFileSync(`/proc/${pid}/stat`, 'utf8')
-				const closeParen = stat.lastIndexOf(')')
-				if (closeParen === -1) continue
-				const fields = stat.slice(closeParen + 2).split(' ')
-				const ppid = Number.parseInt(fields[1], 10)
-				const utime = Number.parseInt(fields[11], 10)
-				const stime = Number.parseInt(fields[12], 10)
-				const rss = Number.parseInt(fields[21], 10) * pageSize
+				const parsed = parseProcStat(fs.readFileSync(`/proc/${pid}/stat`, 'utf8'))
 
-				if (Number.isNaN(ppid)) continue
+				if (!parsed) continue
+
+				const { ppid, utime, stime, rss } = parsed
+
 				stats.set(pid, { utime, stime, rss })
 
 				let kids = children.get(ppid)
+
 				if (!kids) {
 					kids = []
+
 					children.set(ppid, kids)
 				}
+
 				kids.push(pid)
 			} catch {
 				// process vanished between readdir and readFile
@@ -863,20 +803,6 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		}
 
 		return { children, stats }
-	}
-
-	private collectDescendants(rootPid: number, children: Map<number, number[]>): number[] {
-		const result: number[] = []
-		const stack = [rootPid]
-
-		while (stack.length > 0) {
-			const pid = stack.pop() as number
-			result.push(pid)
-			const kids = children.get(pid)
-			if (kids) stack.push(...kids)
-		}
-
-		return result
 	}
 
 	private notifyDependents(failedName: string): void {

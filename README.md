@@ -35,6 +35,15 @@ pnpm dev
 | `title` | Custom title for the header (`--title="My App"`). Defaults to `Hlidskjalf`. |
 | `metrics` | Show CPU and memory usage per workspace. Defaults to `false`. |
 
+## Controls
+
+| Key | Action |
+| --- | --- |
+| `↑` / `↓` or `k` / `j` | Move the selection between workspaces |
+| `s` | Stop the selected workspace (or start it again if stopped) |
+| `r` | Restart the selected workspace |
+| `q` or `Ctrl+C` | Quit |
+
 ## License
 
 MIT

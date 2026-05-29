@@ -109,7 +109,7 @@ describe('sortByName', () => {
 		const sorted = sortByName(workspaces)
 
 		expect(sorted).not.toBe(workspaces)
-		expect(workspaces[0].name).toBe('b')
+		expect(workspaces[0]?.name).toBe('b')
 	})
 })
 
@@ -147,9 +147,9 @@ describe('sortByDeps', () => {
 
 		const sorted = sortByDeps(workspaces)
 
-		expect(sorted[0].kind).toBe('package')
-		expect(sorted[1].kind).toBe('package')
-		expect(sorted[2].kind).toBe('app')
+		expect(sorted[0]?.kind).toBe('package')
+		expect(sorted[1]?.kind).toBe('package')
+		expect(sorted[2]?.kind).toBe('app')
 	})
 
 	it('does not mutate the original array', () => {
@@ -334,7 +334,35 @@ describe('discover', () => {
 
 		const result = discover(tmpDir)
 
-		expect(result[0].deps).toEqual(['utils'])
+		expect(result[0]?.deps).toEqual(['utils'])
+	})
+
+	it('ignores non-string dependency values without crashing', () => {
+		createWorkspace('apps', 'web', {
+			name: 'web',
+			scripts: { dev: 'next dev' },
+			dependencies: {
+				utils: 'workspace:*',
+				// Malformed values that would throw if treated as strings.
+				broken: 123,
+				nested: { version: '1.0.0' },
+			},
+		})
+
+		const result = discover(tmpDir)
+
+		expect(result).toEqual([{ name: 'web', kind: 'app', deps: ['utils'] }])
+	})
+
+	it('ignores non-string dev script values', () => {
+		createWorkspace('packages', 'utils', {
+			name: 'utils',
+			scripts: { dev: { run: 'tsup' } },
+		})
+
+		const result = discover(tmpDir)
+
+		expect(result).toEqual([])
 	})
 
 	it('handles missing directories gracefully', () => {

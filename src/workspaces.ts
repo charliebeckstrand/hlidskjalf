@@ -16,6 +16,23 @@ export function isValidPackageName(name: string): boolean {
 	return VALID_PKG_NAME.test(name) && name.length <= 214
 }
 
+/**
+ * Coerce an unknown value into a record of string-valued entries, dropping any
+ * non-string values. Guards downstream code against malformed package.json
+ * fields (e.g. a numeric dependency version) that would otherwise throw.
+ */
+function stringRecord(value: unknown): Record<string, string> | undefined {
+	if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined
+
+	const result: Record<string, string> = {}
+
+	for (const [key, v] of Object.entries(value)) {
+		if (typeof v === 'string') result[key] = v
+	}
+
+	return result
+}
+
 function readJson(path: string): PkgJson | null {
 	try {
 		const raw: unknown = JSON.parse(readFileSync(path, 'utf-8'))
@@ -25,17 +42,9 @@ function readJson(path: string): PkgJson | null {
 
 		const name = typeof obj.name === 'string' ? obj.name : undefined
 
-		const scripts =
-			typeof obj.scripts === 'object' && obj.scripts !== null && !Array.isArray(obj.scripts)
-				? (obj.scripts as Record<string, string>)
-				: undefined
+		const scripts = stringRecord(obj.scripts)
 
-		const dependencies =
-			typeof obj.dependencies === 'object' &&
-			obj.dependencies !== null &&
-			!Array.isArray(obj.dependencies)
-				? (obj.dependencies as Record<string, string>)
-				: undefined
+		const dependencies = stringRecord(obj.dependencies)
 
 		return { name, scripts, dependencies }
 	} catch {
