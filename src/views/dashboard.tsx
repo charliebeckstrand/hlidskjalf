@@ -1,9 +1,10 @@
-import { Box, Text, useStdout } from 'ink'
+import { Box, Text } from 'ink'
 import Spinner from 'ink-spinner'
 import { useMemo } from 'react'
 
 import { useLogScroll } from '../hooks/use-log-scroll.js'
-import { nameColumnWidth } from '../layout.js'
+import { useTerminalSize } from '../hooks/use-terminal-size.js'
+import { logPanelHeight, nameColumnWidth, urlColumnWidth } from '../layout.js'
 import { hyperlink, truncateEnd } from '../links.js'
 import { colors, statusDisplay } from '../theme.js'
 import type { Metrics, Process, Status, WorkspaceKind } from '../types.js'
@@ -181,10 +182,7 @@ function LogPanel({
 }
 
 export function Dashboard({ processes, selectedIndex, title, metrics = false }: Props) {
-	const { stdout } = useStdout()
-
-	const cols = stdout?.columns ?? 80
-	const rows = stdout?.rows ?? 24
+	const { columns: cols, rows } = useTerminalSize()
 
 	const allReady = useMemo(
 		() =>
@@ -195,10 +193,9 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 
 	const nameWidth = useMemo(() => nameColumnWidth(processes), [processes])
 
-	// 2 (paddingX) + 2 (indicator + space) + nameWidth + 6 (kind) + 14 (status) + optional 17 (cpu+mem)
-	const urlWidth = cols - nameWidth - 24 - (metrics ? 17 : 0)
+	const urlWidth = urlColumnWidth(cols, nameWidth, metrics)
 
-	const logHeight = Math.max(3, rows - processes.length - 11)
+	const logHeight = logPanelHeight(rows, processes.length)
 
 	const safeIndex = Math.min(selectedIndex, Math.max(0, processes.length - 1))
 

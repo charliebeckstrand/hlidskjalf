@@ -23,3 +23,32 @@ export function nameColumnWidth(processes: Process[], min = 14): number {
 
 	return width
 }
+
+/**
+ * Fixed horizontal space a row spends on everything except the name and URL
+ * columns: 2 (row paddingX) + 2 (selection indicator + space) + 6 (kind) + 14
+ * (status). The name column is variable (see `nameColumnWidth`) and the URL
+ * column claims whatever is left.
+ */
+const ROW_CHROME_WIDTH = 24
+
+/** Combined width of the optional CPU (8) and MEM (9) metric columns. */
+const METRICS_WIDTH = 17
+
+/**
+ * Width left for the URL column after the fixed chrome, the name column, and the
+ * optional metric columns. May come out non-positive on a narrow terminal, in
+ * which case the caller hides the URL rather than rendering a zero/negative box.
+ */
+export function urlColumnWidth(columns: number, nameWidth: number, metrics: boolean): number {
+	return columns - nameWidth - ROW_CHROME_WIDTH - (metrics ? METRICS_WIDTH : 0)
+}
+
+/**
+ * Height of the scrollback area inside the log panel: the rows left after the
+ * header, table header, one row per process, and the panel's own border/labels,
+ * floored at 3 so the panel never collapses on a short terminal.
+ */
+export function logPanelHeight(rows: number, processCount: number): number {
+	return Math.max(3, rows - processCount - 11)
+}
