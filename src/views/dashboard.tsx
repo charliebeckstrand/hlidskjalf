@@ -209,7 +209,14 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 	)
 
 	return (
-		<Box flexDirection="column">
+		// Clamp to one line below the terminal height. Ink only erases the previous
+		// frame via log-update while the rendered height stays under `stdout.rows`;
+		// once a frame reaches it, Ink falls back to a raw write and stops tracking
+		// line counts, which strands the old frame (a duplicated header) in the
+		// scrollback. Capping the height here keeps every frame on the log-update
+		// path, and `overflow: hidden` clips any transient overshoot (a wrapped row,
+		// a short terminal) rather than letting it tip past the threshold.
+		<Box flexDirection="column" height={rows - 1} overflow="hidden">
 			<Header title={title} ready={allReady} columns={cols} hints={HINTS} />
 
 			{/* Table header */}
