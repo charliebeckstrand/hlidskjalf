@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url'
 
 import type { Config } from './config.js'
 import type { SortOrder } from './types.js'
+import { isPlainObject } from './util.js'
 import { normalizeFilters } from './workspaces.js'
 
 /**
@@ -22,13 +23,13 @@ const PACKAGE_JSON_KEY = 'hlidskjalf'
  * that survived validation so merging stays additive.
  */
 function validate(raw: unknown, source: string): Config {
-	if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+	if (!isPlainObject(raw)) {
 		console.error(`Ignoring ${source}: expected a config object.`)
 
 		return {}
 	}
 
-	const obj = raw as Record<string, unknown>
+	const obj = raw
 
 	const config: Config = {}
 
@@ -67,9 +68,9 @@ function fromPackageJson(root: string): Config {
 		return {}
 	}
 
-	if (typeof parsed !== 'object' || parsed === null) return {}
+	if (!isPlainObject(parsed)) return {}
 
-	const key = (parsed as Record<string, unknown>)[PACKAGE_JSON_KEY]
+	const key = parsed[PACKAGE_JSON_KEY]
 
 	if (key === undefined) return {}
 

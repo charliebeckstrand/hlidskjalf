@@ -4,7 +4,13 @@ import { useMemo } from 'react'
 
 import { useLogScroll } from '../hooks/use-log-scroll.js'
 import { useTerminalSize } from '../hooks/use-terminal-size.js'
-import { fitNameColumnWidth, logPanelHeight, nameColumnWidth, urlColumnWidth } from '../layout.js'
+import {
+	COLUMN_WIDTHS,
+	fitNameColumnWidth,
+	logPanelHeight,
+	nameColumnWidth,
+	urlColumnWidth,
+} from '../layout.js'
 import { hyperlink, truncateEnd } from '../links.js'
 import { colors, statusDisplay } from '../theme.js'
 import type { Metrics, Process, Status, WorkspaceKind } from '../types.js'
@@ -77,10 +83,10 @@ function ProcessRow({
 					{proc.workspace.name}
 				</Text>
 			</Box>
-			<Box width={6}>
+			<Box width={COLUMN_WIDTHS.kind}>
 				<Text color={colors.muted}>{kindLabel[proc.workspace.kind]}</Text>
 			</Box>
-			<Box width={14}>
+			<Box width={COLUMN_WIDTHS.status}>
 				<Text color={color}>
 					<StatusGlyph status={proc.status} icon={icon} /> {label}
 				</Text>
@@ -105,10 +111,10 @@ function MetricsCells({ metrics }: { metrics?: Metrics }) {
 	if (!metrics) {
 		return (
 			<>
-				<Box width={8}>
+				<Box width={COLUMN_WIDTHS.cpu}>
 					<Text color={colors.dim}>{'—'}</Text>
 				</Box>
-				<Box width={9}>
+				<Box width={COLUMN_WIDTHS.mem}>
 					<Text color={colors.dim}>{'—'}</Text>
 				</Box>
 			</>
@@ -117,10 +123,10 @@ function MetricsCells({ metrics }: { metrics?: Metrics }) {
 
 	return (
 		<>
-			<Box width={8}>
+			<Box width={COLUMN_WIDTHS.cpu}>
 				<Text color={metrics.cpu > 80 ? colors.error : colors.muted}>{formatCpu(metrics.cpu)}</Text>
 			</Box>
-			<Box width={9}>
+			<Box width={COLUMN_WIDTHS.mem}>
 				<Text color={memColor(metrics.mem)}>{formatMem(metrics.mem)}</Text>
 			</Box>
 		</>
@@ -230,24 +236,24 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 						Name
 					</Text>
 				</Box>
-				<Box width={6}>
+				<Box width={COLUMN_WIDTHS.kind}>
 					<Text color={colors.muted} bold>
 						Kind
 					</Text>
 				</Box>
-				<Box width={14}>
+				<Box width={COLUMN_WIDTHS.status}>
 					<Text color={colors.muted} bold>
 						Status
 					</Text>
 				</Box>
 				{metrics && (
 					<>
-						<Box width={8}>
+						<Box width={COLUMN_WIDTHS.cpu}>
 							<Text color={colors.muted} bold>
 								CPU
 							</Text>
 						</Box>
-						<Box width={9}>
+						<Box width={COLUMN_WIDTHS.mem}>
 							<Text color={colors.muted} bold>
 								MEM
 							</Text>

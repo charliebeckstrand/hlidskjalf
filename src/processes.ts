@@ -28,6 +28,18 @@ const MIN_METRICS_INTERVAL_MS = 1_000
 const IDLE_THRESHOLD_MS = 300_000
 const MAX_BUFFER_SIZE = 65_536
 const MAX_LINE_LENGTH = 8192
+// Grace period after SIGTERM before a lingering child is force-killed with SIGKILL.
+const KILL_GRACE_MS = 5000
+
+/**
+ * Whether a spawned child is still running — it exists and the OS hasn't reported
+ * it exiting (`exitCode`) or being signalled (`signalCode`). Centralizes the
+ * three-part check the lifecycle code would otherwise repeat (and risk getting
+ * subtly wrong) at every teardown and metrics site.
+ */
+function isRunning(child: ChildProcess | null | undefined): child is ChildProcess {
+	return !!child && child.exitCode === null && child.signalCode === null
+}
 
 interface ProcessEntry {
 	process: Process
@@ -139,9 +151,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 				const entry = this.entries.get(workspace.name)
 
 				if (entry) {
-					entry.process.logs.push(
-						`[hlidskjalf] warning: dependency ${failedDeps.join(', ')} failed — starting anyway`,
-					)
+					this.note(entry, `warning: dependency ${failedDeps.join(', ')} failed — starting anyway`)
 
 					this.emit('change')
 				}
@@ -174,13 +184,11 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		for (const entry of this.entries.values()) {
 			const { child } = entry
 
-			if (!child || child.exitCode !== null || child.signalCode !== null) continue
+			if (!isRunning(child)) continue
 
 			waiting.push(
 				new Promise((resolve) => {
-					const escalate = setTimeout(() => {
-						if (child.exitCode === null) this.killTree(child, 'SIGKILL')
-					}, 5000)
+					const escalate = this.escalateKill(child)
 
 					child.on('close', () => {
 						clearTimeout(escalate)
@@ -226,6 +234,26 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		return this.entries.get(name)
 	}
 
+	/**
+	 * Arm a force-kill: if the child hasn't exited within the grace period after
+	 * its SIGTERM, SIGKILL its group. Returns the (unref'd) timer so the caller can
+	 * cancel it from the child's `close` handler.
+	 */
+	private escalateKill(child: ChildProcess): ReturnType<typeof setTimeout> {
+		const timer = setTimeout(() => {
+			if (child.exitCode === null) this.killTree(child, 'SIGKILL')
+		}, KILL_GRACE_MS)
+
+		timer.unref()
+
+		return timer
+	}
+
+	/** Append an internal hlidskjalf status line to a process's (bounded) log buffer. */
+	private note(entry: ProcessEntry, message: string): void {
+		appendLog(entry.process.logs, `[hlidskjalf] ${message}`)
+	}
+
 	private clearTimers(entry: ProcessEntry): void {
 		if (entry.restartTimer) {
 			clearTimeout(entry.restartTimer)
@@ -257,7 +285,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		const { child } = entry
 
-		if (!child || child.exitCode !== null || child.signalCode !== null) {
+		if (!isRunning(child)) {
 			entry.child = null
 
 			onClosed()
@@ -271,11 +299,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		if (!entry.teardownStarted) {
 			entry.teardownStarted = true
 
-			const escalate = setTimeout(() => {
-				if (child.exitCode === null) this.killTree(child, 'SIGKILL')
-			}, 5000)
-
-			escalate.unref()
+			const escalate = this.escalateKill(child)
 
 			child.on('close', () => {
 				clearTimeout(escalate)
@@ -350,7 +374,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 				e.startupTimer = null
 
 				if (e.process.status !== 'watching' && e.process.status !== 'ready') {
-					e.process.logs.push(`[hlidskjalf] startup timeout after ${STARTUP_TIMEOUT_MS / 1000}s`)
+					this.note(e, `startup timeout after ${STARTUP_TIMEOUT_MS / 1000}s`)
 
 					this.setStatus(workspace.name, 'timeout')
 				}
@@ -486,9 +510,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		const { restartRetries } = entry
 
 		if (restartRetries > MAX_RESTART_RETRIES) {
-			entry.process.logs.push(
-				`[hlidskjalf] process exited ${MAX_RESTART_RETRIES} times — giving up.`,
-			)
+			this.note(entry, `process exited ${MAX_RESTART_RETRIES} times — giving up.`)
 
 			this.setStatus(workspace.name, 'error')
 
@@ -497,8 +519,9 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		const delay = RESTART_DELAY_MS * 2 ** (restartRetries - 1)
 
-		entry.process.logs.push(
-			`[hlidskjalf] process exited unexpectedly (attempt ${restartRetries}/${MAX_RESTART_RETRIES}) — restarting in ${delay / 1000}s...`,
+		this.note(
+			entry,
+			`process exited unexpectedly (attempt ${restartRetries}/${MAX_RESTART_RETRIES}) — restarting in ${delay / 1000}s...`,
 		)
 		this.setStatus(workspace.name, 'error')
 
@@ -669,7 +692,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		const { child } = entry
 
-		const wasLive = !!child && child.exitCode === null && child.signalCode === null
+		const wasLive = isRunning(child)
 
 		this.beginTeardown(entry, () => {
 			entry.restartRetries = 0
@@ -678,7 +701,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		})
 
 		if (wasLive) {
-			entry.process.logs.push('[hlidskjalf] stopping process...')
+			this.note(entry, 'stopping process...')
 
 			this.emit('change')
 		}
@@ -701,7 +724,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 			entry.process.url = undefined
 
-			entry.process.logs.push('[hlidskjalf] restarting process...')
+			this.note(entry, 'restarting process...')
 
 			this.spawn(workspace)
 		}
@@ -710,12 +733,12 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		const { child } = entry
 
-		const wasLive = !!child && child.exitCode === null && child.signalCode === null
+		const wasLive = isRunning(child)
 
 		this.beginTeardown(entry, doRestart)
 
 		if (wasLive) {
-			entry.process.logs.push('[hlidskjalf] stopping process for restart...')
+			this.note(entry, 'stopping process for restart...')
 
 			this.emit('change')
 		}
@@ -822,10 +845,8 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		const rootPids = new Map<number, string>()
 
 		for (const [name, entry] of this.entries) {
-			const pid = entry.child?.pid
-
-			if (pid && entry.child?.exitCode === null) {
-				rootPids.set(pid, name)
+			if (isRunning(entry.child) && entry.child.pid !== undefined) {
+				rootPids.set(entry.child.pid, name)
 			}
 		}
 
@@ -991,9 +1012,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 			const entry = this.entry(workspace.name)
 
 			if (entry) {
-				entry.process.logs.push(
-					`[hlidskjalf] warning: dependency ${failedName} entered error state`,
-				)
+				this.note(entry, `warning: dependency ${failedName} entered error state`)
 			}
 		}
 	}

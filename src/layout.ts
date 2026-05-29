@@ -25,15 +25,34 @@ export function nameColumnWidth(processes: Process[], min = 14): number {
 }
 
 /**
- * Fixed horizontal space a row spends on everything except the name and URL
- * columns: 2 (row paddingX) + 2 (selection indicator + space) + 6 (kind) + 14
- * (status). The name column is variable (see `nameColumnWidth`) and the URL
- * column claims whatever is left.
+ * Fixed column widths shared by the dashboard's table header and every row, so
+ * the two stay in lockstep and the layout maths below derive from the same
+ * source rather than re-encoding the numbers. The name column is variable (see
+ * `nameColumnWidth`/`fitNameColumnWidth`) and the URL column claims whatever is
+ * left.
  */
-const ROW_CHROME_WIDTH = 24
+export const COLUMN_WIDTHS = {
+	/** Selection indicator (`▸`) plus its trailing space. */
+	indicator: 2,
+	kind: 6,
+	status: 14,
+	cpu: 8,
+	mem: 9,
+} as const
 
-/** Combined width of the optional CPU (8) and MEM (9) metric columns. */
-const METRICS_WIDTH = 17
+/** Horizontal padding applied to each row's outer Box (`paddingX`), per side. */
+const ROW_PADDING_X = 1
+
+/**
+ * Fixed horizontal space a row spends on everything except the name and URL
+ * columns: the row padding (both sides), the selection indicator, and the
+ * kind/status columns.
+ */
+const ROW_CHROME_WIDTH =
+	ROW_PADDING_X * 2 + COLUMN_WIDTHS.indicator + COLUMN_WIDTHS.kind + COLUMN_WIDTHS.status
+
+/** Combined width of the optional CPU and MEM metric columns. */
+const METRICS_WIDTH = COLUMN_WIDTHS.cpu + COLUMN_WIDTHS.mem
 
 /**
  * Clamp the natural name-column width to the space left for the always-visible
