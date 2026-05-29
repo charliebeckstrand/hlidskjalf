@@ -1,10 +1,19 @@
 import { useApp } from 'ink'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { type Coalescer, createCoalescer } from '../coalesce.js'
 import type { Runner } from '../processes.js'
 import { createRunner } from '../processes.js'
 import type { Options, Process } from '../types.js'
 import { discover, filterWorkspaces, sortByDeps, sortByName } from '../workspaces.js'
+
+/**
+ * Upper bound on how often the process list is re-rendered. The runner emits a
+ * change per log line, so coalescing keeps React reconciliation to ~60fps no
+ * matter how chatty the child processes are. State is always read fresh at
+ * flush time, so the latest output still lands within one frame.
+ */
+const RENDER_THROTTLE_MS = 16
 
 interface UseRunnerResult {
 	processes: Process[]
@@ -21,6 +30,7 @@ export function useRunner(options: Options): UseRunnerResult {
 	const [processes, setProcesses] = useState<Process[]>([])
 
 	const runnerRef = useRef<Runner | null>(null)
+	const coalescerRef = useRef<Coalescer | null>(null)
 	const stoppingRef = useRef(false)
 
 	const stop = useCallback(() => {
@@ -68,7 +78,9 @@ export function useRunner(options: Options): UseRunnerResult {
 
 			setProcesses(sorted.map((w) => ({ workspace: w, status: 'pending', logs: [] })))
 
-			runner.on('change', () => {
+			// Read the latest state at flush time, not when the change fired, so a
+			// coalesced burst still renders the most recent output.
+			const rebuild = () => {
 				setProcesses(
 					displayOrder.flatMap((name) => {
 						const p = runner.get(name)
@@ -76,7 +88,13 @@ export function useRunner(options: Options): UseRunnerResult {
 						return p ? [p] : []
 					}),
 				)
-			})
+			}
+
+			const coalescer = createCoalescer(rebuild, RENDER_THROTTLE_MS)
+
+			coalescerRef.current = coalescer
+
+			runner.on('change', coalescer.schedule)
 
 			setLoading(false)
 
@@ -93,6 +111,8 @@ export function useRunner(options: Options): UseRunnerResult {
 
 		return () => {
 			process.off('SIGTERM', stop)
+
+			coalescerRef.current?.cancel()
 		}
 	}, [exit, options.filter, options.metrics, options.order, options.root, stop])
 
