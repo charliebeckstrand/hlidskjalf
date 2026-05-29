@@ -28,7 +28,9 @@ function localOrigin(raw: string): string | undefined {
 	}
 
 	if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return undefined
+
 	if (!parsed.port) return undefined
+
 	if (!LOCAL_HOSTS.has(parsed.hostname)) return undefined
 
 	return parsed.origin
