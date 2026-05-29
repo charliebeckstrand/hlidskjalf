@@ -9,5 +9,5 @@
 		"skipLibCheck": true,
 		"outDir": "dist"
 	},
-	"include": ["src", "bench"]
+	"include": ["src", "__benchmarks__", "__tests__"]
 }

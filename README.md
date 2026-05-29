@@ -48,7 +48,7 @@ pnpm dev
 
 Performance-sensitive code paths — per-log-line parsing, metrics polling, and
 workspace ordering — are benchmarked with [tinybench](https://github.com/tinylibs/tinybench)
-under `bench/`. Run them with:
+under `__benchmarks__/`. Run them with:
 
 ```sh
 pnpm bench            # all suites

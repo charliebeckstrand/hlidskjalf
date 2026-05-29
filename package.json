@@ -33,7 +33,7 @@
 		"format": "biome format --write .",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run",
-		"bench": "tsx bench/index.ts"
+		"bench": "tsx __benchmarks__/index.ts"
 	},
 	"dependencies": {
 		"ink": "^5.2.1",

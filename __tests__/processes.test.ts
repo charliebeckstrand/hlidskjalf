@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createRunner, type Runner } from './processes.js'
-import type { Workspace } from './types.js'
+import { createRunner, type Runner } from '../src/processes.js'
+import type { Workspace } from '../src/types.js'
 
 // A controllable stand-in for a spawned child process. Lets tests drive
 // stdout/stderr output and exit/signal events deterministically.
