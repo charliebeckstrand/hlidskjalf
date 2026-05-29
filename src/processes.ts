@@ -1,8 +1,6 @@
 import { type ChildProcess, execFileSync, spawn } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import fs from 'node:fs'
-import http from 'node:http'
-import https from 'node:https'
 import os from 'node:os'
 
 import {
@@ -70,7 +68,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		this.metricsEnabled = metrics
 
-		this.numCpus = os.cpus().length
+		this.numCpus = os.availableParallelism()
 	}
 
 	get(name: string): Process | undefined {
@@ -459,24 +457,17 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		this.heartbeatInterval.unref()
 	}
 
-	private probeUrl(url: string): Promise<boolean> {
-		return new Promise((resolve) => {
-			const client = url.startsWith('https') ? https : http
+	private async probeUrl(url: string): Promise<boolean> {
+		try {
+			const res = await fetch(url, { signal: AbortSignal.timeout(3000) })
 
-			const req = client.get(url, { timeout: 3000 }, (res) => {
-				res.resume()
+			// Any response means the server is alive; drain the body so the socket frees.
+			await res.body?.cancel()
 
-				resolve(true)
-			})
-
-			req.on('error', () => resolve(false))
-
-			req.on('timeout', () => {
-				req.destroy()
-
-				resolve(false)
-			})
-		})
+			return true
+		} catch {
+			return false
+		}
 	}
 
 	private scheduleErrorRecovery(name: string): void {
