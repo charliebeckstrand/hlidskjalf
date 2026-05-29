@@ -58,8 +58,11 @@ export function collectDescendants(rootPid: number, children: Map<number, number
 
 	while (stack.length > 0) {
 		const pid = stack.pop() as number
+
 		result.push(pid)
+
 		const kids = children.get(pid)
+
 		if (kids) stack.push(...kids)
 	}
 
@@ -100,6 +103,7 @@ export function parsePsOutput(output: string): {
 
 		if (!kids) {
 			kids = []
+
 			children.set(ppid, kids)
 		}
 

@@ -22,6 +22,7 @@ const hoisted = vi.hoisted(() => {
 
 		constructor(args: string[]) {
 			super()
+
 			this.args = args
 		}
 
@@ -36,6 +37,7 @@ const hoisted = vi.hoisted(() => {
 			queueMicrotask(() => {
 				if (this.exitCode === null && this.signalCode === null) {
 					this.signalCode = this.lastSignal
+
 					this.emit('close', null, this.lastSignal)
 				}
 			})
@@ -52,6 +54,7 @@ const hoisted = vi.hoisted(() => {
 		exit(code: number | null, signal: string | null = null): void {
 			this.exitCode = code
 			this.signalCode = signal
+
 			this.emit('close', code, signal)
 		}
 	}
@@ -64,7 +67,9 @@ const hoisted = vi.hoisted(() => {
 vi.mock('node:child_process', () => ({
 	spawn: (_cmd: string, args: string[]) => {
 		const child = new hoisted.FakeChild(args)
+
 		hoisted.spawned.push(child)
+
 		return child
 	},
 	execFileSync: () => '',

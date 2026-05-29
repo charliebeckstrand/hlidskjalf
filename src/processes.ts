@@ -683,6 +683,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		for (const [rootPid, name] of rootPids) {
 			const pids = collectDescendants(rootPid, tree.children)
+
 			let totalTicks = 0
 			let totalMem = 0
 
@@ -696,6 +697,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 			}
 
 			const prev = this.prevCpuSnapshot.get(name)
+
 			let cpuPercent = 0
 
 			if (prev) {
@@ -705,6 +707,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 			this.prevCpuSnapshot.set(name, { ticks: totalTicks, time: now })
 
 			const entry = this.entry(name)
+
 			if (entry) {
 				entry.process.metrics = { cpu: cpuPercent, mem: totalMem }
 				changed = true
@@ -732,6 +735,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		for (const [rootPid, name] of rootPids) {
 			const pids = collectDescendants(rootPid, children)
+
 			let totalCpu = 0
 			let totalMem = 0
 
@@ -772,20 +776,26 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		for (const entry of entries) {
 			if (!/^\d+$/.test(entry)) continue
+
 			const pid = Number.parseInt(entry, 10)
 
 			try {
 				const parsed = parseProcStat(fs.readFileSync(`/proc/${pid}/stat`, 'utf8'))
+
 				if (!parsed) continue
 
 				const { ppid, utime, stime, rss } = parsed
+
 				stats.set(pid, { utime, stime, rss })
 
 				let kids = children.get(ppid)
+
 				if (!kids) {
 					kids = []
+
 					children.set(ppid, kids)
 				}
+
 				kids.push(pid)
 			} catch {
 				// process vanished between readdir and readFile
