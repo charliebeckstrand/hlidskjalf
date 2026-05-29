@@ -4,7 +4,7 @@ import type { ComponentProps, ReactNode } from 'react'
 import type { Status } from '../types.js'
 import { colors } from '../ui.js'
 
-/** A fixed-width table cell. Replaces the repeated `<Box width=…>` blocks in the table. */
+/** A fixed-width table cell. Replaces the repeated `<Box width=...>` blocks in the table. */
 export function Cell({ width, children }: { width: number; children: ReactNode }) {
 	return <Box width={width}>{children}</Box>
 }
@@ -27,5 +27,6 @@ export function Panel({ children, ...box }: ComponentProps<typeof Box> & { child
 /** An animated spinner while building, falling back to the status glyph otherwise. */
 export function StatusGlyph({ status, icon }: { status: Status; icon: string }) {
 	if (status === 'building') return <Spinner type="dots" />
+
 	return <Text>{icon}</Text>
 }

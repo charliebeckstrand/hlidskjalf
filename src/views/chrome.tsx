@@ -14,6 +14,7 @@ interface HeaderProps {
 /** Top bar shared by every screen: status dot, title, and (space permitting) key hints. */
 export function Header({ title, ready = false, columns, hints }: HeaderProps) {
 	const showHints = hints && columns >= 10 + hints.length + 4
+
 	return (
 		<Box
 			flexDirection="column"
@@ -48,6 +49,7 @@ export function Header({ title, ready = false, columns, hints }: HeaderProps) {
 /** Initial discovery screen, shown until the store registers its workspaces. */
 export function Loading({ title }: { title: string }) {
 	const { columns } = useTerminalSize()
+
 	return (
 		<Box flexDirection="column">
 			<Header title={title} columns={columns} />
@@ -63,12 +65,11 @@ export function Loading({ title }: { title: string }) {
 
 /** Every keybinding the app responds to, paired with its description. */
 const BINDINGS: ReadonlyArray<readonly [keys: string, action: string]> = [
-	['↑/↓', 'Select process'],
+	['↑/↓', 'Navigate proccesses'],
 	['s', 'Stop / start process'],
 	['r', 'Restart process'],
 	['c', 'Clear logs'],
 	['PgUp/PgDn', 'Scroll logs'],
-	['Home/End', 'Jump to oldest / newest logs'],
 	['?', 'Toggle help'],
 	['q', 'Quit'],
 ]
@@ -76,7 +77,9 @@ const BINDINGS: ReadonlyArray<readonly [keys: string, action: string]> = [
 /** Keybindings overlay, toggled with `?`. */
 export function Help({ title }: { title: string }) {
 	const { columns } = useTerminalSize()
+
 	const keyWidth = Math.max(...BINDINGS.map(([keys]) => keys.length))
+
 	return (
 		<Box flexDirection="column">
 			<Header title={title} columns={columns} hints={HINTS} />

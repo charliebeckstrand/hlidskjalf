@@ -17,14 +17,19 @@ describe('safeEnv', () => {
 			SECRET_TOKEN: 'abc',
 			AWS_SECRET_ACCESS_KEY: 'nope',
 		})
+
 		expect(env.PATH).toBe('/usr/bin')
+
 		expect(env.HOME).toBe('/home/me')
+
 		expect(env.SECRET_TOKEN).toBeUndefined()
+
 		expect(env.AWS_SECRET_ACCESS_KEY).toBeUndefined()
 	})
 
 	it('forces colour output, even with no source', () => {
 		expect(safeEnv({}).FORCE_COLOR).toBe('1')
+
 		expect(safeEnv().FORCE_COLOR).toBe('1')
 	})
 })
@@ -40,6 +45,7 @@ describe('collectDescendants', () => {
 			[2, [3]],
 			[10, [11]],
 		])
+
 		expect(collectDescendants(1, children).sort((a, b) => a - b)).toEqual([1, 2, 3])
 	})
 })
@@ -69,20 +75,27 @@ describe('parsePsOutput', () => {
 
 	it('skips the header and parses each row', () => {
 		const { stats } = parsePsOutput(output)
+
 		expect(stats.has(1)).toBe(false)
+
 		expect(stats.size).toBe(3)
+
 		expect(stats.get(100)?.rss).toBe(1024 * 1024)
+
 		expect(stats.get(200)?.cputimeTicks).toBe(1050)
 	})
 
 	it('builds a parent → children map walkable by collectDescendants', () => {
 		const { children } = parsePsOutput(output)
+
 		expect(children.get(100)?.sort((a, b) => a - b)).toEqual([200, 300])
+
 		expect(collectDescendants(100, children).sort((a, b) => a - b)).toEqual([100, 200, 300])
 	})
 
 	it('ignores malformed rows and empty output', () => {
 		expect(parsePsOutput('PID PPID TIME RSS\ngarbage line\n42 1 0:01 64').stats.size).toBe(1)
+
 		expect(parsePsOutput('').stats.size).toBe(0)
 	})
 })
@@ -97,10 +110,12 @@ describe('sumTickDeltas', () => {
 			[1, 100],
 			[2, 200],
 		])
+
 		const curr = new Map([
 			[1, 150],
 			[2, 260],
 		])
+
 		expect(sumTickDeltas(prev, curr)).toBe(110)
 	})
 
@@ -125,10 +140,15 @@ describe('parseProcStat', () => {
 	// After the comm field: index 1 = ppid, 11 = utime, 12 = stime, 21 = rss (pages).
 	function buildStat(o: { ppid: number; utime: number; stime: number; rssPages: number }): string {
 		const fields = new Array(50).fill('0')
+
 		fields[1] = String(o.ppid)
+
 		fields[11] = String(o.utime)
+
 		fields[12] = String(o.stime)
+
 		fields[21] = String(o.rssPages)
+
 		return `1234 (some comm) S ${fields.slice(1).join(' ')}`
 	}
 
@@ -140,12 +160,15 @@ describe('parseProcStat', () => {
 
 	it('handles a comm field containing spaces and parens', () => {
 		const fields = new Array(50).fill('0')
+
 		fields[1] = '7'
+
 		expect(parseProcStat(`999 (weird )( name) S ${fields.slice(1).join(' ')}`, 4096)?.ppid).toBe(7)
 	})
 
 	it('returns null on a missing comm paren or non-numeric ppid', () => {
 		expect(parseProcStat('1234 no parens here')).toBeNull()
+
 		expect(parseProcStat('1234 (comm) S notanumber')).toBeNull()
 	})
 })
@@ -153,12 +176,15 @@ describe('parseProcStat', () => {
 describe('cpuPercentFromTicks', () => {
 	it('computes a percentage of total capacity across cores', () => {
 		expect(cpuPercentFromTicks(100, 1000, 1)).toBeCloseTo(100)
+
 		expect(cpuPercentFromTicks(100, 1000, 4)).toBeCloseTo(25)
 	})
 
 	it('returns 0 for negative deltas or degenerate windows/cpus', () => {
 		expect(cpuPercentFromTicks(-50, 1000, 1)).toBe(0)
+
 		expect(cpuPercentFromTicks(100, 0, 1)).toBe(0)
+
 		expect(cpuPercentFromTicks(100, 1000, 0)).toBe(0)
 	})
 })

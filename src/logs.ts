@@ -19,6 +19,7 @@ const TRIM_SLACK = MAX_LOGS
 /** Append a line, trimming the oldest lines in batches once past MAX_LOGS + TRIM_SLACK. */
 export function appendLog(logs: string[], line: string): void {
 	logs.push(line)
+
 	if (logs.length > MAX_LOGS + TRIM_SLACK) {
 		logs.splice(0, logs.length - MAX_LOGS)
 	}
@@ -41,8 +42,12 @@ export interface LogWindow {
  */
 export function visibleLogRange(total: number, height: number, scroll: number): LogWindow {
 	const maxScroll = Math.max(0, total - height)
+
 	const clamped = Math.min(Math.max(0, scroll), maxScroll)
+
 	const end = total - clamped
+
 	const start = Math.max(0, end - height)
+
 	return { start, end, maxScroll }
 }

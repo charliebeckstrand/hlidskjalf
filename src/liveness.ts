@@ -3,8 +3,10 @@ import { every } from './ui.js'
 
 /** How often the liveness sweep runs. */
 const HEARTBEAT_INTERVAL_MS = 10_000
+
 /** Output silence after which a `ready`/`watching` process is probed and, if dead, marked idle. */
 const IDLE_THRESHOLD_MS = 300_000
+
 /** Per-probe HTTP timeout. */
 const PROBE_TIMEOUT_MS = 3000
 
@@ -16,13 +18,16 @@ const PROBE_TIMEOUT_MS = 3000
  */
 export interface Monitored {
 	readonly process: { status: Status; url?: string }
+
 	lastOutputAt: number
+
 	readonly lastGoodStatus: Status | null
 }
 
 export interface HeartbeatDeps {
 	/** The tracked processes, keyed by workspace name. */
 	entries(): Iterable<[string, Monitored]>
+
 	/** Transition a process to a new status (drives the idle ↔ ready/watching flips). */
 	setStatus(name: string, status: Status): void
 }
@@ -35,8 +40,10 @@ export interface Heartbeat {
 async function probe(url: string): Promise<boolean> {
 	try {
 		const res = await fetch(url, { signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) })
+
 		// Any response means the server is alive; drain the body so the socket frees.
 		await res.body?.cancel()
+
 		return true
 	} catch {
 		return false
@@ -51,6 +58,7 @@ async function probe(url: string): Promise<boolean> {
 export function createHeartbeat(deps: HeartbeatDeps): Heartbeat {
 	const tick = () => {
 		const now = Date.now()
+
 		for (const [name, entry] of deps.entries()) {
 			const { status, url } = entry.process
 
@@ -60,9 +68,11 @@ export function createHeartbeat(deps: HeartbeatDeps): Heartbeat {
 					// so we don't resurrect it to a running status.
 					if (alive && entry.process.status === 'idle') {
 						entry.lastOutputAt = Date.now()
+
 						deps.setStatus(name, entry.lastGoodStatus ?? 'ready')
 					}
 				})
+
 				continue
 			}
 

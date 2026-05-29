@@ -46,21 +46,29 @@ export function safeEnv(
 	source: NodeJS.ProcessEnv = process.env,
 ): Record<string, string | undefined> {
 	const filtered: Record<string, string | undefined> = {}
+
 	for (const key of Object.keys(source)) {
 		if (ENV_ALLOWLIST.has(key)) filtered[key] = source[key]
 	}
+
 	filtered.FORCE_COLOR = '1'
+
 	return filtered
 }
 
 /** Collect a root pid and all its (transitive) descendants from a parent→children map. */
 export function collectDescendants(rootPid: number, children: Map<number, number[]>): number[] {
 	const result: number[] = []
+
 	const stack = [rootPid]
+
 	while (stack.length > 0) {
 		const pid = stack.pop() as number
+
 		result.push(pid)
+
 		const kids = children.get(pid)
+
 		// Push children one at a time rather than spreading: a spread passes every child
 		// as a function argument, which throws RangeError on a pathologically wide tree.
 		if (kids) {
@@ -83,27 +91,40 @@ export interface PsStat {
  */
 export function parseCpuTime(raw: string): number {
 	let rest = raw.trim()
+
 	if (!rest) return 0
 
 	let days = 0
+
 	const dash = rest.indexOf('-')
+
 	if (dash !== -1) {
 		days = Number.parseInt(rest.slice(0, dash), 10)
+
 		if (Number.isNaN(days)) return 0
+
 		rest = rest.slice(dash + 1)
 	}
 
 	const parts = rest.split(':')
+
 	let seconds = 0
+
 	let multiplier = 1
+
 	// Walk colon-separated fields right-to-left (seconds, minutes, hours).
 	for (let i = parts.length - 1; i >= 0; i--) {
 		const value = Number.parseFloat(parts[i] ?? '')
+
 		if (Number.isNaN(value)) return 0
+
 		seconds += value * multiplier
+
 		multiplier *= 60
 	}
+
 	seconds += days * 86_400
+
 	return Math.round(seconds * 100)
 }
 
@@ -113,25 +134,37 @@ export function parsePsOutput(output: string): {
 	stats: Map<number, PsStat>
 } {
 	const children = new Map<number, number[]>()
+
 	const stats = new Map<number, PsStat>()
 
 	for (const line of output.trim().split('\n').slice(1)) {
 		const parts = line.trim().split(/\s+/)
+
 		if (parts.length < 4) continue
+
 		const pid = Number.parseInt(parts[0] ?? '', 10)
+
 		const ppid = Number.parseInt(parts[1] ?? '', 10)
+
 		const cputimeTicks = parseCpuTime(parts[2] ?? '')
+
 		const rssKb = Number.parseInt(parts[3] ?? '', 10)
+
 		if (Number.isNaN(pid) || Number.isNaN(ppid)) continue
 
 		stats.set(pid, { cputimeTicks, rss: (Number.isNaN(rssKb) ? 0 : rssKb) * 1024 })
+
 		let kids = children.get(ppid)
+
 		if (!kids) {
 			kids = []
+
 			children.set(ppid, kids)
 		}
+
 		kids.push(pid)
 	}
+
 	return { children, stats }
 }
 
@@ -146,11 +179,15 @@ export function sumTickDeltas(
 	curr: Map<number, number>,
 ): number {
 	if (!prev) return 0
+
 	let delta = 0
+
 	for (const [pid, ticks] of curr) {
 		const before = prev.get(pid)
+
 		if (before !== undefined && ticks > before) delta += ticks - before
 	}
+
 	return delta
 }
 
@@ -169,14 +206,21 @@ export function parseProcStat(content: string, pageSize = 4096): ProcStat | null
 	// The comm field (field 2) is wrapped in parens and may contain spaces/parens, so
 	// split after the final ')'.
 	const closeParen = content.lastIndexOf(')')
+
 	if (closeParen === -1) return null
 
 	const fields = content.slice(closeParen + 2).split(' ')
+
 	const ppid = Number.parseInt(fields[1] ?? '', 10)
+
 	const utime = Number.parseInt(fields[11] ?? '', 10)
+
 	const stime = Number.parseInt(fields[12] ?? '', 10)
+
 	const rss = Number.parseInt(fields[21] ?? '', 10) * pageSize
+
 	if (Number.isNaN(ppid)) return null
+
 	return { ppid, utime, stime, rss }
 }
 
@@ -191,7 +235,9 @@ export function cpuPercentFromTicks(
 	ticksPerSec = 100,
 ): number {
 	if (elapsedMs <= 0 || numCpus <= 0) return 0
+
 	const elapsedSec = elapsedMs / 1000
+
 	return Math.max(0, (tickDelta / ticksPerSec / elapsedSec / numCpus) * 100)
 }
 
@@ -199,10 +245,12 @@ export function cpuPercentFromTicks(
 
 /** Periodic fallback poll interval. */
 const METRICS_INTERVAL_MS = 3_000
+
 // Floor on the gap between two CPU samples. Event-driven sampling can ask sooner than
 // the periodic poll, but a delta over too short a window is dominated by tick-granularity
 // noise, so never sample faster than this.
 const MIN_METRICS_INTERVAL_MS = 1_000
+
 /** Hard cap on the `ps` call so a wedged process table can't stall the poll. */
 const PS_TIMEOUT_MS = 5_000
 
@@ -232,9 +280,13 @@ export interface Meter {
  */
 export function createMeter(deps: MeterDeps): Meter {
 	const prevCpuSnapshot = new Map<string, { time: number; perPid: Map<number, number> }>()
+
 	const numCpus = os.availableParallelism()
+
 	let timer: ReturnType<typeof setTimeout> | null = null
+
 	let lastSampleAt = 0
+
 	let stopped = false
 
 	/**
@@ -248,18 +300,27 @@ export function createMeter(deps: MeterDeps): Meter {
 		statOf: (pid: number) => { ticks: number; rss: number } | undefined,
 	): boolean => {
 		const prev = prevCpuSnapshot.get(name)
+
 		const perPid = new Map<number, number>()
+
 		let totalMem = 0
+
 		for (const pid of pids) {
 			const stat = statOf(pid)
+
 			if (!stat) continue
+
 			perPid.set(pid, stat.ticks)
+
 			totalMem += stat.rss
 		}
+
 		const cpu = prev
 			? cpuPercentFromTicks(sumTickDeltas(prev.perPid, perPid), now - prev.time, numCpus)
 			: 0
+
 		prevCpuSnapshot.set(name, { time: now, perPid })
+
 		return deps.setMetrics(name, { cpu, mem: totalMem })
 	}
 
@@ -268,26 +329,39 @@ export function createMeter(deps: MeterDeps): Meter {
 		stats: Map<number, { utime: number; stime: number; rss: number }>
 	} => {
 		const children = new Map<number, number[]>()
+
 		const stats = new Map<number, { utime: number; stime: number; rss: number }>()
+
 		let entries: string[]
+
 		try {
 			entries = fs.readdirSync('/proc')
 		} catch {
 			return { children, stats }
 		}
+
 		for (const entry of entries) {
 			if (!/^\d+$/.test(entry)) continue
+
 			const pid = Number.parseInt(entry, 10)
+
 			try {
 				const parsed = parseProcStat(fs.readFileSync(`/proc/${pid}/stat`, 'utf8'))
+
 				if (!parsed) continue
+
 				const { ppid, utime, stime, rss } = parsed
+
 				stats.set(pid, { utime, stime, rss })
+
 				let kids = children.get(ppid)
+
 				if (!kids) {
 					kids = []
+
 					children.set(ppid, kids)
 				}
+
 				kids.push(pid)
 			} catch {
 				// process vanished between readdir and readFile
@@ -298,21 +372,29 @@ export function createMeter(deps: MeterDeps): Meter {
 
 	const collectProc = (roots: Map<number, string>): void => {
 		const tree = readProcTree()
+
 		const now = Date.now()
+
 		let changed = false
+
 		for (const [rootPid, name] of roots) {
 			const pids = collectDescendants(rootPid, tree.children)
+
 			const updated = apply(name, pids, now, (pid) => {
 				const stat = tree.stats.get(pid)
+
 				return stat ? { ticks: stat.utime + stat.stime, rss: stat.rss } : undefined
 			})
+
 			changed = changed || updated
 		}
+
 		if (changed) deps.onChange()
 	}
 
 	const collectPs = (roots: Map<number, string>): void => {
 		let output: string
+
 		try {
 			output = execFileSync('ps', ['-eo', 'pid,ppid,time,rss'], {
 				encoding: 'utf8',
@@ -321,15 +403,22 @@ export function createMeter(deps: MeterDeps): Meter {
 		} catch {
 			return
 		}
+
 		const { children, stats } = parsePsOutput(output)
+
 		const now = Date.now()
+
 		let changed = false
+
 		for (const [rootPid, name] of roots) {
 			const pids = collectDescendants(rootPid, children)
+
 			const updated = apply(name, pids, now, (pid) => {
 				const stat = stats.get(pid)
+
 				return stat ? { ticks: stat.cputimeTicks, rss: stat.rss } : undefined
 			})
+
 			changed = changed || updated
 		}
 		if (changed) deps.onChange()
@@ -337,31 +426,42 @@ export function createMeter(deps: MeterDeps): Meter {
 
 	const collect = (): void => {
 		if (stopped) return
+
 		lastSampleAt = Date.now()
+
 		const roots = deps.roots()
+
 		if (roots.size === 0) return
+
 		if (process.platform === 'linux') collectProc(roots)
 		else collectPs(roots)
 	}
 
 	const schedule = (delay: number): void => {
 		if (timer) clearTimeout(timer)
+
 		timer = setTimeout(() => {
 			timer = null
+
 			collect()
+
 			if (!stopped) schedule(METRICS_INTERVAL_MS)
 		}, delay)
+
 		timer.unref()
 	}
 
 	// Seed per-PID baselines (this first sample reports 0% CPU) and arm the poll.
 	collect()
+
 	schedule(METRICS_INTERVAL_MS)
 
 	return {
 		request() {
 			if (stopped) return
+
 			const sinceLast = Date.now() - lastSampleAt
+
 			schedule(Math.max(0, MIN_METRICS_INTERVAL_MS - sinceLast))
 		},
 		reset(name) {
@@ -369,8 +469,10 @@ export function createMeter(deps: MeterDeps): Meter {
 		},
 		stop() {
 			stopped = true
+
 			if (timer) {
 				clearTimeout(timer)
+
 				timer = null
 			}
 		},

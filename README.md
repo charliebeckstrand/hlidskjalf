@@ -87,7 +87,6 @@ stopped and dropped from the dashboard. Pass `--no-watch` (or set
 | `r` | Restart the selected workspace |
 | `c` | Clear the logs for the selected workspace |
 | `PgUp` / `PgDn` | Scroll the log panel up / down a page |
-| `Home` / `End` | Jump to the oldest / newest log lines (`End` resumes following) |
 | `q` | Quit |
 
 ## License

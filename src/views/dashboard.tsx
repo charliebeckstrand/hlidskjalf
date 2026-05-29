@@ -77,6 +77,7 @@ function ProcessRow({
 	urlWidth: number
 }) {
 	const { color, label, icon } = statusDisplay[proc.status]
+
 	return (
 		<Box paddingX={1}>
 			<Text color={selected ? colors.highlight : colors.dim}>{selected ? '▸' : ' '}</Text>
@@ -124,7 +125,9 @@ function LogPanel({
 	atBottom: boolean
 }) {
 	const logLines = proc.logs.slice(start, end)
+
 	const fillCount = height - logLines.length
+
 	const hidden = proc.logs.length - end
 
 	return (
@@ -166,7 +169,9 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 	// Natural width fits the longest name; the URL's full width is reserved first, then
 	// the name takes what's left (truncating before it can squeeze the URL).
 	const naturalNameWidth = useMemo(() => nameColumnWidth(processes), [processes])
+
 	const urlContent = useMemo(() => urlContentWidth(processes), [processes])
+
 	const { name: nameWidth, url: urlWidth } = columnWidths(
 		cols,
 		naturalNameWidth,
@@ -175,7 +180,9 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 	)
 
 	const logHeight = logPanelHeight(rows, processes.length)
+
 	const safeIndex = Math.min(selectedIndex, Math.max(0, processes.length - 1))
+
 	const selected = processes[safeIndex]
 
 	const scroll = useLogScroll(

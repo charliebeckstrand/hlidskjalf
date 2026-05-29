@@ -57,18 +57,26 @@ const PACKAGE_JSON_KEY = 'hlidskjalf'
 function validate(raw: unknown, source: string): Config {
 	if (!isPlainObject(raw)) {
 		console.error(`Ignoring ${source}: expected a config object.`)
+
 		return {}
 	}
+
 	const config: Config = {}
 
 	if (Array.isArray(raw.filter)) {
 		const strings = raw.filter.filter((v): v is string => typeof v === 'string')
+
 		const filter = normalizeFilters(strings)
+
 		if (filter.length) config.filter = filter
 	}
+
 	if (raw.order === 'run' || raw.order === 'alphabetical') config.order = raw.order
+
 	if (typeof raw.title === 'string') config.title = raw.title
+
 	if (typeof raw.metrics === 'boolean') config.metrics = raw.metrics
+
 	if (typeof raw.watch === 'boolean') config.watch = raw.watch
 
 	return config
@@ -77,18 +85,23 @@ function validate(raw: unknown, source: string): Config {
 /** Read and validate the `hlidskjalf` key from the root package.json, if present. */
 function fromPackageJson(root: string): Config {
 	const path = join(root, 'package.json')
+
 	if (!existsSync(path)) return {}
 
 	let parsed: unknown
+
 	try {
 		parsed = JSON.parse(readFileSync(path, 'utf-8'))
 	} catch {
 		return {}
 	}
+
 	if (!isPlainObject(parsed)) return {}
 
 	const key = parsed[PACKAGE_JSON_KEY]
+
 	if (key === undefined) return {}
+
 	return validate(key, `package.json "${PACKAGE_JSON_KEY}" key`)
 }
 
@@ -96,15 +109,20 @@ function fromPackageJson(root: string): Config {
 async function fromConfigFile(root: string): Promise<Config> {
 	for (const name of CONFIG_FILES) {
 		const path = join(root, name)
+
 		if (!existsSync(path)) continue
+
 		try {
 			const mod = (await import(pathToFileURL(path).href)) as { default?: unknown }
+
 			return validate(mod.default ?? mod, name)
 		} catch (err) {
 			console.error(`Ignoring ${name}: ${err instanceof Error ? err.message : 'failed to load'}`)
+
 			return {}
 		}
 	}
+
 	return {}
 }
 
@@ -115,6 +133,8 @@ async function fromConfigFile(root: string): Promise<Config> {
  */
 export async function loadConfig(root: string): Promise<Config> {
 	const fromPkg = fromPackageJson(root)
+
 	const fromFile = await fromConfigFile(root)
+
 	return { ...fromPkg, ...fromFile }
 }

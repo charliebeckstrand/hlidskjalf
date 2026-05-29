@@ -20,6 +20,7 @@ export function layoutSuite(): Bench {
 	const bench = new Bench({ name: 'layout — dashboard column widths', time: 500 })
 
 	const small = makeProcesses(20)
+
 	const large = makeProcesses(200)
 
 	bench

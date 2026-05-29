@@ -19,15 +19,21 @@ const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '0.0.0.0'])
  */
 function localOrigin(raw: string): string | undefined {
 	const cleaned = raw.replace(/[.,;:!?)}\]]+$/, '')
+
 	let parsed: URL
+
 	try {
 		parsed = new URL(cleaned)
 	} catch {
 		return undefined
 	}
+
 	if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return undefined
+
 	if (!parsed.port) return undefined
+
 	if (!LOCAL_HOSTS.has(parsed.hostname)) return undefined
+
 	return parsed.origin
 }
 
@@ -61,17 +67,23 @@ const matchers = baseMatchers.map((m) => ({ ...m, needsHttp: m.pattern.source.in
 
 export function parseLine(line: string): ParsedLine {
 	const truncated = line.length > MAX_PARSE_LENGTH ? line.slice(0, MAX_PARSE_LENGTH) : line
+
 	if (DTS.test(truncated)) return {}
 
 	const hasHttp = truncated.includes('http')
+
 	for (const { pattern, status, needsHttp } of matchers) {
 		if (needsHttp && !hasHttp) continue
+
 		const match = truncated.match(pattern)
+
 		if (match) {
 			const url = match[1] ? localOrigin(match[1]) : undefined
+
 			return { status, url }
 		}
 	}
+
 	return {}
 }
 
@@ -81,6 +93,7 @@ export function parseLine(line: string): ParsedLine {
  */
 export function stripAnsi(text: string): string {
 	if (!text.includes('\x1b')) return text
+
 	return stripVTControlCharacters(text)
 }
 
@@ -103,12 +116,17 @@ const BARE_CONTROLS =
  */
 export function sanitizeForDisplay(text: string): string {
 	const hasEscape = text.includes('\x1b')
+
 	// search() ignores /g lastIndex, so the regex is safe to reuse for the replace below.
 	const hasControl = text.search(BARE_CONTROLS) !== -1
+
 	if (!hasEscape && !hasControl) return text
 
 	let out = text
+
 	if (hasEscape) out = out.replace(NON_SGR_ESCAPES, '')
+
 	if (hasControl) out = out.replace(BARE_CONTROLS, '')
+
 	return out
 }

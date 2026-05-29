@@ -20,24 +20,58 @@ type Phase = 'loading' | 'running'
 
 export function App({ options }: Props) {
 	const { exit } = useApp()
+
 	const [store] = useState(() => createStore(options))
 
-	// Bridge the external store into React. `useDeferredValue` keeps a log flood at low
-	// priority so React coalesces the burst into far fewer committed renders, which is
-	// what the old hand-rolled coalescer did — now built-in.
-	const subscribe = useCallback((cb: () => void) => store.subscribe(cb), [store])
+	// Bridge the external store into React. The store notifies per output line; a chatty
+	// dev server emits hundreds a second, and `useSyncExternalStore` schedules a
+	// synchronous re-render on every notification. Forwarding each one trips React's
+	// nested-update guard ("Maximum update depth exceeded") and pegs the CPU, so coalesce
+	// a burst into a single React update per event-loop turn. `getSnapshot` still returns
+	// the latest state synchronously, so no output is dropped — only the render is batched.
+	// (`useDeferredValue` below additionally de-prioritizes rendering that batched value.)
+	const subscribe = useCallback(
+		(onStoreChange: () => void) => {
+			let pending: ReturnType<typeof setImmediate> | undefined
+
+			const unsubscribe = store.subscribe(() => {
+				if (pending) return
+
+				pending = setImmediate(() => {
+					pending = undefined
+
+					onStoreChange()
+				})
+			})
+
+			return () => {
+				if (pending) clearImmediate(pending)
+
+				unsubscribe()
+			}
+		},
+		[store],
+	)
+
 	const getSnapshot = useCallback(() => store.getSnapshot(), [store])
+
 	const live = useSyncExternalStore(subscribe, getSnapshot)
+
 	const processes = useDeferredValue(live)
 
 	const [phase, setPhase] = useState<Phase>('loading')
+
 	const [showHelp, setShowHelp] = useState(false)
+
 	const [cursorState, setCursor] = useState(0)
+
 	const stopping = useRef(false)
 
 	const stop = useCallback(() => {
 		if (stopping.current) return
+
 		stopping.current = true
+
 		store
 			.shutdown()
 			.catch(() => {})
@@ -46,10 +80,12 @@ export function App({ options }: Props) {
 
 	useEffect(() => {
 		let active = true
+
 		store
 			.start()
 			.then((started) => {
 				if (!active) return
+
 				if (started) {
 					setPhase('running')
 				} else {
@@ -63,9 +99,12 @@ export function App({ options }: Props) {
 			})
 
 		process.on('SIGTERM', stop)
+
 		return () => {
 			active = false
+
 			process.off('SIGTERM', stop)
+
 			void store.shutdown()
 		}
 	}, [store, exit, stop])
@@ -77,30 +116,41 @@ export function App({ options }: Props) {
 	useInput((input, key) => {
 		if (input === 'q' || (key.ctrl && input === 'c')) {
 			stop()
+
 			return
 		}
+
 		if (input === '?') {
 			setShowHelp((open) => !open)
+
 			return
 		}
+
 		// While help is open it captures all other input; Esc closes it.
 		if (showHelp) {
 			if (key.escape) setShowHelp(false)
+
 			return
 		}
+
 		if (processes.length === 0) return
 
 		if (key.upArrow || input === 'k') {
 			setCursor((i) => Math.max(0, i - 1))
+
 			return
 		}
+
 		if (key.downArrow || input === 'j') {
 			setCursor((i) => Math.min(processes.length - 1, i + 1))
+
 			return
 		}
 
 		const selected = processes[cursor]
+
 		if (!selected) return
+
 		const { name } = selected.workspace
 
 		if (input === 's') {
@@ -114,7 +164,9 @@ export function App({ options }: Props) {
 	})
 
 	if (phase === 'loading') return <Loading title={options.title} />
+
 	if (showHelp) return <Help title={options.title} />
+
 	return (
 		<Dashboard
 			processes={processes}

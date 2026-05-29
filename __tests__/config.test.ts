@@ -19,6 +19,7 @@ describe('loadConfig', () => {
 
 	beforeEach(() => {
 		tmpDir = fs.mkdtempSync(join(fs.realpathSync(os.tmpdir()), 'hlidskjalf-config-'))
+
 		// Validation warnings are expected in several cases — keep test output clean.
 		vi.spyOn(console, 'error').mockImplementation(() => {})
 	})
@@ -36,17 +37,21 @@ describe('loadConfig', () => {
 
 	it('reads the package.json "hlidskjalf" key and ignores a keyless or broken file', async () => {
 		write('package.json', JSON.stringify({ hlidskjalf: { order: 'run', metrics: true } }))
+
 		expect(await loadConfig(tmpDir)).toEqual({ order: 'run', metrics: true })
 
 		write('package.json', JSON.stringify({ name: 'root' }))
+
 		expect(await loadConfig(tmpDir)).toEqual({})
 
 		write('package.json', '{ not valid json')
+
 		expect(await loadConfig(tmpDir)).toEqual({})
 	})
 
 	it('reads the default export of hlidskjalf.config.ts', async () => {
 		write('hlidskjalf.config.ts', 'export default { order: "run", title: "Mine", watch: false }')
+
 		expect(await loadConfig(tmpDir)).toEqual({ order: 'run', title: 'Mine', watch: false })
 	})
 
@@ -56,12 +61,15 @@ describe('loadConfig', () => {
 			`import { defineConfig } from ${JSON.stringify(CONFIG_SRC)}\n` +
 				'export default defineConfig({ metrics: true })',
 		)
+
 		expect(await loadConfig(tmpDir)).toEqual({ metrics: true })
 	})
 
 	it('lets the config file override the package.json key, merging the rest', async () => {
 		write('package.json', JSON.stringify({ hlidskjalf: { order: 'run', metrics: true } }))
+
 		write('hlidskjalf.config.ts', 'export default { order: "alphabetical" }')
+
 		expect(await loadConfig(tmpDir)).toEqual({ order: 'alphabetical', metrics: true })
 	})
 
@@ -72,21 +80,25 @@ describe('loadConfig', () => {
 			'hlidskjalf.config.ts',
 			'export default { order: "sideways", metrics: "yes", title: 5, watch: 1 }',
 		)
+
 		expect(await loadConfig(tmpDir)).toEqual({})
 	})
 
 	it('keeps only valid filter entries', async () => {
 		write('hlidskjalf.config.ts', 'export default { filter: ["web", "api...", "Bad Name", 42] }')
+
 		expect(await loadConfig(tmpDir)).toEqual({ filter: ['web', 'api...'] })
 	})
 
 	it('drops a non-array filter', async () => {
 		write('hlidskjalf.config.ts', 'export default { filter: "web" }')
+
 		expect(await loadConfig(tmpDir)).toEqual({})
 	})
 
 	it('ignores a config file that throws on import', async () => {
 		write('hlidskjalf.config.ts', 'throw new Error("boom")')
+
 		expect(await loadConfig(tmpDir)).toEqual({})
 	})
 })

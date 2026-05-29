@@ -48,6 +48,7 @@ export function parserSuite(): Bench {
 		})
 		.add('full pipeline: sanitize + strip + classify', () => {
 			sanitizeForDisplay(LOG_LINES.ansiHeavy)
+
 			parseLine(stripAnsi(LOG_LINES.ansiHeavy))
 		})
 

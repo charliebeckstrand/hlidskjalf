@@ -27,6 +27,7 @@ export function logsSuite(): Bench {
 	// Prefill to capacity so we measure steady-state appends, not the initial
 	// fill. Each task mutates its own buffer; both self-regulate via trimming.
 	const amortized = Array.from({ length: MAX_LOGS }, () => line)
+
 	const naive = Array.from({ length: MAX_LOGS }, () => line)
 
 	bench

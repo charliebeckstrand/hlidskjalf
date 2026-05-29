@@ -82,6 +82,7 @@ describe('parseLine', () => {
 	describe('edge cases', () => {
 		it('returns empty for unrecognized and empty lines', () => {
 			expect(parseLine('just some regular log output')).toEqual({})
+
 			expect(parseLine('')).toEqual({})
 		})
 
@@ -94,7 +95,9 @@ describe('parseLine', () => {
 describe('sanitizeForDisplay', () => {
 	it('preserves plain text and SGR colour codes', () => {
 		expect(sanitizeForDisplay('hello world')).toBe('hello world')
+
 		const colored = '\x1b[31mred text\x1b[0m'
+
 		expect(sanitizeForDisplay(colored)).toBe(colored)
 	})
 
@@ -117,8 +120,11 @@ describe('sanitizeForDisplay', () => {
 
 	it('strips bare control bytes (BEL, backspace, CR, form feed) but keeps tabs', () => {
 		expect(sanitizeForDisplay('build done\x07')).toBe('build done')
+
 		expect(sanitizeForDisplay('\x07')).toBe('')
+
 		expect(sanitizeForDisplay('a\x08b\rc\x0cd')).toBe('abcd')
+
 		expect(sanitizeForDisplay('\x1b[31mred\x1b[0m\tdone\x07')).toBe('\x1b[31mred\x1b[0m\tdone')
 	})
 })

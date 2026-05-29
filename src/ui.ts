@@ -39,7 +39,7 @@ export const statusDisplay = {
 } as const satisfies Record<Status, { color: string; label: string; icon: string }>
 
 /** Footer/header hint string shared by every screen. */
-export const HINTS = '? help   q quit'
+export const HINTS = '↑/↓ navigate | ? help | q quit'
 
 // --- Value formatters (dashboard metric cells) ---------------------------------
 
@@ -51,9 +51,11 @@ export function formatCpu(cpu: number): string {
 /** Format a byte count as a right-aligned K/M/G value in a seven-column field. */
 export function formatMem(bytes: number): string {
 	let s: string
+
 	if (bytes < 1024 * 1024) s = `${(bytes / 1024).toFixed(0)} K`
 	else if (bytes < 1024 * 1024 * 1024) s = `${(bytes / (1024 * 1024)).toFixed(1)} M`
 	else s = `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} G`
+
 	return s.padStart(7)
 }
 
@@ -61,6 +63,7 @@ export function formatMem(bytes: number): string {
 export function memColor(bytes: number): string {
 	if (bytes > 512 * 1024 * 1024) return colors.error
 	if (bytes > 256 * 1024 * 1024) return colors.warning
+
 	return colors.muted
 }
 
@@ -72,8 +75,10 @@ export function cpuColor(metrics: Metrics): string {
 // --- Terminal hyperlinks -------------------------------------------------------
 
 const ESC = String.fromCharCode(27)
+
 /** OSC 8 hyperlink introducer (no params): ESC ] 8 ; ; */
 const OSC8 = `${ESC}]8;;`
+
 /**
  * OSC terminator. The spec allows BEL or ST, but Ink's renderer
  * (`@alcalzone/ansi-tokenize`) only recognises the BEL form — feeding it ST makes
@@ -98,9 +103,12 @@ export function hyperlink(url: string, label: string = url): string {
  */
 export function truncateEnd(text: string, width: number): string {
 	if (width <= 0) return ''
+
 	if (text.length <= width) return text
-	if (width === 1) return '…'
-	return `${text.slice(0, width - 1)}…`
+
+	if (width === 1) return '...'
+
+	return `${text.slice(0, width - 1)}...`
 }
 
 // --- Alternate screen ----------------------------------------------------------
@@ -117,14 +125,21 @@ const EXIT_ALT_SCREEN = '\x1b[?1049l'
  */
 export function enterAltScreen(stream: NodeJS.WriteStream = process.stdout): () => void {
 	if (!stream.isTTY) return () => {}
+
 	stream.write(ENTER_ALT_SCREEN)
+
 	let restored = false
+
 	const restore = () => {
 		if (restored) return
+
 		restored = true
+
 		stream.write(EXIT_ALT_SCREEN)
 	}
+
 	process.once('exit', restore)
+
 	return restore
 }
 
@@ -136,13 +151,17 @@ export function enterAltScreen(stream: NodeJS.WriteStream = process.stdout): () 
  */
 export function every(ms: number, fn: () => void): () => void {
 	const t = setInterval(fn, ms)
+
 	t.unref()
+
 	return () => clearInterval(t)
 }
 
 /** Schedule an unref'd timeout and return a canceller. */
 export function after(ms: number, fn: () => void): () => void {
 	const t = setTimeout(fn, ms)
+
 	t.unref()
+
 	return () => clearTimeout(t)
 }

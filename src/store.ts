@@ -64,14 +64,17 @@ function isRunning(child: ChildProcess | null | undefined): child is ChildProces
  */
 function killTree(child: ChildProcess, signal: NodeJS.Signals): void {
 	const { pid } = child
+
 	if (pid !== undefined) {
 		try {
 			process.kill(-pid, signal)
+
 			return
 		} catch {
 			// Group already exited, or the child never became a leader.
 		}
 	}
+
 	try {
 		child.kill(signal)
 	} catch {
@@ -87,7 +90,9 @@ function escalateKill(child: ChildProcess): ReturnType<typeof setTimeout> {
 	const timer = setTimeout(() => {
 		if (child.exitCode === null) killTree(child, 'SIGKILL')
 	}, KILL_GRACE_MS)
+
 	timer.unref()
+
 	return timer
 }
 
@@ -126,6 +131,7 @@ class ProcessStore implements Store {
 
 	subscribe(listener: () => void): () => void {
 		this.listeners.add(listener)
+
 		return () => this.listeners.delete(listener)
 	}
 
@@ -133,16 +139,20 @@ class ProcessStore implements Store {
 		if (this.dirty) {
 			this.snapshot = this.order.flatMap((name) => {
 				const proc = this.entries.get(name)?.process
+
 				return proc ? [proc] : []
 			})
+
 			this.dirty = false
 		}
+
 		return this.snapshot
 	}
 
 	/** Mark the snapshot stale and notify subscribers (React + internal waiters). */
 	private changed(): void {
 		this.dirty = true
+
 		for (const listener of this.listeners) listener()
 	}
 
@@ -150,6 +160,7 @@ class ProcessStore implements Store {
 
 	private discoverFiltered(): Workspace[] {
 		const found = discover(this.root)
+
 		return this.filter ? filterWorkspaces(found, this.filter) : found
 	}
 
@@ -161,15 +172,19 @@ class ProcessStore implements Store {
 
 	async start(): Promise<boolean> {
 		const workspaces = this.discoverFiltered()
+
 		if (workspaces.length === 0) return false
 
 		const startOrder = sortByDeps(workspaces)
+
 		const sorted = this.sortForDisplay(workspaces)
+
 		this.order = sorted.map((w) => w.name)
 
 		for (const workspace of workspaces) {
 			this.entries.set(workspace.name, ProcessStore.newEntry(workspace))
 		}
+
 		this.changed()
 
 		if (this.watchEnabled) {
@@ -178,11 +193,13 @@ class ProcessStore implements Store {
 
 		// Spawn in the background; the dashboard already renders the pending list.
 		void this.spawnAll(startOrder)
+
 		return true
 	}
 
 	private async spawnAll(workspaces: Workspace[]): Promise<void> {
 		this.allWorkspaces = workspaces
+
 		const packages = workspaces.filter((w) => w.kind === 'package')
 		const apps = workspaces.filter((w) => w.kind !== 'package')
 
@@ -193,17 +210,22 @@ class ProcessStore implements Store {
 		}
 
 		const failedPackages = new Set<string>()
+
 		for (const pkg of packages) {
 			const s = this.entries.get(pkg.name)?.process.status
+
 			if (s === 'error' || s === 'stopped' || s === 'timeout') failedPackages.add(pkg.name)
 		}
 
 		for (const workspace of apps) {
 			const failedDeps = workspace.deps.filter((d) => failedPackages.has(d))
+
 			if (failedDeps.length > 0) {
 				const entry = this.entries.get(workspace.name)
+
 				if (entry) {
 					this.note(entry, `warning: dependency ${failedDeps.join(', ')} failed — starting anyway`)
+
 					this.changed()
 				}
 			}
@@ -220,8 +242,11 @@ class ProcessStore implements Store {
 				roots: () => this.runningRoots(),
 				setMetrics: (name, metrics) => {
 					const entry = this.entries.get(name)
+
 					if (!entry) return false
+
 					entry.process.metrics = metrics
+
 					return true
 				},
 				onChange: () => this.changed(),
@@ -232,34 +257,44 @@ class ProcessStore implements Store {
 	/** Running root PIDs mapped to their workspace name, for the meter to sample. */
 	private runningRoots(): Map<number, string> {
 		const roots = new Map<number, string>()
+
 		for (const [name, entry] of this.entries) {
 			if (isRunning(entry.child) && entry.child.pid !== undefined) {
 				roots.set(entry.child.pid, name)
 			}
 		}
+
 		return roots
 	}
 
 	async shutdown(): Promise<void> {
 		this.stopping = true
+
 		this.watcher?.close()
+
 		this.heartbeat?.stop()
 		this.meter?.stop()
 
 		for (const entry of this.entries.values()) this.clearTimers(entry)
+
 		for (const child of this.pendingRebuilds) child.kill('SIGTERM')
 
 		const waiting: Promise<void>[] = []
 		for (const entry of this.entries.values()) {
 			const { child } = entry
+
 			if (!isRunning(child)) continue
+
 			waiting.push(
 				new Promise((resolve) => {
 					const escalate = escalateKill(child)
+
 					child.on('close', () => {
 						clearTimeout(escalate)
+
 						resolve()
 					})
+
 					killTree(child, 'SIGTERM')
 				}),
 			)
@@ -275,18 +310,25 @@ class ProcessStore implements Store {
 	 */
 	private rediscover(): void {
 		if (this.stopping) return
+
 		const fresh = this.discoverFiltered()
+
 		const freshNames = new Set(fresh.map((w) => w.name))
+
 		const currentNames = new Set(this.order)
 
 		const added = fresh.filter((w) => !currentNames.has(w.name))
+
 		const removed = [...currentNames].filter((name) => !freshNames.has(name))
+
 		if (added.length === 0 && removed.length === 0) return
 
 		for (const name of removed) this.removeWorkspace(name)
+
 		for (const workspace of added) this.addWorkspace(workspace)
 
 		this.order = this.sortForDisplay(fresh).map((w) => w.name)
+
 		this.changed()
 	}
 
@@ -316,14 +358,19 @@ class ProcessStore implements Store {
 	private clearTimers(entry: ProcessEntry): void {
 		if (entry.restartTimer) {
 			clearTimeout(entry.restartTimer)
+
 			entry.restartTimer = null
 		}
+
 		if (entry.errorTimer) {
 			clearTimeout(entry.errorTimer)
+
 			entry.errorTimer = null
 		}
+
 		if (entry.startupTimer) {
 			clearTimeout(entry.startupTimer)
+
 			entry.startupTimer = null
 		}
 	}
@@ -337,11 +384,14 @@ class ProcessStore implements Store {
 	 */
 	private beginTeardown(entry: ProcessEntry, onClosed: () => void): void {
 		entry.intentionalExit = true
+
 		const { child } = entry
 
 		if (!isRunning(child)) {
 			entry.child = null
+
 			onClosed()
+
 			return
 		}
 
@@ -350,35 +400,49 @@ class ProcessStore implements Store {
 
 		if (!entry.teardownStarted) {
 			entry.teardownStarted = true
+
 			const escalate = escalateKill(child)
+
 			child.on('close', () => {
 				clearTimeout(escalate)
+
 				entry.child = null
+
 				entry.teardownStarted = false
+
 				const action = entry.onClose
+
 				entry.onClose = null
+
 				action?.()
 			})
 		}
+
 		killTree(child, 'SIGTERM')
 	}
 
 	private waitForPackages(names: string[]): Promise<void> {
 		const remaining = new Set(names)
+
 		return new Promise((resolve) => {
 			const check = () => {
 				for (const name of [...remaining]) {
 					const s = this.entries.get(name)?.process.status
+
 					if (s === 'watching' || s === 'error' || s === 'stopped' || s === 'timeout') {
 						remaining.delete(name)
 					}
 				}
+
 				if (remaining.size === 0) {
 					this.listeners.delete(check)
+
 					resolve()
 				}
 			}
+
 			this.listeners.add(check)
+
 			check()
 		})
 	}
@@ -397,8 +461,10 @@ class ProcessStore implements Store {
 		})
 
 		const entry = this.entries.get(workspace.name)
+
 		if (entry) {
 			entry.child = child
+
 			entry.intentionalExit = false
 		}
 
@@ -406,29 +472,42 @@ class ProcessStore implements Store {
 
 		const startupTimer = setTimeout(() => {
 			const e = this.entries.get(workspace.name)
+
 			if (e) {
 				e.startupTimer = null
+
 				if (e.process.status !== 'watching' && e.process.status !== 'ready') {
 					this.note(e, `startup timeout after ${STARTUP_TIMEOUT_MS / 1000}s`)
+
 					this.setStatus(workspace.name, 'timeout')
 				}
 			}
 		}, STARTUP_TIMEOUT_MS)
+
 		startupTimer.unref()
+
 		if (entry) entry.startupTimer = startupTimer
 
 		let buffer = ''
+
 		const onData = (data: Buffer) => {
 			buffer += data.toString()
+
 			if (!buffer.includes('\n') && buffer.length > MAX_BUFFER_SIZE) {
 				this.handleLine(workspace.name, buffer)
+
 				buffer = ''
+
 				return
 			}
+
 			const lines = buffer.split('\n')
+
 			buffer = lines.pop() ?? ''
+
 			for (const raw of lines) {
 				const line = raw.trimEnd()
+
 				if (line) this.handleLine(workspace.name, line)
 			}
 		}
@@ -438,48 +517,65 @@ class ProcessStore implements Store {
 
 		child.on('close', (code, signal) => {
 			if (buffer.trim()) this.handleLine(workspace.name, buffer.trimEnd())
+
 			buffer = ''
+
 			if (this.stopping) return
+
 			// A deliberate stop/restart handles its own teardown; don't treat it as a crash.
 			if (this.entries.get(workspace.name)?.intentionalExit) return
+
 			this.handleUnexpectedExit(workspace, code, signal)
 		})
 
 		child.on('error', () => {
 			const e = this.entries.get(workspace.name)
+
 			if (e?.startupTimer) {
 				clearTimeout(e.startupTimer)
+
 				e.startupTimer = null
 			}
+
 			this.setStatus(workspace.name, 'error')
 		})
 	}
 
 	private handleLine(name: string, raw: string): void {
 		if (this.stopping) return
+
 		const entry = this.entries.get(name)
+
 		if (!entry) return
 
 		const line = raw.length > MAX_LINE_LENGTH ? raw.slice(0, MAX_LINE_LENGTH) : raw
+
 		const { process: proc } = entry
 
 		appendLog(proc.logs, sanitizeForDisplay(line))
+
 		entry.lastOutputAt = Date.now()
 
 		const prevStatus = proc.status
+
 		if (proc.status === 'idle') proc.status = entry.lastGoodStatus ?? 'ready'
 
 		const { status, url } = parseLine(stripAnsi(line))
+
 		if (status) {
 			if (status === 'error') {
 				this.scheduleErrorRecovery(name)
 			} else {
 				entry.lastGoodStatus = status
+
 				this.clearErrorTimer(name)
+
 				entry.restartRetries = 0
+
 				if (status === 'watching' || status === 'ready') {
 					if (entry.startupTimer) {
 						clearTimeout(entry.startupTimer)
+
 						entry.startupTimer = null
 					}
 				}
@@ -502,25 +598,33 @@ class ProcessStore implements Store {
 	): void {
 		if (code === 0) {
 			this.setStatus(workspace.name, 'stopped')
+
 			return
 		}
+
 		const entry = this.entries.get(workspace.name)
+
 		if (!entry) return
 
 		entry.restartRetries += 1
+
 		const { restartRetries } = entry
 
 		if (restartRetries > MAX_RESTART_RETRIES) {
 			this.note(entry, `process exited ${MAX_RESTART_RETRIES} times — giving up.`)
+
 			this.setStatus(workspace.name, 'error')
+
 			return
 		}
 
 		const delay = RESTART_DELAY_MS * 2 ** (restartRetries - 1)
+
 		this.note(
 			entry,
 			`process exited unexpectedly (attempt ${restartRetries}/${MAX_RESTART_RETRIES}) — restarting in ${delay / 1000}s...`,
 		)
+
 		this.setStatus(workspace.name, 'error')
 
 		if (signal === 'SIGABRT') {
@@ -532,14 +636,18 @@ class ProcessStore implements Store {
 					if (!this.stopping && e && !e.intentionalExit) this.spawn(workspace)
 				})
 				.catch(() => this.setStatus(workspace.name, 'error'))
+
 			return
 		}
 
 		const timer = setTimeout(() => {
 			entry.restartTimer = null
+
 			if (!this.stopping) this.spawn(workspace)
 		}, delay)
+
 		timer.unref()
+
 		entry.restartTimer = timer
 	}
 
@@ -550,11 +658,15 @@ class ProcessStore implements Store {
 				stdio: 'pipe',
 				env: safeEnv(),
 			})
+
 			this.pendingRebuilds.add(child)
+
 			const done = () => {
 				this.pendingRebuilds.delete(child)
+
 				resolve()
 			}
+
 			child.on('close', done)
 			child.on('error', done)
 		})
@@ -562,31 +674,41 @@ class ProcessStore implements Store {
 
 	private scheduleErrorRecovery(name: string): void {
 		this.clearErrorTimer(name)
+
 		const entry = this.entries.get(name)
+
 		if (!entry) return
+
 		const timer = setTimeout(() => {
 			entry.errorTimer = null
+
 			if (entry.process.status === 'error') {
 				this.setStatus(name, entry.lastGoodStatus ?? 'ready')
 			}
 		}, ERROR_RECOVERY_MS)
+
 		timer.unref()
+
 		entry.errorTimer = timer
 	}
 
 	private clearErrorTimer(name: string): void {
 		const entry = this.entries.get(name)
+
 		if (entry?.errorTimer) {
 			clearTimeout(entry.errorTimer)
+
 			entry.errorTimer = null
 		}
 	}
 
 	private setStatus(name: string, status: Status): void {
 		const entry = this.entries.get(name)
+
 		if (!entry) return
 
 		const changed = entry.process.status !== status
+
 		entry.process.status = status
 
 		// A stopped process has no child left to meter; drop its last reading so the
@@ -605,50 +727,71 @@ class ProcessStore implements Store {
 
 	stopProcess(name: string): void {
 		if (this.stopping) return
+
 		const entry = this.entries.get(name)
+
 		if (!entry) return
 
 		this.clearTimers(entry)
+
 		const wasLive = isRunning(entry.child)
+
 		this.beginTeardown(entry, () => {
 			entry.restartRetries = 0
+
 			this.setStatus(name, 'stopped')
 		})
+
 		if (wasLive) {
 			this.note(entry, 'stopping process...')
+
 			this.changed()
 		}
 	}
 
 	restartProcess(name: string): void {
 		if (this.stopping) return
+
 		const entry = this.entries.get(name)
+
 		if (!entry) return
 
 		const workspace = entry.process.workspace
+
 		const doRestart = () => {
 			// A shutdown may have begun while the child was closing; don't respawn into it.
 			if (this.stopping) return
+
 			entry.restartRetries = 0
+
 			entry.process.url = undefined
+
 			this.note(entry, 'restarting process...')
+
 			this.spawn(workspace)
 		}
 
 		this.clearTimers(entry)
+
 		const wasLive = isRunning(entry.child)
+
 		this.beginTeardown(entry, doRestart)
+
 		if (wasLive) {
 			this.note(entry, 'stopping process for restart...')
+
 			this.changed()
 		}
 	}
 
 	clearLogs(name: string): void {
 		const entry = this.entries.get(name)
+
 		if (!entry) return
+
 		// Mutate in place: the snapshot rebuild on `changed()` re-renders the empty panel.
 		entry.process.logs.length = 0
+
 		this.changed()
 	}
 
@@ -659,11 +802,16 @@ class ProcessStore implements Store {
 	 */
 	addWorkspace(workspace: Workspace): void {
 		if (this.stopping) return
+
 		if (this.entries.has(workspace.name)) return
+
 		this.allWorkspaces.push(workspace)
+
 		this.entries.set(workspace.name, ProcessStore.newEntry(workspace))
+
 		// Append so it shows immediately; `rediscover` re-sorts the order afterward.
 		if (!this.order.includes(workspace.name)) this.order.push(workspace.name)
+
 		this.spawn(workspace)
 	}
 
@@ -674,22 +822,32 @@ class ProcessStore implements Store {
 	 */
 	removeWorkspace(name: string): void {
 		const entry = this.entries.get(name)
+
 		if (!entry) return
+
 		this.clearTimers(entry)
+
 		// Tear the child's group down so its server frees its port. Deleting the entry
 		// also means the spawn close handler can't find it, so the exit is non-crashing.
 		this.beginTeardown(entry, () => {})
+
 		this.entries.delete(name)
+
 		this.order = this.order.filter((n) => n !== name)
+
 		this.allWorkspaces = this.allWorkspaces.filter((w) => w.name !== name)
+
 		this.meter?.reset(name)
+
 		this.changed()
 	}
 
 	private notifyDependents(failedName: string): void {
 		for (const workspace of this.allWorkspaces) {
 			if (!workspace.deps.includes(failedName)) continue
+
 			const entry = this.entries.get(workspace.name)
+
 			if (entry) this.note(entry, `warning: dependency ${failedName} entered error state`)
 		}
 	}
