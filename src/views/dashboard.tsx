@@ -155,8 +155,6 @@ function LogPanel({
 				<Text color={colors.accentBright} bold>
 					Logs
 				</Text>
-				<Text color={colors.dim}>{' › '}</Text>
-				<Text bold>{proc.workspace.name}</Text>
 				{!atBottom && (
 					<Text color={colors.warning}>
 						{'   '}⏸ scrolled · {hidden} below · End to follow
