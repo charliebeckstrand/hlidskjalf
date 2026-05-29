@@ -42,6 +42,9 @@ pnpm dev
 | `↑` / `↓` | Move the selection between workspaces |
 | `s` | Stop the selected workspace (or start it again if stopped) |
 | `r` | Restart the selected workspace |
+| `c` | Clear the logs for the selected workspace |
+| `PgUp` / `PgDn` | Scroll the log panel up / down a page |
+| `Home` / `End` | Jump to the oldest / newest log lines (`End` resumes following) |
 | `q` | Quit |
 
 ## Benchmarks

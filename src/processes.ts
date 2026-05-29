@@ -47,6 +47,7 @@ export interface Runner extends EventEmitter<RunnerEvents> {
 	shutdown(): Promise<void>
 	stopProcess(name: string): void
 	restartProcess(name: string): void
+	clearLogs(name: string): void
 }
 
 class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
@@ -631,6 +632,18 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		child.kill('SIGTERM')
 
 		entry.process.logs.push('[hlidskjalf] stopping process for restart...')
+
+		this.emit('change')
+	}
+
+	clearLogs(name: string): void {
+		const entry = this.entry(name)
+
+		if (!entry) return
+
+		// Mutate in place: the UI reads this same array each frame, and emitting
+		// `change` rebuilds the process list so React re-renders the empty panel.
+		entry.process.logs.length = 0
 
 		this.emit('change')
 	}

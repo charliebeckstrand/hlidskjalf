@@ -1,9 +1,11 @@
 import { Box, Text, useStdout } from 'ink'
+import Spinner from 'ink-spinner'
 import { useMemo } from 'react'
 
+import { useLogScroll } from '../hooks/use-log-scroll.js'
 import { nameColumnWidth } from '../layout.js'
 import { colors, statusDisplay } from '../theme.js'
-import type { Metrics, Process, WorkspaceKind } from '../types.js'
+import type { Metrics, Process, Status, WorkspaceKind } from '../types.js'
 import { Header } from './header.js'
 
 const kindLabel = {
@@ -12,7 +14,14 @@ const kindLabel = {
 	service: 'svc',
 } satisfies Record<WorkspaceKind, string>
 
-const HINTS = '↑/↓  select    s  stop/start    r  restart    q  quit'
+const HINTS = '↑/↓ select   s stop/start   r restart   c clear   PgUp/PgDn scroll   q quit'
+
+/** An animated spinner while building, falling back to the status glyph otherwise. */
+function StatusGlyph({ status, icon }: { status: Status; icon: string }) {
+	if (status === 'building') return <Spinner type="dots" />
+
+	return <Text>{icon}</Text>
+}
 
 function formatCpu(cpu: number): string {
 	return `${cpu.toFixed(1)}%`.padStart(6)
@@ -71,7 +80,7 @@ function ProcessRow({
 			</Box>
 			<Box width={14}>
 				<Text color={color}>
-					{icon} {label}
+					<StatusGlyph status={proc.status} icon={icon} /> {label}
 				</Text>
 			</Box>
 			{showMetrics && <MetricsCells metrics={proc.metrics} />}
@@ -112,10 +121,24 @@ function MetricsCells({ metrics }: { metrics?: Metrics }) {
 	)
 }
 
-function LogPanel({ process: proc, height }: { process: Process; height: number }) {
-	const logLines = proc.logs.slice(-height)
+function LogPanel({
+	process: proc,
+	height,
+	start,
+	end,
+	atBottom,
+}: {
+	process: Process
+	height: number
+	start: number
+	end: number
+	atBottom: boolean
+}) {
+	const logLines = proc.logs.slice(start, end)
 
 	const fillCount = height - logLines.length
+
+	const hidden = proc.logs.length - end
 
 	return (
 		<Box
@@ -134,6 +157,11 @@ function LogPanel({ process: proc, height }: { process: Process; height: number 
 				</Text>
 				<Text color={colors.dim}>{' › '}</Text>
 				<Text bold>{proc.workspace.name}</Text>
+				{!atBottom && (
+					<Text color={colors.warning}>
+						{'   '}⏸ scrolled · {hidden} below · End to follow
+					</Text>
+				)}
 			</Box>
 			{logLines.map((line, i) => (
 				// biome-ignore lint/suspicious/noArrayIndexKey: log lines have no stable identity
@@ -172,6 +200,13 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 	const safeIndex = Math.min(selectedIndex, Math.max(0, processes.length - 1))
 
 	const selected = processes[safeIndex]
+
+	const scroll = useLogScroll(
+		selected?.logs.length ?? 0,
+		logHeight,
+		selected?.workspace.name ?? '',
+		Boolean(selected),
+	)
 
 	return (
 		<Box flexDirection="column">
@@ -226,7 +261,15 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 			))}
 
 			{/* Log panel */}
-			{selected && <LogPanel process={selected} height={logHeight} />}
+			{selected && (
+				<LogPanel
+					process={selected}
+					height={logHeight}
+					start={scroll.start}
+					end={scroll.end}
+					atBottom={scroll.atBottom}
+				/>
+			)}
 		</Box>
 	)
 }
