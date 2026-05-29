@@ -6,13 +6,13 @@ import { Header } from './header.js'
 
 /** Every keybinding the app responds to, paired with its description. */
 const BINDINGS: ReadonlyArray<readonly [keys: string, action: string]> = [
-	['↑/↓ · k/j', 'Select process'],
+	['↑/↓', 'Select process'],
 	['s', 'Stop / start process'],
 	['r', 'Restart process'],
 	['c', 'Clear logs'],
 	['PgUp/PgDn', 'Scroll logs'],
 	['Home/End', 'Jump to oldest / newest'],
-	['?', 'Toggle this help'],
+	['?', 'Toggle help'],
 	['q', 'Quit'],
 ]
 
