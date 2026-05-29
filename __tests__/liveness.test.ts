@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-
-import { Heartbeat, type Monitored } from '../src/heartbeat.js'
+import { createHeartbeat, type Heartbeat, type Monitored } from '../src/liveness.js'
 import type { Status } from '../src/types.js'
 
 function entry(
@@ -40,14 +39,12 @@ afterEach(() => {
 function run(entries: Map<string, Monitored>): ReturnType<typeof vi.fn> {
 	const setStatus = vi.fn()
 
-	hb = new Heartbeat({ entries: () => entries, setStatus })
-
-	hb.start()
+	hb = createHeartbeat({ entries: () => entries, setStatus })
 
 	return setStatus
 }
 
-describe('Heartbeat', () => {
+describe('createHeartbeat', () => {
 	it('restores a reachable idle process to its last good status', async () => {
 		vi.useFakeTimers()
 
@@ -83,7 +80,6 @@ describe('Heartbeat', () => {
 
 		vi.setSystemTime(1_000_000)
 
-		// lastOutputAt is old enough to cross the idle threshold (5 min).
 		const setStatus = run(new Map([['web', entry('ready', { lastOutputAt: 1 })]]))
 
 		await vi.advanceTimersByTimeAsync(10_000)
@@ -134,7 +130,6 @@ describe('Heartbeat', () => {
 
 		vi.stubGlobal('fetch', fetchMock)
 
-		// lastOutputAt is recent, so the idle threshold isn't crossed.
 		run(new Map([['web', entry('ready', { url: 'http://localhost:3000', lastOutputAt: 999_999 })]]))
 
 		await vi.advanceTimersByTimeAsync(10_000)

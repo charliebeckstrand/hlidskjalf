@@ -1,26 +1,22 @@
 /**
- * Bounded per-process log buffer. Kept as a pure helper (no class state) so the
- * trimming policy can be unit-tested and benchmarked directly — it runs on every
- * line emitted by every child process, the same hot path as the parser.
+ * Bounded per-process log buffer. Pure helpers (no class state) so the trimming
+ * policy can be unit-tested and benchmarked directly — this runs on every line
+ * emitted by every child process, the same hot path as the parser. The buffer is
+ * mutated in place (O(1) amortized append); the store signals React by rebuilding
+ * its snapshot array, not by copying this buffer per line.
  */
 
 /** Maximum log lines retained per process for display scrollback. */
 export const MAX_LOGS = 500
 
 /**
- * Extra lines allowed to accumulate above MAX_LOGS before trimming. Trimming
- * splices from the front of the array, which is O(n) in the number of retained
- * lines; deferring it until this much headroom is used amortizes that cost to
- * O(1) per line instead of paying an O(MAX_LOGS) shift on every line once the
- * buffer is full. Memory stays bounded at MAX_LOGS + TRIM_SLACK lines.
+ * Extra lines allowed above MAX_LOGS before trimming. Splicing from the front is
+ * O(n) in retained lines; deferring it until this much headroom is used amortizes
+ * that to O(1) per line. Memory stays bounded at MAX_LOGS + TRIM_SLACK.
  */
 const TRIM_SLACK = MAX_LOGS
 
-/**
- * Append a line to a process's bounded log buffer, trimming the oldest lines in
- * batches once the buffer grows past MAX_LOGS + TRIM_SLACK. Consumers read the
- * tail (the most recent lines), so the extra headroom is never visible.
- */
+/** Append a line, trimming the oldest lines in batches once past MAX_LOGS + TRIM_SLACK. */
 export function appendLog(logs: string[], line: string): void {
 	logs.push(line)
 
@@ -32,19 +28,17 @@ export function appendLog(logs: string[], line: string): void {
 export interface LogWindow {
 	/** Inclusive start index into the log buffer. */
 	start: number
-	/** Exclusive end index into the log buffer. */
+	/** Exclusive end index into the buffer. */
 	end: number
 	/** Largest valid scroll offset for the given buffer and viewport. */
 	maxScroll: number
 }
 
 /**
- * Resolve the slice of a log buffer visible in a viewport of `height` lines,
- * given a `scroll` offset measured in lines above the tail. `scroll` 0 shows the
- * newest `height` lines (follow mode); larger values page back through history.
- * Offsets are clamped to the buffer, so callers can pass an over-large value
- * (e.g. "jump to top") without first knowing the line count. Pure so the slice
- * maths can be tested without rendering Ink.
+ * Resolve the slice visible in a viewport of `height` lines, given a `scroll` offset
+ * measured in lines above the tail. `scroll` 0 shows the newest `height` lines
+ * (follow mode); larger values page back. Offsets are clamped to the buffer, so a
+ * caller can pass an over-large value ("jump to top") without knowing the line count.
  */
 export function visibleLogRange(total: number, height: number, scroll: number): LogWindow {
 	const maxScroll = Math.max(0, total - height)

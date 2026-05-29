@@ -2,13 +2,13 @@ import fs from 'node:fs'
 import os from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-
 import { type Watcher, watchWorkspaces } from '../src/watcher.js'
 
 const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
 describe('watchWorkspaces', () => {
 	let tmpDir: string
+
 	let watcher: Watcher | null = null
 
 	beforeEach(() => {
@@ -25,39 +25,34 @@ describe('watchWorkspaces', () => {
 		fs.rmSync(tmpDir, { recursive: true, force: true })
 	})
 
-	function createWorkspace(name: string): string {
+	function createWorkspace(name: string): void {
 		const dir = join(tmpDir, 'packages', name)
 
 		fs.mkdirSync(dir, { recursive: true })
 
 		fs.writeFileSync(join(dir, 'package.json'), JSON.stringify({ name, scripts: { dev: 'x' } }))
-
-		return dir
 	}
 
 	/** Resolves on the next debounced change, or rejects if none arrives in time. */
 	function tracker() {
 		let count = 0
+
 		let resolve: (() => void) | null = null
 
-		const onChange = () => {
-			count += 1
-
-			resolve?.()
-
-			resolve = null
-		}
-
-		const next = (ms = 3000) =>
-			new Promise<void>((res, rej) => {
-				resolve = res
-
-				setTimeout(() => rej(new Error('no change within timeout')), ms).unref()
-			})
-
 		return {
-			onChange,
-			next,
+			onChange() {
+				count += 1
+
+				resolve?.()
+
+				resolve = null
+			},
+			next: (ms = 3000) =>
+				new Promise<void>((res, rej) => {
+					resolve = res
+
+					setTimeout(() => rej(new Error('no change within timeout')), ms).unref()
+				}),
 			get count() {
 				return count
 			},
@@ -102,7 +97,6 @@ describe('watchWorkspaces', () => {
 
 		createWorkspace('web')
 
-		// Well past the debounce window — no callback should have run.
 		await delay(700)
 
 		expect(t.count).toBe(0)

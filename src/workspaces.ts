@@ -1,8 +1,6 @@
 import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs'
 import { join, resolve, sep } from 'node:path'
-
 import type { Workspace, WorkspaceKind } from './types.js'
-import { isPlainObject } from './util.js'
 
 interface PkgJson {
 	name?: string
@@ -10,7 +8,12 @@ interface PkgJson {
 	dependencies?: Record<string, string>
 }
 
-/** Valid npm package name pattern (scoped or unscoped) */
+/** Narrow an unknown value to a non-null, non-array object. */
+export function isPlainObject(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+/** Valid npm package name pattern (scoped or unscoped). */
 const VALID_PKG_NAME = /^(@[a-z0-9\-~][a-z0-9\-._~]*\/)?[a-z0-9\-~][a-z0-9\-._~]*$/
 
 export function isValidPackageName(name: string): boolean {
@@ -18,10 +21,10 @@ export function isValidPackageName(name: string): boolean {
 }
 
 /**
- * Clean a raw list of filter patterns from either the CLI or a config file:
- * strip the `{…}` braces a shell may leave around a turbo-style filter, then
- * drop (and warn about) any entry whose package name is invalid. The trailing
- * `...` transitive-deps marker is preserved on valid entries.
+ * Clean a raw list of filter patterns from the CLI or a config file: strip the `{...}`
+ * braces a shell may leave around a turbo-style filter, then drop (and warn about)
+ * any entry whose package name is invalid. The trailing `...` transitive-deps marker
+ * is preserved on valid entries.
  */
 export function normalizeFilters(raw: string[]): string[] {
 	return raw
@@ -40,9 +43,9 @@ export function normalizeFilters(raw: string[]): string[] {
 }
 
 /**
- * Coerce an unknown value into a record of string-valued entries, dropping any
- * non-string values. Guards downstream code against malformed package.json
- * fields (e.g. a numeric dependency version) that would otherwise throw.
+ * Coerce an unknown value into a record of string-valued entries, dropping non-string
+ * values. Guards against malformed package.json fields (e.g. a numeric dependency
+ * version) that would otherwise throw downstream.
  */
 function stringRecord(value: unknown): Record<string, string> | undefined {
 	if (!isPlainObject(value)) return undefined
@@ -59,17 +62,14 @@ function stringRecord(value: unknown): Record<string, string> | undefined {
 function readJson(path: string): PkgJson | null {
 	try {
 		const raw: unknown = JSON.parse(readFileSync(path, 'utf-8'))
+
 		if (!isPlainObject(raw)) return null
 
-		const obj = raw
-
-		const name = typeof obj.name === 'string' ? obj.name : undefined
-
-		const scripts = stringRecord(obj.scripts)
-
-		const dependencies = stringRecord(obj.dependencies)
-
-		return { name, scripts, dependencies }
+		return {
+			name: typeof raw.name === 'string' ? raw.name : undefined,
+			scripts: stringRecord(raw.scripts),
+			dependencies: stringRecord(raw.dependencies),
+		}
 	} catch {
 		return null
 	}
@@ -122,23 +122,17 @@ export function discover(root: string): Workspace[] {
 
 			if (!pkg.scripts?.dev) continue
 
-			results.push({
-				name: pkg.name,
-				kind,
-				deps: workspaceDeps(pkg),
-			})
+			results.push({ name: pkg.name, kind, deps: workspaceDeps(pkg) })
 		}
 	}
-
 	return results
 }
 
 export function sortByDeps(workspaces: Workspace[]): Workspace[] {
 	const names = new Set(workspaces.map((w) => w.name))
 
-	// Precompute each workspace's internal dependency count once. Doing it inside
-	// the comparator instead would re-filter both operands' deps on every one of
-	// the O(n log n) comparisons.
+	// Precompute each workspace's internal dependency count once; doing it inside the
+	// comparator would re-filter both operands' deps on every O(n log n) comparison.
 	const depCount = new Map<Workspace, number>()
 
 	for (const workspace of workspaces) {

@@ -3,10 +3,16 @@ import os from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { defineConfig, loadConfig } from '../src/config.js'
 
-import { loadConfig } from '../src/config/loader.js'
+const CONFIG_SRC = fileURLToPath(new URL('../src/config.ts', import.meta.url))
 
-const CONFIG_SRC = fileURLToPath(new URL('../src/config/config.ts', import.meta.url))
+describe('defineConfig', () => {
+	it('returns its argument unchanged (identity helper)', () => {
+		const cfg = { order: 'run', metrics: true } as const
+		expect(defineConfig(cfg)).toBe(cfg)
+	})
+})
 
 describe('loadConfig', () => {
 	let tmpDir: string
@@ -20,31 +26,24 @@ describe('loadConfig', () => {
 
 	afterEach(() => {
 		fs.rmSync(tmpDir, { recursive: true, force: true })
-
 		vi.restoreAllMocks()
 	})
 
-	function write(name: string, contents: string): void {
-		fs.writeFileSync(join(tmpDir, name), contents)
-	}
+	const write = (name: string, contents: string) => fs.writeFileSync(join(tmpDir, name), contents)
 
 	it('returns an empty config when nothing is present', async () => {
 		expect(await loadConfig(tmpDir)).toEqual({})
 	})
 
-	it('reads the package.json "hlidskjalf" key', async () => {
+	it('reads the package.json "hlidskjalf" key and ignores a keyless or broken file', async () => {
 		write('package.json', JSON.stringify({ hlidskjalf: { order: 'run', metrics: true } }))
 
 		expect(await loadConfig(tmpDir)).toEqual({ order: 'run', metrics: true })
-	})
 
-	it('ignores a package.json without the key', async () => {
 		write('package.json', JSON.stringify({ name: 'root' }))
 
 		expect(await loadConfig(tmpDir)).toEqual({})
-	})
 
-	it('survives a malformed package.json', async () => {
 		write('package.json', '{ not valid json')
 
 		expect(await loadConfig(tmpDir)).toEqual({})
@@ -56,7 +55,7 @@ describe('loadConfig', () => {
 		expect(await loadConfig(tmpDir)).toEqual({ order: 'run', title: 'Mine', watch: false })
 	})
 
-	it('supports defineConfig from the package entry', async () => {
+	it('supports defineConfig imported from the package entry', async () => {
 		write(
 			'hlidskjalf.config.ts',
 			`import { defineConfig } from ${JSON.stringify(CONFIG_SRC)}\n` +
@@ -66,15 +65,16 @@ describe('loadConfig', () => {
 		expect(await loadConfig(tmpDir)).toEqual({ metrics: true })
 	})
 
-	it('lets the config file override the package.json key', async () => {
+	it('lets the config file override the package.json key, merging the rest', async () => {
 		write('package.json', JSON.stringify({ hlidskjalf: { order: 'run', metrics: true } }))
 
 		write('hlidskjalf.config.ts', 'export default { order: "alphabetical" }')
 
-		// File wins on `order`; package.json `metrics` still fills the gap.
 		expect(await loadConfig(tmpDir)).toEqual({ order: 'alphabetical', metrics: true })
 	})
 
+	// Each case uses its own (fresh) tmpDir so the dynamic import isn't served from
+	// the module cache, which keys on the config file's path.
 	it('drops fields with the wrong type or out-of-range values', async () => {
 		write(
 			'hlidskjalf.config.ts',

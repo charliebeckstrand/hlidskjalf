@@ -13,21 +13,23 @@ export interface Watcher {
 
 /**
  * Watch the workspace tree for changes that could alter discovery and invoke
- * `onChange` (debounced) when one lands. Two layers of non-recursive watchers
- * keep this cheap and avoid descending into `node_modules`:
+ * `onChange` (debounced) when one lands. Two layers of non-recursive watchers keep
+ * this cheap and avoid descending into `node_modules`:
  *
- *  - one per parent dir (`packages`/`apps`/`services`) to catch workspace dirs
- *    being added or removed, and
+ *  - one per parent dir (`packages`/`apps`/`services`) to catch workspace dirs being
+ *    added or removed, and
  *  - one per workspace dir to catch its own `package.json` being written.
  *
- * Recursive watching is deliberately avoided: on Linux it would register a
- * watcher for every nested `node_modules` directory.
+ * Recursive watching is deliberately avoided: on Linux it would register a watcher
+ * for every nested `node_modules` directory.
  */
 export function watchWorkspaces(root: string, onChange: () => void): Watcher {
 	const parentWatchers: FSWatcher[] = []
+
 	const childWatchers = new Map<string, FSWatcher>()
 
 	let timer: ReturnType<typeof setTimeout> | null = null
+
 	let closed = false
 
 	const schedule = () => {
@@ -49,8 +51,8 @@ export function watchWorkspaces(root: string, onChange: () => void): Watcher {
 
 		try {
 			const w = watch(dir, (_event, filename) => {
-				// A null filename means the platform couldn't report which file
-				// changed, so re-discover to be safe.
+				// A null filename means the platform couldn't report which file changed,
+				// so re-discover to be safe.
 				if (!filename || filename.toString() === 'package.json') schedule()
 			})
 
@@ -95,7 +97,6 @@ export function watchWorkspaces(root: string, onChange: () => void): Watcher {
 		try {
 			const w = watch(base, () => {
 				syncChildren()
-
 				schedule()
 			})
 
