@@ -32,7 +32,8 @@
 		"lint:fix": "biome check --write .",
 		"format": "biome format --write .",
 		"typecheck": "tsc --noEmit",
-		"test": "vitest run"
+		"test": "vitest run",
+		"bench": "tsx bench/index.ts"
 	},
 	"dependencies": {
 		"ink": "^5.2.1",
@@ -43,7 +44,9 @@
 		"@types/node": "^22.15.33",
 		"@types/react": "^18.3.23",
 		"lefthook": "^2.1.4",
+		"tinybench": "^6.0.2",
 		"tsup": "^8.5.1",
+		"tsx": "^4.22.3",
 		"typescript": "^5.9.3",
 		"vitest": "^4.1.1"
 	}
