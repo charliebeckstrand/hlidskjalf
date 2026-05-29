@@ -160,7 +160,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 			waiting.push(
 				new Promise((resolve) => {
 					const escalate = setTimeout(() => {
-						if (child.exitCode === null) child.kill('SIGKILL')
+						if (child.exitCode === null) this.killTree(child, 'SIGKILL')
 					}, 5000)
 
 					child.on('close', () => {
@@ -168,12 +168,39 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 						resolve()
 					})
 
-					child.kill('SIGTERM')
+					this.killTree(child, 'SIGTERM')
 				}),
 			)
 		}
 
 		await Promise.all(waiting)
+	}
+
+	/**
+	 * Terminate a dev child and everything it spawned. Dev processes run in their
+	 * own group (see `spawn`), so a negative PID signals the whole group — without
+	 * it, `pnpm`'s grandchild (the real server) would be orphaned and keep holding
+	 * its port, breaking the next start. Falls back to the bare child if the group
+	 * is already gone.
+	 */
+	private killTree(child: ChildProcess, signal: NodeJS.Signals): void {
+		const { pid } = child
+
+		if (pid !== undefined) {
+			try {
+				process.kill(-pid, signal)
+
+				return
+			} catch {
+				// Group already exited, or the child never became a leader.
+			}
+		}
+
+		try {
+			child.kill(signal)
+		} catch {
+			// Already dead.
+		}
 	}
 
 	private entry(name: string): ProcessEntry | undefined {
@@ -211,6 +238,12 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 			cwd: this.root,
 			stdio: 'pipe',
 			env: safeEnv(),
+			// Put each dev process in its own process group. Otherwise it shares
+			// ours, and when a dev toolchain tears itself down by signalling its
+			// whole group (`kill -- -<pgid>`), the signal also lands on hlidskjalf
+			// — whose SIGTERM handler then exits the entire UI. A dedicated group
+			// also lets us reap the real server under `pnpm` instead of orphaning it.
+			detached: true,
 		})
 
 		const entry = this.entry(workspace.name)
@@ -547,7 +580,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		entry.intentionalExit = true
 
 		const escalate = setTimeout(() => {
-			if (child.exitCode === null) child.kill('SIGKILL')
+			if (child.exitCode === null) this.killTree(child, 'SIGKILL')
 		}, 5000)
 
 		escalate.unref()
@@ -562,7 +595,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 			this.setStatus(name, 'stopped')
 		})
 
-		child.kill('SIGTERM')
+		this.killTree(child, 'SIGTERM')
 
 		entry.process.logs.push('[hlidskjalf] stopping process...')
 
@@ -616,7 +649,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		}
 
 		const escalate = setTimeout(() => {
-			if (child.exitCode === null) child.kill('SIGKILL')
+			if (child.exitCode === null) this.killTree(child, 'SIGKILL')
 		}, 5000)
 
 		escalate.unref()
@@ -629,7 +662,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 			doRestart()
 		})
 
-		child.kill('SIGTERM')
+		this.killTree(child, 'SIGTERM')
 
 		entry.process.logs.push('[hlidskjalf] stopping process for restart...')
 

@@ -20,11 +20,13 @@ const hoisted = vi.hoisted(() => {
 		killed = false
 		lastSignal: string | null = null
 		args: string[]
+		options: Record<string, unknown>
 
-		constructor(args: string[]) {
+		constructor(args: string[], options: Record<string, unknown> = {}) {
 			super()
 
 			this.args = args
+			this.options = options
 		}
 
 		kill(signal?: string): boolean {
@@ -67,8 +69,8 @@ const hoisted = vi.hoisted(() => {
 })
 
 vi.mock('node:child_process', () => ({
-	spawn: (_cmd: string, args: string[]) => {
-		const child = new hoisted.FakeChild(args)
+	spawn: (_cmd: string, args: string[], options: Record<string, unknown>) => {
+		const child = new hoisted.FakeChild(args, options)
 
 		hoisted.spawned.push(child)
 
@@ -96,12 +98,35 @@ const flush = () => new Promise<void>((resolve) => setImmediate(resolve))
 
 let runner: Runner
 
+beforeEach(() => {
+	// killTree signals the child's process group via process.kill(-pid). The fake
+	// pids here aren't real groups, so intercept the call and drive the matching
+	// fake child instead of signalling an unrelated process group on the machine.
+	vi.spyOn(process, 'kill').mockImplementation(((pid: number, signal?: NodeJS.Signals) => {
+		const child = hoisted.spawned.find((c) => c.pid === Math.abs(pid))
+
+		if (!child) {
+			const err = new Error('ESRCH') as NodeJS.ErrnoException
+
+			err.code = 'ESRCH'
+
+			throw err
+		}
+
+		child.kill(signal)
+
+		return true
+	}) as typeof process.kill)
+})
+
 afterEach(async () => {
 	vi.useRealTimers()
 
 	await runner?.shutdown().catch(() => {})
 
 	hoisted.spawned.length = 0
+
+	vi.restoreAllMocks()
 })
 
 describe('createRunner', () => {
@@ -401,6 +426,35 @@ describe('manual stop and restart', () => {
 
 		expect(runner.get('web')?.status).toBe('building')
 		expect(runner.get('web')?.logs.some((l) => l.includes('giving up'))).toBe(false)
+	})
+})
+
+describe('process isolation', () => {
+	it('spawns dev processes detached, in their own group', async () => {
+		runner = createRunner('/root')
+
+		await runner.start([APP])
+
+		// Without a dedicated group, a dev toolchain signalling its own group on
+		// teardown would also signal — and exit — the hlidskjalf UI.
+		expect(childFor('web')?.options.detached).toBe(true)
+	})
+
+	it('signals the whole process group when stopping', async () => {
+		runner = createRunner('/root')
+
+		await runner.start([APP])
+
+		childFor('web')?.out('Watching for changes\n')
+
+		const pid = childFor('web')?.pid ?? 0
+
+		runner.stopProcess('web')
+
+		await flush()
+
+		// Negative PID targets the group, so the real server under pnpm dies too.
+		expect(vi.mocked(process.kill)).toHaveBeenCalledWith(-pid, 'SIGTERM')
 	})
 })
 
