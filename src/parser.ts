@@ -8,12 +8,30 @@ interface ParsedLine {
 /** Maximum line length to parse — prevents ReDoS on extremely long lines */
 const MAX_PARSE_LENGTH = 4096
 
-/** Matches a localhost URL, capturing the origin (scheme + host + port) */
-const SAFE_URL = /^(https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0):\d{1,5})/
+/** Loopback hosts we're willing to surface a URL for */
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '0.0.0.0'])
 
-/** Strip trailing punctuation that gets captured by \S+ */
-function cleanUrl(raw: string): string {
-	return raw.replace(/[.,;:!?)}\]]+$/, '')
+/**
+ * Extract a loopback http(s) origin (scheme + host + port) from a raw capture,
+ * or undefined if it isn't a local URL. Trailing punctuation swept up by the
+ * matcher's `\S+` is trimmed first so the URL parser doesn't reject it.
+ */
+function localOrigin(raw: string): string | undefined {
+	const cleaned = raw.replace(/[.,;:!?)}\]]+$/, '')
+
+	let parsed: URL
+
+	try {
+		parsed = new URL(cleaned)
+	} catch {
+		return undefined
+	}
+
+	if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return undefined
+	if (!parsed.port) return undefined
+	if (!LOCAL_HOSTS.has(parsed.hostname)) return undefined
+
+	return parsed.origin
 }
 
 // Skip DTS lines — secondary build phase, should not affect status
@@ -47,11 +65,7 @@ export function parseLine(line: string): ParsedLine {
 		const match = truncated.match(pattern)
 
 		if (match) {
-			const cleaned = match[1] ? cleanUrl(match[1]) : undefined
-
-			const urlMatch = cleaned?.match(SAFE_URL)
-
-			const url = urlMatch ? urlMatch[1] : undefined
+			const url = match[1] ? localOrigin(match[1]) : undefined
 
 			return { status, url }
 		}

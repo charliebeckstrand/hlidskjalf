@@ -158,5 +158,5 @@ export function cpuPercentFromTicks(
 	const elapsedSec = elapsedMs / 1000
 	const cpuPercent = (tickDelta / ticksPerSec / elapsedSec / numCpus) * 100
 
-	return cpuPercent < 0 ? 0 : cpuPercent
+	return Math.max(0, cpuPercent)
 }
