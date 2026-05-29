@@ -12,7 +12,7 @@ const BINDINGS: ReadonlyArray<readonly [keys: string, action: string]> = [
 	['r', 'Restart process'],
 	['c', 'Clear logs'],
 	['PgUp/PgDn', 'Scroll logs'],
-	['Home/End', 'Jump to oldest / newest'],
+	['Home/End', 'Jump to oldest / newest logs'],
 	['?', 'Toggle help'],
 	['q', 'Quit'],
 ]

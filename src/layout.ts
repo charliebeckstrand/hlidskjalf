@@ -113,10 +113,26 @@ export function columnWidths(
 }
 
 /**
- * Height of the scrollback area inside the log panel: the rows left after the
- * header, table header, one row per process, and the panel's own border/labels,
- * floored at 3 so the panel never collapses on a short terminal.
+ * Smallest log scrollback worth drawing: a panel with fewer rows than this is all
+ * border and label, so the dashboard hides it rather than render a useless box.
+ */
+export const MIN_LOG_PANEL_HEIGHT = 3
+
+/**
+ * Fixed rows the dashboard spends on everything except the log lines: the header
+ * (4), the table header (2), the log panel's own margin/border/label (5), and one
+ * row of slack so the assembled frame always stays a line clear of the bottom and
+ * can't scroll the header off the top of the screen.
+ */
+const NON_LOG_CHROME = 12
+
+/**
+ * Height of the scrollback area inside the log panel: the rows left for log lines
+ * after the fixed chrome and one row per process. This is the panel's hard maximum
+ * — it can't grow past it, so a flood of log output never pushes the header
+ * off-screen. Comes out small (down to 0) on a short terminal, where the caller
+ * hides the panel below `MIN_LOG_PANEL_HEIGHT` rather than overflow the frame.
  */
 export function logPanelHeight(rows: number, processCount: number): number {
-	return Math.max(3, rows - processCount - 11)
+	return Math.max(0, rows - processCount - NON_LOG_CHROME)
 }

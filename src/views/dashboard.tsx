@@ -8,6 +8,7 @@ import {
 	COLUMN_WIDTHS,
 	columnWidths,
 	logPanelHeight,
+	MIN_LOG_PANEL_HEIGHT,
 	nameColumnWidth,
 	urlContentWidth,
 } from '../layout.js'
@@ -224,13 +225,13 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 	)
 
 	return (
-		// Size the frame to one line below the terminal height so the log panel fills
-		// the screen without the bottom row spilling over. We render on the alternate
-		// screen (see terminal.ts), so frames can't strand copies in the scrollback
-		// and we deliberately avoid `overflow: hidden` here — Ink's overflow clipper
-		// slices every line through a tokenizer that miscounts OSC 8 hyperlinks,
-		// which would truncate the URL column's links to a stray fragment.
-		<Box flexDirection="column" height={rows - 1}>
+		// The frame sizes itself to its content. The log panel is given a hard
+		// maximum height (see `logPanelHeight`) that already reserves room for the
+		// header and a row of bottom slack, so the panel can't grow tall enough to
+		// scroll the header off the top — no frame-level clipping needed (and we
+		// avoid it deliberately: Ink's clipper slices lines through a tokenizer that
+		// miscounts OSC 8 hyperlinks and would truncate the URL column's links).
+		<Box flexDirection="column">
 			<Header title={title} ready={allReady} columns={cols} hints={HINTS} />
 
 			{/* Table header */}
@@ -281,8 +282,9 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 				/>
 			))}
 
-			{/* Log panel */}
-			{selected && (
+			{/* Log panel — hidden on a terminal too short to give it a usable height,
+			    rather than rendered as a cramped box that would crowd out the table. */}
+			{selected && logHeight >= MIN_LOG_PANEL_HEIGHT && (
 				<LogPanel
 					process={selected}
 					height={logHeight}

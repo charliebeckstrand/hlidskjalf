@@ -100,16 +100,25 @@ describe('columnWidths', () => {
 
 describe('logPanelHeight', () => {
 	it('uses the rows left after the chrome and process rows', () => {
-		// 40 - 5 processes - 11 = 24
-		expect(logPanelHeight(40, 5)).toBe(24)
+		// 40 - 5 processes - 12 = 23
+		expect(logPanelHeight(40, 5)).toBe(23)
 	})
 
 	it('grows when the terminal gets taller', () => {
 		expect(logPanelHeight(50, 5)).toBeGreaterThan(logPanelHeight(40, 5))
 	})
 
-	it('never collapses below three rows', () => {
-		expect(logPanelHeight(10, 8)).toBe(3)
-		expect(logPanelHeight(0, 0)).toBe(3)
+	it('clamps to zero on a terminal too short for a panel (caller then hides it)', () => {
+		expect(logPanelHeight(10, 8)).toBe(0)
+		expect(logPanelHeight(0, 0)).toBe(0)
+	})
+
+	it('leaves the assembled frame a row clear of the bottom', () => {
+		// total = header(4) + table header(2) + N rows + panel(logHeight + 4 incl. margin)
+		const rows = 37
+		const count = 4
+		const total = 4 + 2 + count + (logPanelHeight(rows, count) + 4)
+
+		expect(total).toBeLessThanOrEqual(rows - 1)
 	})
 })
