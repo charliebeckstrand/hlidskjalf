@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { colors, statusDisplay } from './theme.js'
-import type { Status } from './types.js'
+import { colors, statusDisplay } from '../src/theme.js'
+import type { Status } from '../src/types.js'
 
 describe('colors', () => {
 	it('exports all required color keys', () => {

@@ -6,7 +6,7 @@ import {
 	parseProcStat,
 	parsePsOutput,
 	safeEnv,
-} from './metrics.js'
+} from '../src/metrics.js'
 
 describe('safeEnv', () => {
 	it('keeps only allowlisted variables', () => {

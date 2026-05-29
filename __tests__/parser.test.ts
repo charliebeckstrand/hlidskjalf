@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { parseLine, sanitizeForDisplay, stripAnsi } from './parser.js'
+import { parseLine, sanitizeForDisplay, stripAnsi } from '../src/parser.js'
 
 describe('parseLine', () => {
 	describe('ready status', () => {

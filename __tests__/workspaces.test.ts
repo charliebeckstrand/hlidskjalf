@@ -2,14 +2,14 @@ import fs from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import type { Workspace } from './types.js'
+import type { Workspace } from '../src/types.js'
 import {
 	discover,
 	filterWorkspaces,
 	isValidPackageName,
 	sortByDeps,
 	sortByName,
-} from './workspaces.js'
+} from '../src/workspaces.js'
 
 describe('isValidPackageName', () => {
 	it('accepts simple names', () => {
