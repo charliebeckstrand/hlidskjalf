@@ -26,7 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   terminal width/height only on first paint, so resizing the window left the
   name/kind/status/URL columns and the log viewport sized for the old
   dimensions (truncated or overflowing). The views now subscribe to terminal
-  `resize` events and reflow the columns and log panel to the new size.
+  `resize` events and reflow the columns and log panel to the new size. The
+  name column is also clamped to the available width so a long workspace name
+  on a narrow terminal can't push the kind/status columns off-screen.
 - **Truncated URL opened the wrong address** — the dashboard's URL column is
   rendered as an OSC 8 hyperlink whose target is the full URL, so clicking it
   opens the complete address even when the column only shows a shortened

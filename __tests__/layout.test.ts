@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { logPanelHeight, nameColumnWidth, urlColumnWidth } from '../src/layout.js'
+import {
+	fitNameColumnWidth,
+	logPanelHeight,
+	nameColumnWidth,
+	urlColumnWidth,
+} from '../src/layout.js'
 import type { Process } from '../src/types.js'
 
 function proc(name: string): Process {
@@ -30,6 +35,35 @@ describe('nameColumnWidth', () => {
 		const many = Array.from({ length: 200_000 }, (_, i) => proc(`pkg-${i}`))
 
 		expect(() => nameColumnWidth(many)).not.toThrow()
+	})
+})
+
+describe('fitNameColumnWidth', () => {
+	it('leaves the natural width untouched on a roomy terminal', () => {
+		expect(fitNameColumnWidth(20, 120, false)).toBe(20)
+	})
+
+	it('clamps to the space left after the fixed chrome on a narrow terminal', () => {
+		// 50 - 24 (chrome) = 26 available; a 40-wide name is capped to 26.
+		expect(fitNameColumnWidth(40, 50, false)).toBe(26)
+	})
+
+	it('also accounts for the metric columns when shown', () => {
+		// 60 - 24 - 17 = 19 available.
+		expect(fitNameColumnWidth(40, 60, true)).toBe(19)
+	})
+
+	it('keeps the always-visible columns within the terminal width', () => {
+		const columns = 48
+		const name = fitNameColumnWidth(80, columns, false)
+
+		// name + chrome must not exceed the terminal, so kind/status stay on-screen.
+		expect(name + 24).toBeLessThanOrEqual(columns)
+	})
+
+	it('never returns less than one column, even on a pathologically tiny terminal', () => {
+		expect(fitNameColumnWidth(40, 10, false)).toBe(1)
+		expect(fitNameColumnWidth(40, 0, true)).toBe(1)
 	})
 })
 

@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 
 import { useLogScroll } from '../hooks/use-log-scroll.js'
 import { useTerminalSize } from '../hooks/use-terminal-size.js'
-import { logPanelHeight, nameColumnWidth, urlColumnWidth } from '../layout.js'
+import { fitNameColumnWidth, logPanelHeight, nameColumnWidth, urlColumnWidth } from '../layout.js'
 import { hyperlink, truncateEnd } from '../links.js'
 import { colors, statusDisplay } from '../theme.js'
 import type { Metrics, Process, Status, WorkspaceKind } from '../types.js'
@@ -191,7 +191,11 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 		[processes],
 	)
 
-	const nameWidth = useMemo(() => nameColumnWidth(processes), [processes])
+	// Natural width fits the longest name; clamp it so a long name on a narrow
+	// terminal can't shove the kind/status columns off-screen.
+	const naturalNameWidth = useMemo(() => nameColumnWidth(processes), [processes])
+
+	const nameWidth = fitNameColumnWidth(naturalNameWidth, cols, metrics)
 
 	const urlWidth = urlColumnWidth(cols, nameWidth, metrics)
 
