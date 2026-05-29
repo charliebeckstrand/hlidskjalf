@@ -51,6 +51,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`--filter` with only invalid patterns** no longer silently launches every
   workspace; it falls back to a configured filter as if unset.
 
+### Internal
+
+- **Keyboard handling extracted to a hook** — `App`'s `useInput` dispatcher and
+  the keyboard-driven UI state (workspace selection and the help overlay toggle)
+  moved into a dedicated `useControls` hook, leaving `App` a thin composition of
+  runner state and views. No behavior change.
+
 ## [0.3.4]
 
 ### Added
