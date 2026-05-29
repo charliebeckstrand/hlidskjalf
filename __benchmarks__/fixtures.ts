@@ -62,23 +62,25 @@ export function makeProcesses(count: number): Process[] {
 }
 
 /**
- * Build deterministic `ps -eo pid,ppid,pcpu,rss` output for `count` processes
+ * Build deterministic `ps -eo pid,ppid,time,rss` output for `count` processes
  * arranged into a shallow tree, matching what parsePsOutput consumes in the
- * metrics poll loop.
+ * metrics poll loop. The TIME column is cumulative CPU time as `MM:SS`.
  */
 export function makePsOutput(count: number): string {
-	const lines = ['  PID  PPID %CPU   RSS']
+	const lines = ['  PID  PPID     TIME   RSS']
 
 	for (let i = 0; i < count; i++) {
 		const pid = 1000 + i
 
 		const ppid = i === 0 ? 1 : 1000 + Math.floor(i / 3)
 
-		const cpu = ((i * 7) % 500) / 10
+		const totalSec = (i * 7) % 6000
+
+		const time = `${Math.floor(totalSec / 60)}:${String(totalSec % 60).padStart(2, '0')}`
 
 		const rssKb = 50_000 + ((i * 1024) % 4_000_000)
 
-		lines.push(`${pid} ${ppid} ${cpu.toFixed(1)} ${rssKb}`)
+		lines.push(`${pid} ${ppid} ${time} ${rssKb}`)
 	}
 
 	return lines.join('\n')

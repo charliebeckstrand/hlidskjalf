@@ -65,7 +65,10 @@ const hoisted = vi.hoisted(() => {
 
 	const spawned: FakeChild[] = []
 
-	return { FakeChild, spawned }
+	// Controllable `ps` output for the metrics poll (the non-linux code path).
+	const psOutput = { current: '' }
+
+	return { FakeChild, spawned, psOutput }
 })
 
 vi.mock('node:child_process', () => ({
@@ -76,7 +79,7 @@ vi.mock('node:child_process', () => ({
 
 		return child
 	},
-	execFileSync: () => '',
+	execFileSync: () => hoisted.psOutput.current,
 }))
 
 const APP: Workspace = { name: 'web', kind: 'app', deps: [] }
@@ -590,5 +593,88 @@ describe('shutdown', () => {
 		child?.out('late output\n')
 
 		expect(runner.get('web')?.logs.length).toBe(before)
+	})
+})
+
+describe('metrics', () => {
+	const realPlatform = process.platform
+
+	beforeEach(() => {
+		// Force the `ps`-based path so the poll reads our controllable fixture
+		// rather than the host's /proc (which the Linux path uses).
+		Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true })
+
+		hoisted.psOutput.current = ''
+	})
+
+	afterEach(() => {
+		Object.defineProperty(process, 'platform', { value: realPlatform, configurable: true })
+
+		hoisted.psOutput.current = ''
+	})
+
+	/** One-line ps tree: the root pid with a cumulative cputime and RSS. */
+	const psTree = (pid: number, time: string, rssKb: number): string =>
+		['  PID  PPID    TIME    RSS', `${pid} 1 ${time} ${rssKb}`].join('\n')
+
+	it('derives a bounded interval CPU from cumulative cputime deltas (no startup spike)', async () => {
+		vi.useFakeTimers()
+
+		runner = createRunner('/root', true)
+
+		await runner.start([APP])
+
+		const pid = childFor('web')?.pid ?? 0
+
+		// Baseline: the process has already burned 10s of CPU at startup. A naive
+		// reading would surface that whole cumulative figure as a spike.
+		hoisted.psOutput.current = psTree(pid, '0:10.00', 200_000)
+
+		// A status change drives an event-driven sample (records the baseline).
+		childFor('web')?.out('Watching for changes\n')
+
+		await vi.advanceTimersByTimeAsync(1200)
+
+		// The next window adds only 0.5 CPU-seconds of real work.
+		hoisted.psOutput.current = psTree(pid, '0:10.50', 200_000)
+
+		childFor('web')?.out('Build start\n')
+
+		await vi.advanceTimersByTimeAsync(1200)
+
+		const metrics = runner.get('web')?.metrics
+
+		expect(metrics).toBeDefined()
+
+		// Reflects the 0.5s delta, not the 10.5s cumulative total: well under 100%.
+		expect(metrics?.cpu).toBeGreaterThan(0)
+		expect(metrics?.cpu).toBeLessThan(100)
+
+		expect(metrics?.mem).toBe(200_000 * 1024)
+	})
+
+	it('clears stale metrics once a process is stopped', async () => {
+		vi.useFakeTimers()
+
+		runner = createRunner('/root', true)
+
+		await runner.start([APP])
+
+		const pid = childFor('web')?.pid ?? 0
+
+		hoisted.psOutput.current = psTree(pid, '0:01.00', 100_000)
+
+		childFor('web')?.out('Watching for changes\n')
+
+		await vi.advanceTimersByTimeAsync(1200)
+
+		expect(runner.get('web')?.metrics).toBeDefined()
+
+		runner.stopProcess('web')
+
+		await vi.advanceTimersByTimeAsync(10)
+
+		expect(runner.get('web')?.status).toBe('stopped')
+		expect(runner.get('web')?.metrics).toBeUndefined()
 	})
 })
