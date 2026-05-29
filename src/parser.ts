@@ -1,3 +1,5 @@
+import { stripVTControlCharacters } from 'node:util'
+
 import type { Status } from './types.js'
 
 interface ParsedLine {
@@ -86,7 +88,16 @@ export function parseLine(line: string): ParsedLine {
 	return {}
 }
 
-export { stripVTControlCharacters as stripAnsi } from 'node:util'
+/**
+ * Remove all ANSI escape sequences from a line before classification. Every
+ * sequence stripVTControlCharacters touches begins with ESC, so a line with no
+ * ESC byte is returned untouched without scanning it.
+ */
+export function stripAnsi(text: string): string {
+	if (!text.includes('\x1b')) return text
+
+	return stripVTControlCharacters(text)
+}
 
 /**
  * Strip all escape sequences EXCEPT SGR color/style codes (\x1b[...m).
@@ -95,6 +106,10 @@ export { stripVTControlCharacters as stripAnsi } from 'node:util'
  * paste, character set selection, and single-character ESC sequences (e.g. \x1bc reset).
  */
 export function sanitizeForDisplay(text: string): string {
+	// Every sequence the regex matches starts with ESC, so a line without one is
+	// returned as-is, skipping the whole-string replace on the common plain line.
+	if (!text.includes('\x1b')) return text
+
 	const NON_SGR_ESCAPES =
 		// biome-ignore lint/suspicious/noControlCharactersInRegex: needed to strip terminal escape sequences
 		/\x1b(?:\][^\x07\x1b]*(?:\x07|\x1b\\)|\[[?>=]*[\d;]*[A-Za-ln-z@~`]|\([A-Za-z]|[^[(\]\x1b])/g

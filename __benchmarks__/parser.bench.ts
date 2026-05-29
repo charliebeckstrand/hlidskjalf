@@ -34,8 +34,14 @@ export function parserSuite(): Bench {
 		.add('stripAnsi: ansi-heavy line', () => {
 			stripAnsi(LOG_LINES.ansiHeavy)
 		})
+		.add('stripAnsi: plain line (no escapes)', () => {
+			stripAnsi(LOG_LINES.plain)
+		})
 		.add('sanitizeForDisplay: SGR-only line', () => {
 			sanitizeForDisplay(LOG_LINES.ansiHeavy)
+		})
+		.add('sanitizeForDisplay: plain line (no escapes)', () => {
+			sanitizeForDisplay(LOG_LINES.plain)
 		})
 		.add('sanitizeForDisplay: control + OSC line', () => {
 			sanitizeForDisplay(LOG_LINES.ansiControl)
