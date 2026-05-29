@@ -35,6 +35,22 @@ pnpm dev
 | `title` | Custom title for the header (`--title="My App"`). Defaults to `Hlidskjalf`. |
 | `metrics` | Show CPU and memory usage per workspace. Defaults to `false`. |
 | `watch` | Re-discover workspaces when `package.json` files change. Defaults to `true`; disable with `--no-watch`. |
+| `theme` | Colour theme (`--theme=niflheim`). One of `bifrost` (default), `niflheim`, `muspelheim`, `yggdrasil`, `helheim`, or `aurora`. |
+
+## Themes
+
+Named for the realms of Norse cosmology, to match the all-seeing high seat the tool is named after:
+
+| Theme | Mood |
+| --- | --- |
+| `bifrost` | The default — the rainbow bridge, indigo accents over teal highlights. |
+| `niflheim` | Ice. Glacial blues and frost-white highlights. |
+| `muspelheim` | Fire. Molten oranges and ember golds. |
+| `yggdrasil` | The world tree. Mosses, leaf-greens, bark greys. |
+| `helheim` | The shadowed underworld. Muted, low-contrast greys for low-light terminals. |
+| `aurora` | _Norðurljós_, the northern lights. A violet-to-teal shimmer. |
+
+Status colours (running / warning / error) stay legible in every theme, so a glyph never misreads.
 
 ## Configuration
 
@@ -48,6 +64,7 @@ export default defineConfig({
   order: 'run',
   metrics: true,
   filter: ['web...'],
+  theme: 'niflheim',
 })
 ```
 

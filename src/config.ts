@@ -7,6 +7,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import type { SortOrder } from './types.js'
+import { parseTheme, type ThemeName } from './ui.js'
 import { isPlainObject, normalizeFilters } from './workspaces.js'
 
 /**
@@ -25,6 +26,11 @@ export interface Config {
 	metrics?: boolean
 	/** Re-discover workspaces when `package.json` files change. Defaults to `true`. */
 	watch?: boolean
+	/**
+	 * Colour theme. One of `bifrost` (default), `niflheim`, `muspelheim`, `yggdrasil`,
+	 * `helheim`, or `aurora`.
+	 */
+	theme?: ThemeName
 }
 
 /**
@@ -78,6 +84,10 @@ function validate(raw: unknown, source: string): Config {
 	if (typeof raw.metrics === 'boolean') config.metrics = raw.metrics
 
 	if (typeof raw.watch === 'boolean') config.watch = raw.watch
+
+	const theme = parseTheme(raw.theme)
+
+	if (theme) config.theme = theme
 
 	return config
 }

@@ -84,6 +84,18 @@ describe('loadConfig', () => {
 		expect(await loadConfig(tmpDir)).toEqual({})
 	})
 
+	it('keeps a known theme name', async () => {
+		write('hlidskjalf.config.ts', 'export default { theme: "niflheim" }')
+
+		expect(await loadConfig(tmpDir)).toEqual({ theme: 'niflheim' })
+	})
+
+	it('drops an unknown theme name', async () => {
+		write('hlidskjalf.config.ts', 'export default { theme: "midgard" }')
+
+		expect(await loadConfig(tmpDir)).toEqual({})
+	})
+
 	it('keeps only valid filter entries', async () => {
 		write('hlidskjalf.config.ts', 'export default { filter: ["web", "api...", "Bad Name", 42] }')
 
