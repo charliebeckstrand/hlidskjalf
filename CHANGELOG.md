@@ -5,6 +5,27 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0]
+
+### Added
+
+- **Help overlay** — press `?` to toggle a full-screen reference listing every
+  keybinding. The footer hints collapse to a compact `? help   q quit`; press
+  `?` again or `Esc` to dismiss, and `q` still quits from anywhere.
+
+### Fixed
+
+- **Duplicated header** — when the rendered dashboard reached the terminal
+  height, Ink fell back to a non-erasing write and stranded the previous frame
+  in the scrollback, stacking the header on each redraw (most visible during an
+  error/reload burst). The dashboard is now clamped to one line below the
+  viewport so every frame stays on the erase path.
+- **Restart killing the UI** — dev processes now run in their own process group,
+  so a workspace's teardown signals can no longer terminate hlidskjalf itself.
+  Stopping or restarting also signals the whole group, reaping the real server
+  under `pnpm` instead of orphaning it (which would keep its port and break the
+  next start).
+
 ## [0.3.2]
 
 ### Added
