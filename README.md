@@ -53,7 +53,7 @@ them with:
 
 ```sh
 pnpm bench            # all suites
-pnpm bench parser     # one or more suites: parser | metrics | workspaces | logs
+pnpm bench parser     # one or more suites: parser | metrics | workspaces | logs | layout
 ```
 
 Each task is warmed up before measuring; the `±` column is the relative margin

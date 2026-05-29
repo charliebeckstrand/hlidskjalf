@@ -1,4 +1,4 @@
-import type { Workspace, WorkspaceKind } from '../src/types.js'
+import type { Process, Workspace, WorkspaceKind } from '../src/types.js'
 
 /**
  * Representative dev-server log lines, one per parser branch plus the common
@@ -47,6 +47,18 @@ export function makeWorkspaces(count: number): Workspace[] {
 	}
 
 	return workspaces
+}
+
+/**
+ * Wrap `count` synthetic workspaces as ready Process records, matching the shape
+ * the dashboard's layout maths consumes each render.
+ */
+export function makeProcesses(count: number): Process[] {
+	return makeWorkspaces(count).map((workspace) => ({
+		workspace,
+		status: 'ready' as const,
+		logs: [],
+	}))
 }
 
 /**
