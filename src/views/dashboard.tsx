@@ -12,7 +12,7 @@ const kindLabel = {
 	service: 'svc',
 } satisfies Record<WorkspaceKind, string>
 
-const HINTS = '↑/↓  j/k  select    s  stop/start    r  restart    q  quit'
+const HINTS = '↑/↓  select    s  stop/start    r  restart    q  quit'
 
 function formatCpu(cpu: number): string {
 	return `${cpu.toFixed(1)}%`.padStart(6)

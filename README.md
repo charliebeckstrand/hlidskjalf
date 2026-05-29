@@ -39,10 +39,10 @@ pnpm dev
 
 | Key | Action |
 | --- | --- |
-| `↑` / `↓` or `k` / `j` | Move the selection between workspaces |
+| `↑` / `↓` | Move the selection between workspaces |
 | `s` | Stop the selected workspace (or start it again if stopped) |
 | `r` | Restart the selected workspace |
-| `q` or `Ctrl+C` | Quit |
+| `q` | Quit |
 
 ## Benchmarks
 
