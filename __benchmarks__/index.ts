@@ -1,3 +1,4 @@
+import { logsSuite } from './logs.bench.js'
 import { metricsSuite } from './metrics.bench.js'
 import { parserSuite } from './parser.bench.js'
 import { runSuite } from './run.js'
@@ -11,6 +12,7 @@ const suites = {
 	parser: parserSuite,
 	metrics: metricsSuite,
 	workspaces: workspacesSuite,
+	logs: logsSuite,
 } as const
 
 type SuiteName = keyof typeof suites

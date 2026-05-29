@@ -3,6 +3,7 @@ import { EventEmitter } from 'node:events'
 import fs from 'node:fs'
 import os from 'node:os'
 
+import { appendLog } from './logs.js'
 import {
 	collectDescendants,
 	cpuPercentFromTicks,
@@ -13,7 +14,6 @@ import {
 import { parseLine, sanitizeForDisplay, stripAnsi } from './parser.js'
 import type { Process, Status, Workspace } from './types.js'
 
-const MAX_LOGS = 500
 const ERROR_RECOVERY_MS = 5000
 const MAX_RESTART_RETRIES = 3
 const RESTART_DELAY_MS = 1000
@@ -302,9 +302,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		const { process: proc } = entry
 
-		proc.logs.push(sanitizeForDisplay(line))
-
-		if (proc.logs.length > MAX_LOGS) proc.logs.splice(0, proc.logs.length - MAX_LOGS)
+		appendLog(proc.logs, sanitizeForDisplay(line))
 
 		entry.lastOutputAt = Date.now()
 
