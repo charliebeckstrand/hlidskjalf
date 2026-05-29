@@ -54,6 +54,7 @@ const hoisted = vi.hoisted(() => {
 		/** Simulate the process exiting on its own (a crash or clean stop). */
 		exit(code: number | null, signal: string | null = null): void {
 			this.exitCode = code
+
 			this.signalCode = signal
 
 			this.emit('close', code, signal)
@@ -97,7 +98,9 @@ let runner: Runner
 
 afterEach(async () => {
 	vi.useRealTimers()
+
 	await runner?.shutdown().catch(() => {})
+
 	hoisted.spawned.length = 0
 })
 
@@ -130,17 +133,21 @@ describe('createRunner', () => {
 describe('runner lifecycle', () => {
 	it('spawns a child and starts in the building state', async () => {
 		runner = createRunner('/root')
+
 		await runner.start([APP])
 
 		expect(childFor('web')).toBeDefined()
+
 		expect(runner.get('web')?.status).toBe('building')
 	})
 
 	it('emits a change event when output arrives', async () => {
 		runner = createRunner('/root')
+
 		await runner.start([APP])
 
 		const onChange = vi.fn()
+
 		runner.on('change', onChange)
 
 		childFor('web')?.out('hello\n')
@@ -152,6 +159,7 @@ describe('runner lifecycle', () => {
 describe('status transitions', () => {
 	beforeEach(async () => {
 		runner = createRunner('/root')
+
 		await runner.start([APP])
 	})
 
@@ -184,6 +192,7 @@ describe('status transitions', () => {
 describe('log handling', () => {
 	beforeEach(async () => {
 		runner = createRunner('/root')
+
 		await runner.start([APP])
 	})
 
@@ -191,13 +200,17 @@ describe('log handling', () => {
 		// Emit far more than the buffer holds so trimming is exercised. The buffer
 		// keeps headroom above MAX_LOGS to amortize trims, so the bound is 2x.
 		const count = MAX_LOGS * 5
+
 		const lines = Array.from({ length: count }, (_, i) => `line${i}`).join('\n')
+
 		childFor('web')?.out(`${lines}\n`)
 
 		const logs = runner.get('web')?.logs ?? []
 
 		expect(logs.length).toBeLessThanOrEqual(MAX_LOGS * 2)
+		
 		expect(logs.length).toBeGreaterThanOrEqual(MAX_LOGS)
+		
 		expect(logs.at(-1)).toBe(`line${count - 1}`)
 	})
 
@@ -207,6 +220,7 @@ describe('log handling', () => {
 		const logs = runner.get('web')?.logs ?? []
 
 		expect(logs.length).toBe(1)
+
 		expect(logs[0]?.length).toBe(8192)
 	})
 })
@@ -214,10 +228,13 @@ describe('log handling', () => {
 describe('error recovery', () => {
 	it('returns to the last good status if no further errors arrive', async () => {
 		vi.useFakeTimers()
+
 		runner = createRunner('/root')
+
 		await runner.start([APP])
 
 		const child = childFor('web')
+
 		child?.out('Watching for changes\n')
 		child?.out('[ERROR] transient\n')
 
@@ -232,22 +249,27 @@ describe('error recovery', () => {
 describe('unexpected exit', () => {
 	it('marks a clean exit (code 0) as stopped without restarting', async () => {
 		runner = createRunner('/root')
+
 		await runner.start([APP])
 
 		childFor('web')?.exit(0)
 
 		expect(runner.get('web')?.status).toBe('stopped')
+
 		expect(spawnCount('web')).toBe(1)
 	})
 
 	it('restarts with backoff after a crash', async () => {
 		vi.useFakeTimers()
+
 		runner = createRunner('/root')
+
 		await runner.start([APP])
 
 		childFor('web')?.exit(1)
 
 		expect(runner.get('web')?.status).toBe('error')
+
 		expect(spawnCount('web')).toBe(1)
 
 		// First backoff is 1s.
@@ -258,24 +280,33 @@ describe('unexpected exit', () => {
 
 	it('gives up after exceeding the retry limit', async () => {
 		vi.useFakeTimers()
+
 		runner = createRunner('/root')
+
 		await runner.start([APP])
 
 		// Crash → restart → crash, escalating the backoff each time.
 		childFor('web')?.exit(1)
+
 		vi.advanceTimersByTime(1000)
+
 		childFor('web')?.exit(1)
+
 		vi.advanceTimersByTime(2000)
+
 		childFor('web')?.exit(1)
+
 		vi.advanceTimersByTime(4000)
 
 		expect(spawnCount('web')).toBe(4)
 
 		// One crash too many: the runner gives up rather than respawning.
 		childFor('web')?.exit(1)
+
 		vi.advanceTimersByTime(8000)
 
 		expect(spawnCount('web')).toBe(4)
+
 		expect(runner.get('web')?.status).toBe('error')
 		expect(runner.get('web')?.logs.some((l) => l.includes('giving up'))).toBe(true)
 	})
@@ -284,25 +315,31 @@ describe('unexpected exit', () => {
 describe('manual stop and restart', () => {
 	it('stops a running process cleanly', async () => {
 		runner = createRunner('/root')
+
 		await runner.start([APP])
 
 		const child = childFor('web')
+
 		child?.out('Watching for changes\n')
 
 		runner.stopProcess('web')
+
 		await flush()
 
 		expect(child?.killed).toBe(true)
+
 		expect(runner.get('web')?.status).toBe('stopped')
 	})
 
 	it('does not log a spurious give-up message when stopping', async () => {
 		runner = createRunner('/root')
+
 		await runner.start([APP])
 
 		childFor('web')?.out('Watching for changes\n')
 
 		runner.stopProcess('web')
+
 		await flush()
 
 		expect(runner.get('web')?.logs.some((l) => l.includes('giving up'))).toBe(false)
@@ -310,30 +347,37 @@ describe('manual stop and restart', () => {
 
 	it('restarts a stopped process when stop is toggled', async () => {
 		runner = createRunner('/root')
+
 		await runner.start([APP])
 
 		runner.stopProcess('web')
+
 		await flush()
 
 		expect(runner.get('web')?.status).toBe('stopped')
 
 		runner.restartProcess('web')
+
 		await flush()
 
 		expect(spawnCount('web')).toBe(2)
+
 		expect(runner.get('web')?.status).toBe('building')
 	})
 
 	it('restarts a running process without flashing an error', async () => {
 		runner = createRunner('/root')
+
 		await runner.start([APP])
 
 		childFor('web')?.out('Watching for changes\n')
 
 		runner.restartProcess('web')
+
 		await flush()
 
 		expect(spawnCount('web')).toBe(2)
+
 		expect(runner.get('web')?.status).toBe('building')
 		expect(runner.get('web')?.logs.some((l) => l.includes('giving up'))).toBe(false)
 	})
@@ -342,6 +386,7 @@ describe('manual stop and restart', () => {
 describe('shutdown', () => {
 	it('terminates running children', async () => {
 		runner = createRunner('/root')
+
 		await runner.start([APP])
 
 		const child = childFor('web')
@@ -353,6 +398,7 @@ describe('shutdown', () => {
 
 	it('ignores further output after shutdown', async () => {
 		runner = createRunner('/root')
+
 		await runner.start([APP])
 
 		const child = childFor('web')
@@ -360,6 +406,7 @@ describe('shutdown', () => {
 		await runner.shutdown()
 
 		const before = runner.get('web')?.logs.length ?? 0
+		
 		child?.out('late output\n')
 
 		expect(runner.get('web')?.logs.length).toBe(before)
