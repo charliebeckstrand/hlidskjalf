@@ -427,6 +427,46 @@ describe('manual stop and restart', () => {
 		expect(runner.get('web')?.status).toBe('building')
 		expect(runner.get('web')?.logs.some((l) => l.includes('giving up'))).toBe(false)
 	})
+
+	it('does not double-spawn when restart is pressed twice before the child closes', async () => {
+		runner = createRunner('/root')
+
+		await runner.start([APP])
+
+		childFor('web')?.out('Watching for changes\n')
+
+		// Two restarts land while the old child is still tearing down. The second
+		// must not stack a second teardown handler, or the close fires both and
+		// spawns two dev servers for one workspace.
+		runner.restartProcess('web')
+		runner.restartProcess('web')
+
+		await flush()
+		await flush()
+
+		expect(spawnCount('web')).toBe(2)
+
+		expect(runner.get('web')?.status).toBe('building')
+	})
+
+	it('does not duplicate when stop then restart race before the child closes', async () => {
+		runner = createRunner('/root')
+
+		await runner.start([APP])
+
+		childFor('web')?.out('Watching for changes\n')
+
+		runner.stopProcess('web')
+		runner.restartProcess('web')
+
+		await flush()
+		await flush()
+
+		// Original + a single restart spawn; the latest request (restart) wins.
+		expect(spawnCount('web')).toBe(2)
+
+		expect(runner.get('web')?.status).toBe('building')
+	})
 })
 
 describe('process isolation', () => {

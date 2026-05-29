@@ -52,12 +52,13 @@ const baseMatchers: { pattern: RegExp; status: Status }[] = [
 	{ pattern: /⚡\uFE0F?\s*Build success/, status: 'watching' },
 	{ pattern: /Build start/, status: 'building' },
 	{ pattern: /Watching for changes/, status: 'watching' },
-	// Bare readiness signal — no URL on the line (e.g. Pino logs the port on a separate line).
-	// Keep below URL-bearing matchers so URL extraction still wins when both could match.
-	{ pattern: /\blistening\b/i, status: 'ready' },
 	{ pattern: /\[ERROR\]/, status: 'error' },
-	{ pattern: /[Ee]rror[\s:]/, status: 'error' },
+	{ pattern: /error[\s:]/i, status: 'error' },
 	{ pattern: /process exit/, status: 'error' },
+	// Bare readiness signal — no URL on the line (e.g. Pino logs the port on a separate line).
+	// Keep below URL-bearing matchers so URL extraction still wins when both could match,
+	// and below the error matchers so a failure line that mentions "listening" stays an error.
+	{ pattern: /\blistening\b/i, status: 'ready' },
 ]
 
 // A matcher whose pattern embeds the `http` literal can only ever match a line

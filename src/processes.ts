@@ -35,6 +35,10 @@ interface ProcessEntry {
 	lastOutputAt: number
 	/** Set when stop/restart deliberately kills the child, so its close event is not treated as a crash. */
 	intentionalExit: boolean
+	/** True while a deliberate kill is in flight, so a second stop/restart doesn't stack another close handler. */
+	teardownStarted: boolean
+	/** Action to run once the in-flight teardown's child closes. The latest request wins. */
+	onClose: (() => void) | null
 }
 
 interface RunnerEvents {
@@ -85,6 +89,8 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 			restartRetries: 0,
 			lastOutputAt: 0,
 			intentionalExit: false,
+			teardownStarted: false,
+			onClose: null,
 		}
 	}
 
@@ -212,6 +218,75 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 	private entry(name: string): ProcessEntry | undefined {
 		return this.entries.get(name)
+	}
+
+	private clearTimers(entry: ProcessEntry): void {
+		if (entry.restartTimer) {
+			clearTimeout(entry.restartTimer)
+
+			entry.restartTimer = null
+		}
+		if (entry.errorTimer) {
+			clearTimeout(entry.errorTimer)
+
+			entry.errorTimer = null
+		}
+		if (entry.startupTimer) {
+			clearTimeout(entry.startupTimer)
+
+			entry.startupTimer = null
+		}
+	}
+
+	/**
+	 * Kill a live child and run `onClosed` once it exits, escalating to SIGKILL if
+	 * it lingers. Calling this again while a teardown is already pending for the
+	 * same child just swaps in the latest `onClosed` rather than stacking another
+	 * `close` listener — otherwise a rapid stop/restart would fire two handlers and
+	 * spawn duplicate dev servers. If the child is already gone, `onClosed` runs
+	 * synchronously.
+	 */
+	private beginTeardown(entry: ProcessEntry, onClosed: () => void): void {
+		entry.intentionalExit = true
+
+		const { child } = entry
+
+		if (!child || child.exitCode !== null || child.signalCode !== null) {
+			entry.child = null
+
+			onClosed()
+
+			return
+		}
+
+		// Latest request wins; the single close handler below reads this at close time.
+		entry.onClose = onClosed
+
+		if (!entry.teardownStarted) {
+			entry.teardownStarted = true
+
+			const escalate = setTimeout(() => {
+				if (child.exitCode === null) this.killTree(child, 'SIGKILL')
+			}, 5000)
+
+			escalate.unref()
+
+			child.on('close', () => {
+				clearTimeout(escalate)
+
+				entry.child = null
+
+				entry.teardownStarted = false
+
+				const action = entry.onClose
+
+				entry.onClose = null
+
+				action?.()
+			})
+		}
+
+		this.killTree(child, 'SIGTERM')
 	}
 
 	private waitForPackages(names: string[]): Promise<void> {
@@ -417,7 +492,11 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		if (signal === 'SIGABRT') {
 			this.rebuildFsevents()
 				.then(() => {
-					if (!this.stopping) this.spawn(workspace)
+					// The workspace may have been stopped or removed while the rebuild ran;
+					// only respawn if it's still tracked and no deliberate exit intervened.
+					const e = this.entry(workspace.name)
+
+					if (!this.stopping && e && !e.intentionalExit) this.spawn(workspace)
 				})
 				.catch(() => this.setStatus(workspace.name, 'error'))
 
@@ -467,7 +546,9 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 				if (status === 'idle' && url) {
 					this.probeUrl(url).then((alive) => {
-						if (alive) {
+						// The probe is async; bail if the process was stopped/restarted in
+						// the meantime so we don't resurrect it to a running status.
+						if (alive && entry.process.status === 'idle') {
 							entry.lastOutputAt = Date.now()
 
 							this.setStatus(name, entry.lastGoodStatus ?? 'ready')
@@ -484,7 +565,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 						this.probeUrl(url).then((alive) => {
 							if (alive) {
 								entry.lastOutputAt = Date.now()
-							} else {
+							} else if (entry.process.status === 'watching' || entry.process.status === 'ready') {
 								this.setStatus(name, 'idle')
 							}
 						})
@@ -546,6 +627,10 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		entry.process.status = status
 
+		// A stopped process has no child left to meter; drop its last reading so the
+		// dashboard doesn't keep showing stale CPU/memory for something that's gone.
+		if (status === 'stopped') entry.process.metrics = undefined
+
 		if (status === 'error' && entry.process.workspace.kind === 'package') {
 			this.notifyDependents(name)
 		}
@@ -560,54 +645,23 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		if (!entry) return
 
-		if (entry.restartTimer) {
-			clearTimeout(entry.restartTimer)
-
-			entry.restartTimer = null
-		}
-		if (entry.errorTimer) {
-			clearTimeout(entry.errorTimer)
-
-			entry.errorTimer = null
-		}
-		if (entry.startupTimer) {
-			clearTimeout(entry.startupTimer)
-
-			entry.startupTimer = null
-		}
+		this.clearTimers(entry)
 
 		const { child } = entry
 
-		if (!child || child.exitCode !== null || child.signalCode !== null) {
-			this.setStatus(name, 'stopped')
+		const wasLive = !!child && child.exitCode === null && child.signalCode === null
 
-			return
-		}
-
-		// Mark the upcoming close as deliberate so it isn't treated as a crash.
-		entry.intentionalExit = true
-
-		const escalate = setTimeout(() => {
-			if (child.exitCode === null) this.killTree(child, 'SIGKILL')
-		}, 5000)
-
-		escalate.unref()
-
-		child.on('close', () => {
-			clearTimeout(escalate)
-
-			entry.child = null
-
+		this.beginTeardown(entry, () => {
 			entry.restartRetries = 0
 
 			this.setStatus(name, 'stopped')
 		})
 
-		this.killTree(child, 'SIGTERM')
+		if (wasLive) {
+			entry.process.logs.push('[hlidskjalf] stopping process...')
 
-		entry.process.logs.push('[hlidskjalf] stopping process...')
-
-		this.emit('change')
+			this.emit('change')
+		}
 	}
 
 	restartProcess(name: string): void {
@@ -620,6 +674,9 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		const workspace = entry.process.workspace
 
 		const doRestart = () => {
+			// A shutdown may have begun while the child was closing; don't respawn into it.
+			if (this.stopping) return
+
 			entry.restartRetries = 0
 
 			entry.process.url = undefined
@@ -629,52 +686,19 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 			this.spawn(workspace)
 		}
 
+		this.clearTimers(entry)
+
 		const { child } = entry
 
-		if (!child || child.exitCode !== null || child.signalCode !== null) {
-			doRestart()
+		const wasLive = !!child && child.exitCode === null && child.signalCode === null
 
-			return
+		this.beginTeardown(entry, doRestart)
+
+		if (wasLive) {
+			entry.process.logs.push('[hlidskjalf] stopping process for restart...')
+
+			this.emit('change')
 		}
-
-		// Mark the upcoming close as deliberate so it isn't treated as a crash.
-		entry.intentionalExit = true
-
-		if (entry.restartTimer) {
-			clearTimeout(entry.restartTimer)
-
-			entry.restartTimer = null
-		}
-		if (entry.errorTimer) {
-			clearTimeout(entry.errorTimer)
-
-			entry.errorTimer = null
-		}
-		if (entry.startupTimer) {
-			clearTimeout(entry.startupTimer)
-
-			entry.startupTimer = null
-		}
-
-		const escalate = setTimeout(() => {
-			if (child.exitCode === null) this.killTree(child, 'SIGKILL')
-		}, 5000)
-
-		escalate.unref()
-
-		child.on('close', () => {
-			clearTimeout(escalate)
-
-			entry.child = null
-
-			doRestart()
-		})
-
-		this.killTree(child, 'SIGTERM')
-
-		entry.process.logs.push('[hlidskjalf] stopping process for restart...')
-
-		this.emit('change')
 	}
 
 	clearLogs(name: string): void {
@@ -717,27 +741,12 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		if (!entry) return
 
-		if (entry.errorTimer) clearTimeout(entry.errorTimer)
-		if (entry.restartTimer) clearTimeout(entry.restartTimer)
-		if (entry.startupTimer) clearTimeout(entry.startupTimer)
+		this.clearTimers(entry)
 
-		const { child } = entry
-
-		if (child && child.exitCode === null && child.signalCode === null) {
-			// Deleting the entry below means the close handler can't find it, so the
-			// exit is already treated as non-crashing; flag it anyway for clarity.
-			entry.intentionalExit = true
-
-			const escalate = setTimeout(() => {
-				if (child.exitCode === null) this.killTree(child, 'SIGKILL')
-			}, 5000)
-
-			escalate.unref()
-
-			child.on('close', () => clearTimeout(escalate))
-
-			this.killTree(child, 'SIGTERM')
-		}
+		// Tear the child's group down so its server frees its port. Deleting the
+		// entry below also means the spawn close handler can't find it, so the exit
+		// is treated as non-crashing.
+		this.beginTeardown(entry, () => {})
 
 		this.entries.delete(name)
 
