@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { appendLog, MAX_LOGS } from '../src/logs.js'
+import { appendLog, MAX_LOGS, visibleLogRange } from '../src/logs.js'
 
 describe('appendLog', () => {
 	it('appends a line to the buffer', () => {
@@ -52,5 +52,34 @@ describe('appendLog', () => {
 		expect(logs.length).toBeLessThanOrEqual(MAX_LOGS * 2)
 		// The newest line is always present.
 		expect(logs[logs.length - 1]).toBe(`line ${MAX_LOGS * 10 - 1}`)
+	})
+})
+
+describe('visibleLogRange', () => {
+	it('shows the whole buffer when it fits the viewport', () => {
+		expect(visibleLogRange(3, 10, 0)).toEqual({ start: 0, end: 3, maxScroll: 0 })
+	})
+
+	it('shows the newest lines when following (scroll 0)', () => {
+		// 100 lines, 10-line viewport → last ten lines.
+		expect(visibleLogRange(100, 10, 0)).toEqual({ start: 90, end: 100, maxScroll: 90 })
+	})
+
+	it('pages back through history by the scroll offset', () => {
+		// Scrolled up 25 lines: the window ends 25 lines above the tail.
+		expect(visibleLogRange(100, 10, 25)).toEqual({ start: 65, end: 75, maxScroll: 90 })
+	})
+
+	it('clamps an over-large scroll to the oldest lines', () => {
+		// "Jump to top" can pass a huge offset without knowing the line count.
+		expect(visibleLogRange(100, 10, 9999)).toEqual({ start: 0, end: 10, maxScroll: 90 })
+	})
+
+	it('clamps a negative scroll back to follow mode', () => {
+		expect(visibleLogRange(100, 10, -5)).toEqual({ start: 90, end: 100, maxScroll: 90 })
+	})
+
+	it('handles an empty buffer', () => {
+		expect(visibleLogRange(0, 10, 0)).toEqual({ start: 0, end: 0, maxScroll: 0 })
 	})
 })

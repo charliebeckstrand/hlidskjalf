@@ -11,7 +11,7 @@ interface Props {
 }
 
 export function App({ options }: Props) {
-	const { processes, loading, stop, stopProcess, restartProcess } = useRunner(options)
+	const { processes, loading, stop, stopProcess, restartProcess, clearLogs } = useRunner(options)
 
 	const cursor = useCursor(processes.length, !loading)
 
@@ -31,6 +31,8 @@ export function App({ options }: Props) {
 		}
 
 		if (input === 'r') restartProcess(selected.workspace.name)
+
+		if (input === 'c') clearLogs(selected.workspace.name)
 	})
 
 	if (loading) return <Loading title={options.title} />

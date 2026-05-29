@@ -28,3 +28,32 @@ export function appendLog(logs: string[], line: string): void {
 		logs.splice(0, logs.length - MAX_LOGS)
 	}
 }
+
+export interface LogWindow {
+	/** Inclusive start index into the log buffer. */
+	start: number
+	/** Exclusive end index into the log buffer. */
+	end: number
+	/** Largest valid scroll offset for the given buffer and viewport. */
+	maxScroll: number
+}
+
+/**
+ * Resolve the slice of a log buffer visible in a viewport of `height` lines,
+ * given a `scroll` offset measured in lines above the tail. `scroll` 0 shows the
+ * newest `height` lines (follow mode); larger values page back through history.
+ * Offsets are clamped to the buffer, so callers can pass an over-large value
+ * (e.g. "jump to top") without first knowing the line count. Pure so the slice
+ * maths can be tested without rendering Ink.
+ */
+export function visibleLogRange(total: number, height: number, scroll: number): LogWindow {
+	const maxScroll = Math.max(0, total - height)
+
+	const clamped = Math.min(Math.max(0, scroll), maxScroll)
+
+	const end = total - clamped
+
+	const start = Math.max(0, end - height)
+
+	return { start, end, maxScroll }
+}

@@ -21,6 +21,7 @@ interface UseRunnerResult {
 	stop: () => void
 	stopProcess: (name: string) => void
 	restartProcess: (name: string) => void
+	clearLogs: (name: string) => void
 }
 
 export function useRunner(options: Options): UseRunnerResult {
@@ -124,5 +125,9 @@ export function useRunner(options: Options): UseRunnerResult {
 		runnerRef.current?.restartProcess(name)
 	}, [])
 
-	return { processes, loading, stop, stopProcess, restartProcess }
+	const clearLogs = useCallback((name: string) => {
+		runnerRef.current?.clearLogs(name)
+	}, [])
+
+	return { processes, loading, stop, stopProcess, restartProcess, clearLogs }
 }

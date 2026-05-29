@@ -113,6 +113,7 @@ describe('createRunner', () => {
 		expect(typeof runner.shutdown).toBe('function')
 		expect(typeof runner.stopProcess).toBe('function')
 		expect(typeof runner.restartProcess).toBe('function')
+		expect(typeof runner.clearLogs).toBe('function')
 	})
 
 	it('is an EventEmitter', () => {
@@ -208,9 +209,9 @@ describe('log handling', () => {
 		const logs = runner.get('web')?.logs ?? []
 
 		expect(logs.length).toBeLessThanOrEqual(MAX_LOGS * 2)
-		
+
 		expect(logs.length).toBeGreaterThanOrEqual(MAX_LOGS)
-		
+
 		expect(logs.at(-1)).toBe(`line${count - 1}`)
 	})
 
@@ -222,6 +223,25 @@ describe('log handling', () => {
 		expect(logs.length).toBe(1)
 
 		expect(logs[0]?.length).toBe(8192)
+	})
+
+	it('clears the buffer for a process and emits a change', () => {
+		childFor('web')?.out('line one\nline two\n')
+
+		expect(runner.get('web')?.logs.length ?? 0).toBeGreaterThan(0)
+
+		const onChange = vi.fn()
+
+		runner.on('change', onChange)
+
+		runner.clearLogs('web')
+
+		expect(runner.get('web')?.logs).toEqual([])
+		expect(onChange).toHaveBeenCalled()
+	})
+
+	it('ignores clearLogs for an unknown process', () => {
+		expect(() => runner.clearLogs('nonexistent')).not.toThrow()
 	})
 })
 
@@ -406,7 +426,7 @@ describe('shutdown', () => {
 		await runner.shutdown()
 
 		const before = runner.get('web')?.logs.length ?? 0
-		
+
 		child?.out('late output\n')
 
 		expect(runner.get('web')?.logs.length).toBe(before)

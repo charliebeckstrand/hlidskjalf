@@ -1,4 +1,5 @@
 import { Box, Text, useStdout } from 'ink'
+import Spinner from 'ink-spinner'
 
 import { colors } from '../theme.js'
 import { Header } from './header.js'
@@ -12,7 +13,9 @@ export function Loading({ title }: { title: string }) {
 		<Box flexDirection="column">
 			<Header title={title} columns={cols} />
 			<Box marginTop={1} paddingX={2}>
-				<Text color={colors.accent}>◑ </Text>
+				<Text color={colors.accent}>
+					<Spinner type="dots" />{' '}
+				</Text>
 				<Text color={colors.muted}>Discovering workspaces...</Text>
 			</Box>
 		</Box>
