@@ -68,6 +68,7 @@ describe('loadConfig', () => {
 
 	it('lets the config file override the package.json key', async () => {
 		write('package.json', JSON.stringify({ hlidskjalf: { order: 'run', metrics: true } }))
+
 		write('hlidskjalf.config.ts', 'export default { order: "alphabetical" }')
 
 		// File wins on `order`; package.json `metrics` still fills the gap.
