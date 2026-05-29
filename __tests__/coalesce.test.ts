@@ -80,7 +80,7 @@ describe('createCoalescer', () => {
 		coalescer.cancel()
 
 		coalescer.schedule()
-		
+
 		vi.advanceTimersByTime(16)
 
 		expect(flush).toHaveBeenCalledTimes(1)
