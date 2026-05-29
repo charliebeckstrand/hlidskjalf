@@ -22,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Truncated URL opened the wrong address** — the dashboard's URL column is
+  rendered as an OSC 8 hyperlink whose target is the full URL, so clicking it
+  opens the complete address even when the column only shows a shortened
+  segment (previously the terminal linkified the visible, truncated text).
 - **Duplicate dev servers on rapid stop/restart** — pressing `r` twice (or `s`
   then `r`) before a process finished tearing down stacked multiple exit
   handlers, spawning a second dev server for the same workspace. Teardown is now

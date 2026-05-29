@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 
 import { useLogScroll } from '../hooks/use-log-scroll.js'
 import { nameColumnWidth } from '../layout.js'
+import { hyperlink, truncateEnd } from '../links.js'
 import { colors, statusDisplay } from '../theme.js'
 import type { Metrics, Process, Status, WorkspaceKind } from '../types.js'
 import { Header } from './header.js'
@@ -86,8 +87,12 @@ function ProcessRow({
 			{showMetrics && <MetricsCells metrics={proc.metrics} />}
 			{proc.url && urlWidth > 0 && (
 				<Box width={urlWidth}>
+					{/* Pre-truncate the label to the column width and wrap it in an OSC 8
+					    hyperlink targeting the full URL, so clicking opens the whole
+					    address even when only a shortened segment is shown. Ink's own
+					    truncator isn't link-aware and would drop the escapes. */}
 					<Text color={colors.url} wrap="truncate">
-						{proc.url}
+						{hyperlink(proc.url, truncateEnd(proc.url, urlWidth))}
 					</Text>
 				</Box>
 			)}
