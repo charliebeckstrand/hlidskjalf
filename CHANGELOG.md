@@ -5,6 +5,27 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0]
+
+### Changed
+
+- **Ground-up internal rewrite** — the architecture was rebuilt around platform
+  built-ins with no change to behaviour or features. The hand-rolled, event-emitter
+  process runner, manual render coalescer, and the ref-juggling glue hook were
+  replaced by a plain store bridged into React with `useSyncExternalStore`, with
+  `useDeferredValue` bounding re-renders under a log flood. The `Meter` and
+  `Heartbeat` classes became factory functions, and a set of single-purpose modules
+  were consolidated (29 → 19 source files) behind shared UI primitives. The result
+  is materially smaller and simpler while preserving every feature: metrics, watch
+  rediscovery, idle probing, fsevents recovery, restart backoff, log scrolling,
+  hyperlinks, the alternate screen, and the full config/flag surface.
+
+### Fixed
+
+- **Log scrolling no longer depends on a private Ink API** — `Home`/`End` are now
+  detected from the key event Ink already delivers, rather than reaching into an
+  internal event emitter.
+
 ## [0.3.7]
 
 ### Added
