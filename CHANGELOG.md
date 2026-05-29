@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.4]
+
+### Added
+
+- **Config file** — persist any CLI option in a `hlidskjalf.config.ts` (loaded
+  directly via Node's type stripping, no build step) or a `hlidskjalf` key in
+  `package.json`, so flags don't have to be retyped. A `defineConfig` helper and
+  `Config` type are exported from the package for full type checking. Precedence
+  is CLI flags → config file → `package.json` key → defaults.
+- **Watch & re-discover workspaces** — the `packages`, `apps`, and `services`
+  directories are watched while running. When a workspace's `package.json` is
+  added, removed, or changed, discovery re-runs: new workspaces start
+  automatically and removed ones are stopped and dropped from the dashboard. On
+  by default; disable with `--no-watch` or `watch: false`.
+
 ## [0.3.3]
 
 ### Added

@@ -34,6 +34,49 @@ pnpm dev
 | `order` | Sort by `alphabetical` (default) or `run` (`--order=run`) dependency order. |
 | `title` | Custom title for the header (`--title="My App"`). Defaults to `Hlidskjalf`. |
 | `metrics` | Show CPU and memory usage per workspace. Defaults to `false`. |
+| `watch` | Re-discover workspaces when `package.json` files change. Defaults to `true`; disable with `--no-watch`. |
+
+## Configuration
+
+Persist any of the options above so they don't have to be retyped on every run.
+Create a `hlidskjalf.config.ts` at the repo root:
+
+```ts
+import { defineConfig } from 'hlidskjalf'
+
+export default defineConfig({
+  order: 'run',
+  metrics: true,
+  filter: ['web...'],
+})
+```
+
+`defineConfig` is optional — a plain `export default { ... }` works too, and
+`hlidskjalf.config.js` / `hlidskjalf.config.mjs` are also recognized. The `.ts`
+form needs no build step: it's loaded directly via Node's type stripping
+(Node ≥ 22.18).
+
+Alternatively, add a `hlidskjalf` key to your root `package.json`:
+
+```json
+{
+  "hlidskjalf": {
+    "order": "run",
+    "metrics": true
+  }
+}
+```
+
+Precedence is **CLI flags → `hlidskjalf.config.*` → `package.json` key →
+defaults**, so a flag always wins over a stored value.
+
+## Watching
+
+While running, hlidskjalf watches your `packages`, `apps`, and `services`
+directories. When a workspace's `package.json` is added, removed, or changed it
+re-runs discovery: new workspaces start automatically and removed ones are
+stopped and dropped from the dashboard. Pass `--no-watch` (or set
+`watch: false`) to turn this off.
 
 ## Controls
 

@@ -5,6 +5,7 @@ import { type Coalescer, createCoalescer } from '../coalesce.js'
 import type { Runner } from '../processes.js'
 import { createRunner } from '../processes.js'
 import type { Options, Process } from '../types.js'
+import { type Watcher, watchWorkspaces } from '../watcher.js'
 import { discover, filterWorkspaces, sortByDeps, sortByName } from '../workspaces.js'
 
 /**
@@ -32,12 +33,18 @@ export function useRunner(options: Options): UseRunnerResult {
 
 	const runnerRef = useRef<Runner | null>(null)
 	const coalescerRef = useRef<Coalescer | null>(null)
+	const watcherRef = useRef<Watcher | null>(null)
+	// Display-order names and the workspaces currently tracked. Held in refs so
+	// the watcher's re-discovery can mutate them without re-running the effect.
+	const displayOrderRef = useRef<string[]>([])
 	const stoppingRef = useRef(false)
 
 	const stop = useCallback(() => {
 		if (stoppingRef.current) return
 
 		stoppingRef.current = true
+
+		watcherRef.current?.close()
 
 		const runner = runnerRef.current
 
@@ -52,12 +59,17 @@ export function useRunner(options: Options): UseRunnerResult {
 	}, [exit])
 
 	useEffect(() => {
-		const run = async () => {
-			let workspaces = discover(options.root)
+		const discoverWorkspaces = () => {
+			const found = discover(options.root)
 
-			if (options.filter) {
-				workspaces = filterWorkspaces(workspaces, options.filter)
-			}
+			return options.filter ? filterWorkspaces(found, options.filter) : found
+		}
+
+		const sortForDisplay = (workspaces: ReturnType<typeof discoverWorkspaces>) =>
+			options.order === 'run' ? sortByDeps(workspaces) : sortByName(workspaces)
+
+		const run = async () => {
+			const workspaces = discoverWorkspaces()
 
 			if (workspaces.length === 0) {
 				console.error('No matching workspaces found.')
@@ -69,9 +81,9 @@ export function useRunner(options: Options): UseRunnerResult {
 
 			const startOrder = sortByDeps(workspaces)
 
-			const sorted = options.order === 'run' ? startOrder : sortByName(workspaces)
+			const sorted = sortForDisplay(workspaces)
 
-			const displayOrder = sorted.map((w) => w.name)
+			displayOrderRef.current = sorted.map((w) => w.name)
 
 			const runner = createRunner(options.root, options.metrics)
 
@@ -83,7 +95,7 @@ export function useRunner(options: Options): UseRunnerResult {
 			// coalesced burst still renders the most recent output.
 			const rebuild = () => {
 				setProcesses(
-					displayOrder.flatMap((name) => {
+					displayOrderRef.current.flatMap((name) => {
 						const p = runner.get(name)
 
 						return p ? [p] : []
@@ -96,6 +108,36 @@ export function useRunner(options: Options): UseRunnerResult {
 			coalescerRef.current = coalescer
 
 			runner.on('change', coalescer.schedule)
+
+			// Re-run discovery when a package.json changes and reconcile the runner:
+			// start workspaces that appeared, drop ones that vanished, and re-sort.
+			if (options.watch) {
+				const rediscover = () => {
+					if (stoppingRef.current) return
+
+					const fresh = discoverWorkspaces()
+
+					const freshNames = new Set(fresh.map((w) => w.name))
+
+					const currentNames = new Set(displayOrderRef.current)
+
+					const added = fresh.filter((w) => !currentNames.has(w.name))
+
+					const removed = [...currentNames].filter((name) => !freshNames.has(name))
+
+					if (added.length === 0 && removed.length === 0) return
+
+					for (const name of removed) runner.removeWorkspace(name)
+
+					for (const workspace of added) runner.addWorkspace(workspace)
+
+					displayOrderRef.current = sortForDisplay(fresh).map((w) => w.name)
+
+					coalescer.schedule()
+				}
+
+				watcherRef.current = watchWorkspaces(options.root, rediscover)
+			}
 
 			setLoading(false)
 
@@ -113,9 +155,11 @@ export function useRunner(options: Options): UseRunnerResult {
 		return () => {
 			process.off('SIGTERM', stop)
 
+			watcherRef.current?.close()
+
 			coalescerRef.current?.cancel()
 		}
-	}, [exit, options.filter, options.metrics, options.order, options.root, stop])
+	}, [exit, options.filter, options.metrics, options.order, options.root, options.watch, stop])
 
 	const stopProcess = useCallback((name: string) => {
 		runnerRef.current?.stopProcess(name)
