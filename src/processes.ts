@@ -105,6 +105,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		}
 
 		const failedPackages = new Set<string>()
+
 		for (const pkg of packages) {
 			const s = this.entries.get(pkg.name)?.process.status
 
@@ -429,6 +430,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 					this.probeUrl(url).then((alive) => {
 						if (alive) {
 							entry.lastOutputAt = Date.now()
+
 							this.setStatus(name, entry.lastGoodStatus ?? 'ready')
 						}
 					})
@@ -680,7 +682,9 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 	private collectMetricsProc(rootPids: Map<number, string>): void {
 		const tree = this.readProcTree()
+
 		const now = Date.now()
+
 		let changed = false
 
 		for (const [rootPid, name] of rootPids) {
@@ -766,6 +770,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		stats: Map<number, { utime: number; stime: number; rss: number }>
 	} {
 		const children = new Map<number, number[]>()
+
 		const stats = new Map<number, { utime: number; stime: number; rss: number }>()
 
 		let entries: string[]

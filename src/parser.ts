@@ -113,5 +113,6 @@ export function sanitizeForDisplay(text: string): string {
 	const NON_SGR_ESCAPES =
 		// biome-ignore lint/suspicious/noControlCharactersInRegex: needed to strip terminal escape sequences
 		/\x1b(?:\][^\x07\x1b]*(?:\x07|\x1b\\)|\[[?>=]*[\d;]*[A-Za-ln-z@~`]|\([A-Za-z]|[^[(\]\x1b])/g
+
 	return text.replace(NON_SGR_ESCAPES, '')
 }
