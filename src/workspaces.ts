@@ -17,6 +17,28 @@ export function isValidPackageName(name: string): boolean {
 }
 
 /**
+ * Clean a raw list of filter patterns from either the CLI or a config file:
+ * strip the `{…}` braces a shell may leave around a turbo-style filter, then
+ * drop (and warn about) any entry whose package name is invalid. The trailing
+ * `...` transitive-deps marker is preserved on valid entries.
+ */
+export function normalizeFilters(raw: string[]): string[] {
+	return raw
+		.map((v) => v.replace(/^\{(.+)\}$/, '$1'))
+		.filter((v) => {
+			const name = v.endsWith('...') ? v.slice(0, -3) : v
+
+			if (!isValidPackageName(name)) {
+				console.error(`Ignoring invalid filter: ${name}`)
+
+				return false
+			}
+
+			return true
+		})
+}
+
+/**
  * Coerce an unknown value into a record of string-valued entries, dropping any
  * non-string values. Guards downstream code against malformed package.json
  * fields (e.g. a numeric dependency version) that would otherwise throw.

@@ -48,6 +48,8 @@ export interface Runner extends EventEmitter<RunnerEvents> {
 	stopProcess(name: string): void
 	restartProcess(name: string): void
 	clearLogs(name: string): void
+	addWorkspace(workspace: Workspace): void
+	removeWorkspace(name: string): void
 }
 
 class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
@@ -72,6 +74,20 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		this.numCpus = os.availableParallelism()
 	}
 
+	private static newEntry(workspace: Workspace): ProcessEntry {
+		return {
+			process: { workspace, status: 'pending', logs: [] },
+			child: null,
+			errorTimer: null,
+			restartTimer: null,
+			startupTimer: null,
+			lastGoodStatus: null,
+			restartRetries: 0,
+			lastOutputAt: 0,
+			intentionalExit: false,
+		}
+	}
+
 	get(name: string): Process | undefined {
 		return this.entries.get(name)?.process
 	}
@@ -83,17 +99,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		const apps = workspaces.filter((w) => w.kind !== 'package')
 
 		for (const workspace of workspaces) {
-			this.entries.set(workspace.name, {
-				process: { workspace, status: 'pending', logs: [] },
-				child: null,
-				errorTimer: null,
-				restartTimer: null,
-				startupTimer: null,
-				lastGoodStatus: null,
-				restartRetries: 0,
-				lastOutputAt: 0,
-				intentionalExit: false,
-			})
+			this.entries.set(workspace.name, ProcessRunner.newEntry(workspace))
 		}
 
 		for (const workspace of packages) {
@@ -679,6 +685,65 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		// Mutate in place: the UI reads this same array each frame, and emitting
 		// `change` rebuilds the process list so React re-renders the empty panel.
 		entry.process.logs.length = 0
+
+		this.emit('change')
+	}
+
+	/**
+	 * Register and start a workspace discovered after startup (e.g. when a new
+	 * `package.json` appears). No-op if it's already tracked or we're shutting
+	 * down. Spawned directly without the startup dependency gating, since the
+	 * already-running packages it may depend on are up by now.
+	 */
+	addWorkspace(workspace: Workspace): void {
+		if (this.stopping) return
+
+		if (this.entries.has(workspace.name)) return
+
+		this.allWorkspaces.push(workspace)
+
+		this.entries.set(workspace.name, ProcessRunner.newEntry(workspace))
+
+		this.spawn(workspace)
+	}
+
+	/**
+	 * Stop and forget a workspace that no longer exists in discovery. Cancels any
+	 * pending timers and tears down the child's process group so its server frees
+	 * its port, then drops all state so it disappears from the dashboard.
+	 */
+	removeWorkspace(name: string): void {
+		const entry = this.entry(name)
+
+		if (!entry) return
+
+		if (entry.errorTimer) clearTimeout(entry.errorTimer)
+		if (entry.restartTimer) clearTimeout(entry.restartTimer)
+		if (entry.startupTimer) clearTimeout(entry.startupTimer)
+
+		const { child } = entry
+
+		if (child && child.exitCode === null && child.signalCode === null) {
+			// Deleting the entry below means the close handler can't find it, so the
+			// exit is already treated as non-crashing; flag it anyway for clarity.
+			entry.intentionalExit = true
+
+			const escalate = setTimeout(() => {
+				if (child.exitCode === null) this.killTree(child, 'SIGKILL')
+			}, 5000)
+
+			escalate.unref()
+
+			child.on('close', () => clearTimeout(escalate))
+
+			this.killTree(child, 'SIGTERM')
+		}
+
+		this.entries.delete(name)
+
+		this.allWorkspaces = this.allWorkspaces.filter((w) => w.name !== name)
+
+		this.prevCpuSnapshot.delete(name)
 
 		this.emit('change')
 	}

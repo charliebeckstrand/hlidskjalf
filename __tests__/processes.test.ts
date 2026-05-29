@@ -458,6 +458,71 @@ describe('process isolation', () => {
 	})
 })
 
+describe('dynamic workspaces', () => {
+	const LIB: Workspace = { name: 'lib', kind: 'package', deps: [] }
+
+	it('spawns a workspace added after startup', async () => {
+		runner = createRunner('/root')
+
+		await runner.start([APP])
+
+		runner.addWorkspace(LIB)
+
+		expect(childFor('lib')).toBeDefined()
+
+		expect(runner.get('lib')?.status).toBe('building')
+	})
+
+	it('ignores adding a workspace that already exists', async () => {
+		runner = createRunner('/root')
+
+		await runner.start([APP])
+
+		runner.addWorkspace(APP)
+
+		expect(spawnCount('web')).toBe(1)
+	})
+
+	it('stops and forgets a removed workspace', async () => {
+		runner = createRunner('/root')
+
+		await runner.start([APP])
+
+		const child = childFor('web')
+
+		runner.removeWorkspace('web')
+
+		await flush()
+
+		expect(child?.killed).toBe(true)
+
+		expect(runner.get('web')).toBeUndefined()
+	})
+
+	it('does not restart a removed workspace when its child exits', async () => {
+		runner = createRunner('/root')
+
+		await runner.start([APP])
+
+		runner.removeWorkspace('web')
+
+		await flush()
+
+		// The teardown SIGTERM closes the child; that close must not respawn it.
+		expect(spawnCount('web')).toBe(1)
+
+		expect(runner.get('web')).toBeUndefined()
+	})
+
+	it('ignores removing an unknown workspace', async () => {
+		runner = createRunner('/root')
+
+		await runner.start([APP])
+
+		expect(() => runner.removeWorkspace('nonexistent')).not.toThrow()
+	})
+})
+
 describe('shutdown', () => {
 	it('terminates running children', async () => {
 		runner = createRunner('/root')

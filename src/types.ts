@@ -37,4 +37,5 @@ export interface Options {
 	order: SortOrder
 	title: string
 	metrics: boolean
+	watch: boolean
 }

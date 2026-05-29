@@ -3,41 +3,69 @@ import { parseArgs } from 'node:util'
 import { render } from 'ink'
 
 import { App } from './app.js'
+import { loadConfig } from './config-loader.js'
 import type { Options, SortOrder } from './types.js'
-import { isValidPackageName } from './workspaces.js'
+import { normalizeFilters } from './workspaces.js'
 
-const { values } = parseArgs({
-	args: process.argv.slice(2),
-	options: {
-		filter: { type: 'string', multiple: true },
-		order: { type: 'string', default: 'alphabetical' },
-		title: { type: 'string', default: 'Hlidskjalf' },
-		metrics: { type: 'boolean', default: false },
-	},
-})
+// `--no-watch` / `--no-metrics` aren't valid parseArgs tokens, so pull them out
+// up front and treat them as explicit `false` overrides for the boolean flags.
+const argv = process.argv.slice(2)
 
-const rawFilter = values.filter?.map((v) => v.replace(/^\{(.+)\}$/, '$1'))
-const filter = rawFilter?.filter((v) => {
-	const name = v.endsWith('...') ? v.slice(0, -3) : v
+const explicit: { metrics?: boolean; watch?: boolean } = {}
 
-	if (!isValidPackageName(name)) {
-		console.error(`Ignoring invalid filter: ${name}`)
+const args = argv.filter((arg) => {
+	if (arg === '--no-metrics') {
+		explicit.metrics = false
+
+		return false
+	}
+
+	if (arg === '--no-watch') {
+		explicit.watch = false
 
 		return false
 	}
 
 	return true
 })
-const order = values.order === 'run' ? 'run' : 'alphabetical'
 
-const title = values.title ?? 'Hlidskjalf'
+const { values } = parseArgs({
+	args,
+	options: {
+		filter: { type: 'string', multiple: true },
+		order: { type: 'string' },
+		title: { type: 'string' },
+		metrics: { type: 'boolean' },
+		watch: { type: 'boolean' },
+	},
+})
+
+const root = process.cwd()
+
+// Precedence: CLI flag > config file / package.json key > built-in default.
+const config = await loadConfig(root)
+
+const cliFilter = values.filter ? normalizeFilters(values.filter) : undefined
+
+const filter = cliFilter ?? config.filter
+
+const rawOrder = values.order ?? config.order
+
+const order: SortOrder = rawOrder === 'run' ? 'run' : 'alphabetical'
+
+const title = values.title ?? config.title ?? 'Hlidskjalf'
+
+const metrics = explicit.metrics ?? values.metrics ?? config.metrics ?? false
+
+const watch = explicit.watch ?? values.watch ?? config.watch ?? true
 
 const options: Options = {
-	root: process.cwd(),
-	order: order satisfies SortOrder,
+	root,
+	order,
 	filter: filter?.length ? filter : undefined,
 	title,
-	metrics: values.metrics ?? false,
+	metrics,
+	watch,
 }
 
 const { waitUntilExit } = render(<App options={options} />, { exitOnCtrlC: false })
