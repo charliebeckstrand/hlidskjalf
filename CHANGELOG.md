@@ -5,6 +5,60 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.7]
+
+### Added
+
+- **Renders on the alternate screen** — the dashboard now runs on the terminal's
+  alternate screen buffer (the same one vim/htop/lazygit use), so its frames can
+  never accumulate in the scrollback: re-renders repaint in place, and on quit the
+  original screen and scrollback are restored exactly as they were before launch.
+  This removes the duplicated-header copies that piled up in the scrollback when a
+  frame outgrew the viewport.
+
+### Changed
+
+- **URL column shows the full address** — the column now reserves the width its
+  longest URL needs before the name column claims any space, so a ready URL is
+  shown in full and a long workspace name truncates instead of squeezing the URL
+  off-screen. On a terminal too narrow for both, the URL is the one that shrinks
+  (and is hidden once nothing's left), while the clickable target stays the
+  complete address.
+- **Resize reflows on settle** — a window drag fires a burst of `resize` events;
+  the dashboard now waits for the size to settle (~120 ms) before reflowing, so it
+  repaints once against the final size rather than thrashing through intermediate
+  widths where a row could briefly wrap and malform the frame.
+
+### Fixed
+
+- **URL column truncated even with room to spare** — the dashboard's outer
+  `overflow: hidden` made Ink slice every line through a tokenizer that miscounts
+  OSC 8 hyperlinks (counting the hidden link target as visible width), cutting the
+  visible URL to a stray fragment regardless of how much space the column had. The
+  clip is gone (the alternate screen makes it unnecessary), so URLs render in full.
+
+### Internal
+
+- **Alternate-screen lifecycle extracted** — the enter/restore escape sequences
+  and the abrupt-exit safety net live in a small `src/terminal.ts` helper, kept
+  pure so the behavior is unit-tested without a live TTY.
+
+## [0.3.6]
+
+### Fixed
+
+- **Broken URL links and a terminal bell on every repaint** — the URL column's
+  OSC 8 hyperlinks were terminated with ST (`ESC \`), but Ink's renderer only
+  recognizes the BEL (`\x07`) form: it mis-tokenized the links, dropped the
+  visible label on narrow columns, and stranded the bell byte it emits outside a
+  valid escape, ringing the terminal on every re-render (e.g. each time the
+  selection moved). Links are now BEL-terminated so they round-trip intact and
+  silently.
+- **Terminal chime when selecting a process** — a bare control byte such as BEL
+  (`\x07`) in a process's own log output survived display sanitization and rang
+  the terminal bell when that process's log panel rendered. Sanitization now
+  strips bare C0/DEL control bytes (keeping tabs and SGR colour codes).
+
 ## [0.3.5]
 
 ### Changed

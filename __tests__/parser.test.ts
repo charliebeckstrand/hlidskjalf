@@ -240,6 +240,19 @@ describe('sanitizeForDisplay', () => {
 
 		expect(result).toBe('\x1b[31mcolored\x1b[0mrest')
 	})
+
+	it('strips a bare BEL so rendering the line never rings the terminal bell', () => {
+		expect(sanitizeForDisplay('build done\x07')).toBe('build done')
+		expect(sanitizeForDisplay('\x07')).toBe('')
+	})
+
+	it('strips other bare control bytes (backspace, CR, form feed)', () => {
+		expect(sanitizeForDisplay('a\x08b\rc\x0cd')).toBe('abcd')
+	})
+
+	it('keeps tabs and SGR colors while dropping a bare BEL', () => {
+		expect(sanitizeForDisplay('\x1b[31mred\x1b[0m\tdone\x07')).toBe('\x1b[31mred\x1b[0m\tdone')
+	})
 })
 
 describe('stripAnsi', () => {

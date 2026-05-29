@@ -9,6 +9,14 @@ export interface TerminalSize {
 /** Dimensions used when stdout isn't a TTY (piped output, tests). */
 const FALLBACK: TerminalSize = { columns: 80, rows: 24 }
 
+/**
+ * How long the terminal must stop changing size before we reflow. A window drag
+ * fires a burst of `resize` events; reflowing on each one repaints mid-drag at
+ * intermediate widths, where a row can briefly be wider than the terminal and
+ * wrap. Waiting for the size to settle reflows once, against the final size.
+ */
+const RESIZE_SETTLE_MS = 120
+
 function readSize(stdout: NodeJS.WriteStream | undefined): TerminalSize {
 	return {
 		columns: stdout?.columns ?? FALLBACK.columns,
@@ -22,7 +30,9 @@ function readSize(stdout: NodeJS.WriteStream | undefined): TerminalSize {
  * so layout computed from those values would stay frozen at the size present on
  * first paint. Subscribing to the stream's `resize` event and storing the size
  * in state forces a re-render whenever the terminal grows or shrinks, so columns
- * and the log viewport reflow to the new size.
+ * and the log viewport reflow to the new size. Reflows are debounced until the
+ * size settles (see `RESIZE_SETTLE_MS`) so a window drag reflows once at the end
+ * rather than thrashing through every intermediate width.
  */
 export function useTerminalSize(): TerminalSize {
 	const { stdout } = useStdout()
@@ -32,7 +42,9 @@ export function useTerminalSize(): TerminalSize {
 	useEffect(() => {
 		if (!stdout) return
 
-		const onResize = () => {
+		let timer: ReturnType<typeof setTimeout> | undefined
+
+		const apply = () => {
 			setSize((prev) => {
 				const next = readSize(stdout)
 
@@ -41,13 +53,21 @@ export function useTerminalSize(): TerminalSize {
 			})
 		}
 
+		const onResize = () => {
+			if (timer) clearTimeout(timer)
+
+			timer = setTimeout(apply, RESIZE_SETTLE_MS)
+		}
+
 		stdout.on('resize', onResize)
 
 		// The size may have changed between the initial state and this subscription;
-		// reconcile once so we never miss an early resize.
-		onResize()
+		// reconcile once, immediately, so the first paint isn't stuck at a stale size.
+		apply()
 
 		return () => {
+			if (timer) clearTimeout(timer)
+
 			stdout.off('resize', onResize)
 		}
 	}, [stdout])

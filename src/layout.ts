@@ -7,12 +7,19 @@
 import type { Process } from './types.js'
 
 /**
+ * Smallest the name column is allowed to shrink to when the URL column takes
+ * priority, so a name stays at least partly legible even on a tight terminal.
+ * Doubles as the natural-width floor in `nameColumnWidth`.
+ */
+const MIN_NAME_WIDTH = 14
+
+/**
  * Width of the workspace-name column: the longest name plus padding, floored at
  * `min`. A plain loop rather than `Math.max(min, ...names)` so it neither
  * allocates an intermediate array per render nor risks a RangeError from
  * spreading a huge list as call arguments.
  */
-export function nameColumnWidth(processes: Process[], min = 14): number {
+export function nameColumnWidth(processes: Process[], min = MIN_NAME_WIDTH): number {
 	let width = min
 
 	for (const proc of processes) {
@@ -25,11 +32,27 @@ export function nameColumnWidth(processes: Process[], min = 14): number {
 }
 
 /**
+ * Width the URL column wants in order to show every workspace's URL in full: the
+ * length of the longest URL, or 0 when no process has one. URLs are ASCII, so
+ * character count maps 1:1 to columns.
+ */
+export function urlContentWidth(processes: Process[]): number {
+	let width = 0
+
+	for (const proc of processes) {
+		const length = proc.url?.length ?? 0
+
+		if (length > width) width = length
+	}
+
+	return width
+}
+
+/**
  * Fixed column widths shared by the dashboard's table header and every row, so
  * the two stay in lockstep and the layout maths below derive from the same
- * source rather than re-encoding the numbers. The name column is variable (see
- * `nameColumnWidth`/`fitNameColumnWidth`) and the URL column claims whatever is
- * left.
+ * source rather than re-encoding the numbers. The name and URL columns are
+ * variable; `columnWidths` splits the remaining space between them.
  */
 export const COLUMN_WIDTHS = {
 	/** Selection indicator (`▸`) plus its trailing space. */
@@ -54,32 +77,39 @@ const ROW_CHROME_WIDTH =
 /** Combined width of the optional CPU and MEM metric columns. */
 const METRICS_WIDTH = COLUMN_WIDTHS.cpu + COLUMN_WIDTHS.mem
 
-/**
- * Clamp the natural name-column width to the space left for the always-visible
- * columns (the fixed chrome plus the optional metric columns), so a long
- * workspace name on a narrow terminal can't push the kind/status columns
- * off-screen. On a roomy terminal the natural width is returned untouched; when
- * it has to shrink, a sliver is always kept so the name box stays valid and its
- * text truncates with an ellipsis. The URL column then absorbs whatever, if
- * anything, remains.
- */
-export function fitNameColumnWidth(
-	naturalWidth: number,
-	columns: number,
-	metrics: boolean,
-): number {
-	const available = columns - ROW_CHROME_WIDTH - (metrics ? METRICS_WIDTH : 0)
-
-	return Math.max(1, Math.min(naturalWidth, available))
+export interface ColumnWidths {
+	/** Width of the workspace-name column. */
+	name: number
+	/** Width of the URL column; 0 when there's no room (the caller then hides it). */
+	url: number
 }
 
 /**
- * Width left for the URL column after the fixed chrome, the name column, and the
- * optional metric columns. May come out non-positive on a narrow terminal, in
- * which case the caller hides the URL rather than rendering a zero/negative box.
+ * Split the flexible space left after the fixed chrome (and optional metric
+ * columns) between the name and URL columns, giving the URL priority. Its full
+ * content width is reserved first so a ready URL is shown in full rather than
+ * truncated, and the name column takes whatever remains up to its natural width —
+ * so a long workspace name truncates before it can squeeze the URL off-screen. A
+ * readable name floor is always kept, so when even that doesn't fit it's the URL
+ * that shrinks (and is hidden once nothing is left for it).
  */
-export function urlColumnWidth(columns: number, nameWidth: number, metrics: boolean): number {
-	return columns - nameWidth - ROW_CHROME_WIDTH - (metrics ? METRICS_WIDTH : 0)
+export function columnWidths(
+	columns: number,
+	naturalNameWidth: number,
+	urlContent: number,
+	metrics: boolean,
+): ColumnWidths {
+	const available = columns - ROW_CHROME_WIDTH - (metrics ? METRICS_WIDTH : 0)
+
+	if (available <= 1) return { name: Math.max(1, available), url: 0 }
+
+	// Reserve the URL's full width, but never push the name below its floor.
+	const url = Math.max(0, Math.min(urlContent, available - MIN_NAME_WIDTH))
+
+	// The name takes the rest, capped at its natural width and floored at one column.
+	const name = Math.max(1, Math.min(naturalNameWidth, available - url))
+
+	return { name, url }
 }
 
 /**

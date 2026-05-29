@@ -4,19 +4,30 @@ import { hyperlink, truncateEnd } from '../src/links.js'
 
 const ESC = String.fromCharCode(27)
 const OSC8 = `${ESC}]8;;`
-const ST = `${ESC}\\`
+// Ink's renderer only recognises BEL-terminated OSC 8 links (see links.ts), so
+// that's the terminator we emit — ST would be mis-tokenised and ring the bell.
+const BEL = String.fromCharCode(7)
 
 describe('hyperlink', () => {
 	it('wraps a label in an OSC 8 sequence targeting the full url', () => {
 		const url = 'http://localhost:3000'
 
-		expect(hyperlink(url, 'http://localh…')).toBe(`${OSC8}${url}${ST}http://localh…${OSC8}${ST}`)
+		expect(hyperlink(url, 'http://localh…')).toBe(`${OSC8}${url}${BEL}http://localh…${OSC8}${BEL}`)
 	})
 
 	it('defaults the visible label to the url itself', () => {
 		const url = 'http://localhost:5173'
 
-		expect(hyperlink(url)).toBe(`${OSC8}${url}${ST}${url}${OSC8}${ST}`)
+		expect(hyperlink(url)).toBe(`${OSC8}${url}${BEL}${url}${OSC8}${BEL}`)
+	})
+
+	it('terminates with BEL, not ST, so Ink keeps the link intact', () => {
+		// Ink's tokenizer scans for BEL to find the link target; an ST terminator
+		// (ESC \) would make it drop the label and strand a bell-ringing BEL.
+		const link = hyperlink('http://localhost:3000', 'http://localh…')
+
+		expect(link).not.toContain(`${ESC}\\`)
+		expect(link).toContain(BEL)
 	})
 
 	it('keeps the full url as the target even when the label is truncated', () => {
@@ -24,8 +35,8 @@ describe('hyperlink', () => {
 
 		const link = hyperlink(url, truncateEnd(url, 10))
 
-		// The clickable target (between the introducer and the first ST) is the full url.
-		const target = link.slice(OSC8.length, link.indexOf(ST))
+		// The clickable target (between the introducer and the first terminator) is the full url.
+		const target = link.slice(OSC8.length, link.indexOf(BEL))
 
 		expect(target).toBe(url)
 	})

@@ -1,15 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-	fitNameColumnWidth,
-	logPanelHeight,
-	nameColumnWidth,
-	urlColumnWidth,
-} from '../src/layout.js'
+import { columnWidths, logPanelHeight, nameColumnWidth, urlContentWidth } from '../src/layout.js'
 import type { Process } from '../src/types.js'
 
-function proc(name: string): Process {
-	return { workspace: { name, kind: 'package', deps: [] }, status: 'ready', logs: [] }
+function proc(name: string, url?: string): Process {
+	return { workspace: { name, kind: 'package', deps: [] }, status: 'ready', logs: [], url }
 }
 
 describe('nameColumnWidth', () => {
@@ -38,55 +33,68 @@ describe('nameColumnWidth', () => {
 	})
 })
 
-describe('fitNameColumnWidth', () => {
-	it('leaves the natural width untouched on a roomy terminal', () => {
-		expect(fitNameColumnWidth(20, 120, false)).toBe(20)
+describe('urlContentWidth', () => {
+	it('is zero when no process has a URL', () => {
+		expect(urlContentWidth([proc('a'), proc('web')])).toBe(0)
 	})
 
-	it('clamps to the space left after the fixed chrome on a narrow terminal', () => {
-		// 50 - 24 (chrome) = 26 available; a 40-wide name is capped to 26.
-		expect(fitNameColumnWidth(40, 50, false)).toBe(26)
-	})
+	it('returns the length of the longest URL', () => {
+		const longest = 'http://localhost:3000'
 
-	it('also accounts for the metric columns when shown', () => {
-		// 60 - 24 - 17 = 19 available.
-		expect(fitNameColumnWidth(40, 60, true)).toBe(19)
-	})
-
-	it('keeps the always-visible columns within the terminal width', () => {
-		const columns = 48
-		const name = fitNameColumnWidth(80, columns, false)
-
-		// name + chrome must not exceed the terminal, so kind/status stay on-screen.
-		expect(name + 24).toBeLessThanOrEqual(columns)
-	})
-
-	it('never returns less than one column, even on a pathologically tiny terminal', () => {
-		expect(fitNameColumnWidth(40, 10, false)).toBe(1)
-		expect(fitNameColumnWidth(40, 0, true)).toBe(1)
+		expect(urlContentWidth([proc('a', 'http://x:80'), proc('web', longest)])).toBe(longest.length)
 	})
 })
 
-describe('urlColumnWidth', () => {
-	it('claims the space left after chrome and the name column', () => {
-		// 120 - 14 (name) - 24 (chrome) = 82
-		expect(urlColumnWidth(120, 14, false)).toBe(82)
+describe('columnWidths', () => {
+	it('reserves the full URL width and gives the name the rest on a roomy terminal', () => {
+		// 120 - 24 (chrome) = 96 available. URL wants 21, name's natural width is 14.
+		const { name, url } = columnWidths(120, 14, 21, false)
+
+		expect(url).toBe(21)
+		expect(name).toBe(14)
 	})
 
-	it('reserves the metric columns when metrics are shown', () => {
-		// 120 - 14 - 24 - 17 = 65
-		expect(urlColumnWidth(120, 14, true)).toBe(65)
+	it('keeps the URL in full and truncates a long name when space is tight', () => {
+		// 60 - 24 = 36 available. URL (21) is reserved first; the name takes the rest.
+		const { name, url } = columnWidths(60, 40, 21, false)
+
+		expect(url).toBe(21)
+		expect(name).toBe(15)
 	})
 
-	it('reflows when the terminal width changes', () => {
-		const narrow = urlColumnWidth(80, 14, false)
-		const wide = urlColumnWidth(160, 14, false)
+	it('never pushes the name below its floor — the URL shrinks instead', () => {
+		// 48 - 24 = 24 available. Reserving the 14-col name floor leaves 10 for the URL.
+		const { name, url } = columnWidths(48, 40, 21, false)
 
-		expect(wide - narrow).toBe(80)
+		expect(name).toBe(14)
+		expect(url).toBe(10)
 	})
 
-	it('can go non-positive on a narrow terminal (URL then hidden by the caller)', () => {
-		expect(urlColumnWidth(30, 14, false)).toBeLessThanOrEqual(0)
+	it('accounts for the metric columns when shown', () => {
+		// 120 - 24 - 17 = 79 available; URL still gets its full 21.
+		const { name, url } = columnWidths(120, 14, 21, true)
+
+		expect(url).toBe(21)
+		expect(name).toBe(14)
+	})
+
+	it('hides the URL (width 0) when there is none to show', () => {
+		const { name, url } = columnWidths(120, 14, 0, false)
+
+		expect(url).toBe(0)
+		expect(name).toBe(14)
+	})
+
+	it('does not exceed the available width', () => {
+		const columns = 50
+		const { name, url } = columnWidths(columns, 80, 21, false)
+
+		expect(name + url + 24).toBeLessThanOrEqual(columns)
+	})
+
+	it('keeps the name at one column on a pathologically tiny terminal', () => {
+		expect(columnWidths(10, 40, 21, false)).toEqual({ name: 1, url: 0 })
+		expect(columnWidths(0, 40, 21, true)).toEqual({ name: 1, url: 0 })
 	})
 })
 

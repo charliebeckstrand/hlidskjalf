@@ -5,10 +5,20 @@
  */
 
 const ESC = String.fromCharCode(27)
+
 /** OSC 8 hyperlink introducer (no params): ESC ] 8 ; ; */
 const OSC8 = `${ESC}]8;;`
-/** String Terminator: ESC \ */
-const ST = `${ESC}\\`
+
+/**
+ * OSC terminator. The spec allows either BEL (`\x07`) or ST (`ESC \`), but these
+ * strings are handed to Ink, whose renderer (`@alcalzone/ansi-tokenize`) only
+ * recognises the BEL form — it scans for `\x07` to find the link target and
+ * re-emits links BEL-terminated. Feeding it an ST-terminated link makes the
+ * tokenizer miss the terminator, drop the visible label on narrow columns, and
+ * strand the BEL it emits outside a valid OSC sequence, which rings the
+ * terminal bell on every re-render. So we terminate with BEL to match it.
+ */
+const BEL = String.fromCharCode(7)
 
 /**
  * Wrap `label` in an OSC 8 hyperlink pointing at `url`. The clickable target is
@@ -19,7 +29,7 @@ const ST = `${ESC}\\`
  * `label` as plain text.
  */
 export function hyperlink(url: string, label: string = url): string {
-	return `${OSC8}${url}${ST}${label}${OSC8}${ST}`
+	return `${OSC8}${url}${BEL}${label}${OSC8}${BEL}`
 }
 
 /**

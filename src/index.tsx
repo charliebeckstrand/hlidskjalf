@@ -4,6 +4,7 @@ import { render } from 'ink'
 
 import { App } from './app.js'
 import { loadConfig } from './config/loader.js'
+import { enterAltScreen } from './terminal.js'
 import type { Options, SortOrder } from './types.js'
 import { normalizeFilters } from './workspaces.js'
 
@@ -71,8 +72,16 @@ const options: Options = {
 	watch,
 }
 
-const { waitUntilExit } = render(<App options={options} />, { exitOnCtrlC: false })
+// Render on the alternate screen so the dashboard never accumulates in the
+// scrollback; restore the primary screen however we exit.
+const restoreScreen = enterAltScreen()
 
-await waitUntilExit()
+try {
+	const { waitUntilExit } = render(<App options={options} />, { exitOnCtrlC: false })
+
+	await waitUntilExit()
+} finally {
+	restoreScreen()
+}
 
 process.exit(0)

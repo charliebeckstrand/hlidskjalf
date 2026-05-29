@@ -6,10 +6,10 @@ import { useLogScroll } from '../hooks/use-log-scroll.js'
 import { useTerminalSize } from '../hooks/use-terminal-size.js'
 import {
 	COLUMN_WIDTHS,
-	fitNameColumnWidth,
+	columnWidths,
 	logPanelHeight,
 	nameColumnWidth,
-	urlColumnWidth,
+	urlContentWidth,
 } from '../layout.js'
 import { hyperlink, truncateEnd } from '../links.js'
 import { colors, statusDisplay } from '../theme.js'
@@ -197,13 +197,18 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 		[processes],
 	)
 
-	// Natural width fits the longest name; clamp it so a long name on a narrow
-	// terminal can't shove the kind/status columns off-screen.
+	// Natural width fits the longest name; the URL's full width is reserved first,
+	// then the name takes what's left (truncating before it can squeeze the URL).
 	const naturalNameWidth = useMemo(() => nameColumnWidth(processes), [processes])
 
-	const nameWidth = fitNameColumnWidth(naturalNameWidth, cols, metrics)
+	const urlContent = useMemo(() => urlContentWidth(processes), [processes])
 
-	const urlWidth = urlColumnWidth(cols, nameWidth, metrics)
+	const { name: nameWidth, url: urlWidth } = columnWidths(
+		cols,
+		naturalNameWidth,
+		urlContent,
+		metrics,
+	)
 
 	const logHeight = logPanelHeight(rows, processes.length)
 
@@ -219,14 +224,13 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 	)
 
 	return (
-		// Clamp to one line below the terminal height. Ink only erases the previous
-		// frame via log-update while the rendered height stays under `stdout.rows`;
-		// once a frame reaches it, Ink falls back to a raw write and stops tracking
-		// line counts, which strands the old frame (a duplicated header) in the
-		// scrollback. Capping the height here keeps every frame on the log-update
-		// path, and `overflow: hidden` clips any transient overshoot (a wrapped row,
-		// a short terminal) rather than letting it tip past the threshold.
-		<Box flexDirection="column" height={rows - 1} overflow="hidden">
+		// Size the frame to one line below the terminal height so the log panel fills
+		// the screen without the bottom row spilling over. We render on the alternate
+		// screen (see terminal.ts), so frames can't strand copies in the scrollback
+		// and we deliberately avoid `overflow: hidden` here — Ink's overflow clipper
+		// slices every line through a tokenizer that miscounts OSC 8 hyperlinks,
+		// which would truncate the URL column's links to a stray fragment.
+		<Box flexDirection="column" height={rows - 1}>
 			<Header title={title} ready={allReady} columns={cols} hints={HINTS} />
 
 			{/* Table header */}

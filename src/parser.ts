@@ -100,20 +100,45 @@ export function stripAnsi(text: string): string {
 	return stripVTControlCharacters(text)
 }
 
+const NON_SGR_ESCAPES =
+	// biome-ignore lint/suspicious/noControlCharactersInRegex: needed to strip terminal escape sequences
+	/\x1b(?:\][^\x07\x1b]*(?:\x07|\x1b\\)|\[[?>=]*[\d;]*[A-Za-ln-z@~`]|\([A-Za-z]|[^[(\]\x1b])/g
+
 /**
- * Strip all escape sequences EXCEPT SGR color/style codes (\x1b[...m).
- * Uses a whitelist approach: only SGR passes through. Everything else is stripped,
- * including cursor movement, screen clears, title changes, hyperlinks, bracketed
- * paste, character set selection, and single-character ESC sequences (e.g. \x1bc reset).
+ * Bare C0/DEL control bytes that aren't part of an escape sequence and so survive
+ * the strip above. Rendering them raw would ring the terminal bell (BEL, \x07) or
+ * move the cursor (backspace, carriage return, form feed). Tab (\x09) and ESC
+ * (\x1b) are excluded: tab is benign display whitespace and ESC introduces the SGR
+ * colour codes we deliberately keep.
+ */
+const BARE_CONTROLS =
+	// biome-ignore lint/suspicious/noControlCharactersInRegex: needed to strip terminal control characters
+	/[\x00-\x08\x0b-\x1a\x1c-\x1f\x7f]/g
+
+/**
+ * Strip all escape sequences EXCEPT SGR color/style codes (\x1b[...m), plus any
+ * bare control characters. Uses a whitelist approach: only SGR and printable text
+ * pass through. Everything else is stripped, including cursor movement, screen
+ * clears, title changes, hyperlinks, bracketed paste, character set selection,
+ * single-character ESC sequences (e.g. \x1bc reset), and lone control bytes such
+ * as BEL — which would otherwise ring the terminal bell on every render.
  */
 export function sanitizeForDisplay(text: string): string {
-	// Every sequence the regex matches starts with ESC, so a line without one is
-	// returned as-is, skipping the whole-string replace on the common plain line.
-	if (!text.includes('\x1b')) return text
+	const hasEscape = text.includes('\x1b')
 
-	const NON_SGR_ESCAPES =
-		// biome-ignore lint/suspicious/noControlCharactersInRegex: needed to strip terminal escape sequences
-		/\x1b(?:\][^\x07\x1b]*(?:\x07|\x1b\\)|\[[?>=]*[\d;]*[A-Za-ln-z@~`]|\([A-Za-z]|[^[(\]\x1b])/g
+	// A bare control byte survives the escape strip (it has no ESC prefix), so
+	// detect it separately. search() ignores the /g lastIndex, so the one regex is
+	// safe to reuse for the replace below.
+	const hasControl = text.search(BARE_CONTROLS) !== -1
 
-	return text.replace(NON_SGR_ESCAPES, '')
+	// Skip both whole-string replaces on the common plain line.
+	if (!hasEscape && !hasControl) return text
+
+	let out = text
+
+	if (hasEscape) out = out.replace(NON_SGR_ESCAPES, '')
+
+	if (hasControl) out = out.replace(BARE_CONTROLS, '')
+
+	return out
 }
