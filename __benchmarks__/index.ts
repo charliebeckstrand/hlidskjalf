@@ -21,7 +21,9 @@ const unknown = requested.filter((name): name is string => !(name in suites))
 
 if (unknown.length > 0) {
 	console.error(`Unknown suite(s): ${unknown.join(', ')}`)
+	
 	console.error(`Available: ${Object.keys(suites).join(', ')}`)
+
 	process.exit(1)
 }
 
