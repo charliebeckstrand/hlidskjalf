@@ -75,11 +75,55 @@ export function collectDescendants(rootPid: number, children: Map<number, number
 }
 
 export interface PsStat {
-	cpu: number
+	/** Cumulative CPU time the process has used, expressed in USER_HZ ticks (100/s). */
+	cputimeTicks: number
 	rss: number
 }
 
-/** Parse the output of `ps -eo pid,ppid,pcpu,rss` into parent→children and pid→stat maps. */
+/**
+ * Parse a `ps` cumulative CPU time field (`[[dd-]hh:]mm:ss[.frac]`) into USER_HZ
+ * ticks (hundredths of a second), so it diffs against the same unit as the
+ * `/proc` utime+stime ticks. Returns 0 for an empty or malformed value.
+ */
+export function parseCpuTime(raw: string): number {
+	let rest = raw.trim()
+
+	if (!rest) return 0
+
+	let days = 0
+
+	const dash = rest.indexOf('-')
+
+	if (dash !== -1) {
+		days = Number.parseInt(rest.slice(0, dash), 10)
+
+		if (Number.isNaN(days)) return 0
+
+		rest = rest.slice(dash + 1)
+	}
+
+	const parts = rest.split(':')
+
+	let seconds = 0
+	let multiplier = 1
+
+	// Walk the colon-separated fields right-to-left (seconds, minutes, hours).
+	for (let i = parts.length - 1; i >= 0; i--) {
+		const value = Number.parseFloat(parts[i] ?? '')
+
+		if (Number.isNaN(value)) return 0
+
+		seconds += value * multiplier
+
+		multiplier *= 60
+	}
+
+	seconds += days * 86_400
+
+	return Math.round(seconds * 100)
+}
+
+/** Parse the output of `ps -eo pid,ppid,time,rss` into parent→children and pid→stat maps. */
 export function parsePsOutput(output: string): {
 	children: Map<number, number[]>
 	stats: Map<number, PsStat>
@@ -94,13 +138,13 @@ export function parsePsOutput(output: string): {
 
 		const pid = Number.parseInt(parts[0] ?? '', 10)
 		const ppid = Number.parseInt(parts[1] ?? '', 10)
-		const cpu = Number.parseFloat(parts[2] ?? '')
+		const cputimeTicks = parseCpuTime(parts[2] ?? '')
 		const rssKb = Number.parseInt(parts[3] ?? '', 10)
 
 		if (Number.isNaN(pid) || Number.isNaN(ppid)) continue
 
 		stats.set(pid, {
-			cpu: Number.isNaN(cpu) ? 0 : cpu,
+			cputimeTicks,
 			rss: (Number.isNaN(rssKb) ? 0 : rssKb) * 1024,
 		})
 
@@ -116,6 +160,31 @@ export function parsePsOutput(output: string): {
 	}
 
 	return { children, stats }
+}
+
+/**
+ * Sum the positive per-PID CPU-tick deltas between two process-tree snapshots.
+ * A PID absent from `prev` (one that appeared since the last sample) contributes
+ * nothing, so a tree that grows between samples — e.g. a dev server spawning a
+ * heavy compile child during startup — doesn't dump that child's since-birth
+ * ticks into a single interval, which is what produced the startup CPU spike.
+ * A PID whose ticks went backwards (PID reuse) is likewise ignored.
+ */
+export function sumTickDeltas(
+	prev: Map<number, number> | undefined,
+	curr: Map<number, number>,
+): number {
+	if (!prev) return 0
+
+	let delta = 0
+
+	for (const [pid, ticks] of curr) {
+		const before = prev.get(pid)
+
+		if (before !== undefined && ticks > before) delta += ticks - before
+	}
+
+	return delta
 }
 
 export interface ProcStat {

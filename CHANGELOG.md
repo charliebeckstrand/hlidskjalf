@@ -5,6 +5,70 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.5]
+
+### Changed
+
+- **More accurate `--metrics`** — CPU is now derived from per-PID cumulative
+  CPU-time deltas between samples instead of an aggregate tree total (and the
+  non-Linux path now diffs `ps` cumulative CPU time rather than its
+  lifetime-average `%CPU`). A process that spawns a heavy compile child during
+  startup no longer dumps that child's since-birth CPU into a single interval,
+  which removes the brief >100% spike that decayed to 0% on launch.
+- **Event-driven metrics sampling** — a fresh CPU/memory sample is pulled on
+  status changes (start, restart, build, idle) rather than only on the periodic
+  poll, so usage updates promptly. Samples are spaced at least 1s apart to keep
+  the readings accurate, and the 3s periodic poll remains as a fallback.
+
+### Fixed
+
+- **Layout frozen at the startup terminal size** — the dashboard read the
+  terminal width/height only on first paint, so resizing the window left the
+  name/kind/status/URL columns and the log viewport sized for the old
+  dimensions (truncated or overflowing). The views now subscribe to terminal
+  `resize` events and reflow the columns and log panel to the new size. The
+  name column is also clamped to the available width so a long workspace name
+  on a narrow terminal can't push the kind/status columns off-screen.
+- **Truncated URL opened the wrong address** — the dashboard's URL column is
+  rendered as an OSC 8 hyperlink whose target is the full URL, so clicking it
+  opens the complete address even when the column only shows a shortened
+  segment (previously the terminal linkified the visible, truncated text).
+- **Duplicate dev servers on rapid stop/restart** — pressing `r` twice (or `s`
+  then `r`) before a process finished tearing down stacked multiple exit
+  handlers, spawning a second dev server for the same workspace. Teardown is now
+  funnelled through a single guarded path where the latest request wins.
+- **Stale metrics & process resurrection** — a stopped process kept showing its
+  last CPU/memory reading; an in-flight liveness probe could flip a just-stopped
+  process back to running; and the fsevents rebuild could respawn a workspace
+  that had been stopped or removed mid-rebuild. All three now re-check current
+  state before acting.
+- **Log status misclassification** — an error line that happened to mention
+  "listening" was read as `ready`, and all-caps `ERROR:` went undetected. The
+  matcher ordering and casing are fixed.
+- **Selection past the end of the list** — removing a watched workspace while it
+  was selected could leave keypresses targeting a phantom row; the cursor now
+  clamps to the current list length.
+- **`--filter` with only invalid patterns** no longer silently launches every
+  workspace; it falls back to a configured filter as if unset.
+
+### Internal
+
+- **Keyboard handling extracted to a hook** — `App`'s `useInput` dispatcher and
+  the keyboard-driven UI state (workspace selection and the help overlay toggle)
+  moved into a dedicated `useControls` hook, leaving `App` a thin composition of
+  runner state and views. No behavior change.
+- **Metrics sampling extracted from the runner** — the CPU/memory polling
+  (`/proc` and `ps` collection, per-PID diffing, event-driven scheduling) moved
+  out of `ProcessRunner` into a composed `Meter` (`src/meter.ts`), shrinking
+  `processes.ts` by ~180 lines. No behavior change.
+- **`config` module folder** — `config.ts` and the renamed `loader.ts` (was
+  `config-loader.ts`) now live under `src/config/`. The published package entry
+  (`dist/config.js`) is unchanged.
+- **Child-control and heartbeat split out of the runner** — the process-group
+  signal helpers (`isRunning`/`killTree`/`escalateKill`) moved to `src/child.ts`
+  and the liveness sweep to a composed `Heartbeat` (`src/heartbeat.ts`), further
+  shrinking `processes.ts`. No behavior change.
+
 ## [0.3.4]
 
 ### Added

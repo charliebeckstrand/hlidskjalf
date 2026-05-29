@@ -3,7 +3,7 @@ import { parseArgs } from 'node:util'
 import { render } from 'ink'
 
 import { App } from './app.js'
-import { loadConfig } from './config-loader.js'
+import { loadConfig } from './config/loader.js'
 import type { Options, SortOrder } from './types.js'
 import { normalizeFilters } from './workspaces.js'
 
@@ -47,7 +47,10 @@ const config = await loadConfig(root)
 
 const cliFilter = values.filter ? normalizeFilters(values.filter) : undefined
 
-const filter = cliFilter ?? config.filter
+// A CLI filter that normalized to nothing (every pattern was invalid) shouldn't
+// silently launch every workspace — fall back to a configured filter as if no
+// `--filter` was passed at all.
+const filter = cliFilter?.length ? cliFilter : config.filter
 
 const rawOrder = values.order ?? config.order
 

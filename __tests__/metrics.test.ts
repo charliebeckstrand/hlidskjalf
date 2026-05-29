@@ -3,9 +3,11 @@ import { describe, expect, it } from 'vitest'
 import {
 	collectDescendants,
 	cpuPercentFromTicks,
+	parseCpuTime,
 	parseProcStat,
 	parsePsOutput,
 	safeEnv,
+	sumTickDeltas,
 } from '../src/metrics.js'
 
 describe('safeEnv', () => {
@@ -67,12 +69,39 @@ describe('collectDescendants', () => {
 	})
 })
 
+describe('parseCpuTime', () => {
+	it('parses MM:SS into ticks (hundredths of a second)', () => {
+		// 1:23 = 83s = 8300 ticks at 100 Hz.
+		expect(parseCpuTime('1:23')).toBe(8300)
+	})
+
+	it('parses fractional seconds (BSD/macOS style)', () => {
+		expect(parseCpuTime('0:00.50')).toBe(50)
+	})
+
+	it('parses HH:MM:SS', () => {
+		// 1:00:00 = 3600s = 360000 ticks.
+		expect(parseCpuTime('1:00:00')).toBe(360_000)
+	})
+
+	it('parses a day prefix', () => {
+		// 1-00:00:00 = 86400s.
+		expect(parseCpuTime('1-00:00:00')).toBe(86_400 * 100)
+	})
+
+	it('returns 0 for empty or malformed values', () => {
+		expect(parseCpuTime('')).toBe(0)
+		expect(parseCpuTime('   ')).toBe(0)
+		expect(parseCpuTime('garbage')).toBe(0)
+	})
+})
+
 describe('parsePsOutput', () => {
 	const output = [
-		'  PID  PPID %CPU   RSS',
-		'  100     1  5.0  1024',
-		'  200   100 10.5  2048',
-		'  300   100  0.0   512',
+		'  PID  PPID     TIME   RSS',
+		'  100     1  0:05.00  1024',
+		'  200   100  0:10.50  2048',
+		'  300   100  0:00.00   512',
 	].join('\n')
 
 	it('skips the header row', () => {
@@ -82,11 +111,11 @@ describe('parsePsOutput', () => {
 		expect(stats.size).toBe(3)
 	})
 
-	it('converts rss from KiB to bytes', () => {
+	it('converts rss from KiB to bytes and time to ticks', () => {
 		const { stats } = parsePsOutput(output)
 
 		expect(stats.get(100)?.rss).toBe(1024 * 1024)
-		expect(stats.get(200)?.cpu).toBe(10.5)
+		expect(stats.get(200)?.cputimeTicks).toBe(1050)
 	})
 
 	it('builds the parent → children map', () => {
@@ -102,7 +131,7 @@ describe('parsePsOutput', () => {
 	})
 
 	it('ignores malformed rows', () => {
-		const { stats } = parsePsOutput('PID PPID %CPU RSS\ngarbage line\n42 1 1.0 64')
+		const { stats } = parsePsOutput('PID PPID TIME RSS\ngarbage line\n42 1 0:01 64')
 
 		expect(stats.size).toBe(1)
 		expect(stats.has(42)).toBe(true)
@@ -110,6 +139,43 @@ describe('parsePsOutput', () => {
 
 	it('handles empty output without throwing', () => {
 		expect(parsePsOutput('').stats.size).toBe(0)
+	})
+})
+
+describe('sumTickDeltas', () => {
+	it('returns 0 when there is no previous snapshot', () => {
+		expect(sumTickDeltas(undefined, new Map([[1, 100]]))).toBe(0)
+	})
+
+	it('sums per-PID increases between snapshots', () => {
+		const prev = new Map([
+			[1, 100],
+			[2, 200],
+		])
+		const curr = new Map([
+			[1, 150],
+			[2, 260],
+		])
+
+		expect(sumTickDeltas(prev, curr)).toBe(50 + 60)
+	})
+
+	it('ignores a freshly-appeared PID so a growing tree does not spike', () => {
+		// PID 2 is new this sample: its since-birth ticks must not count as interval work.
+		const prev = new Map([[1, 100]])
+		const curr = new Map([
+			[1, 110],
+			[2, 5000],
+		])
+
+		expect(sumTickDeltas(prev, curr)).toBe(10)
+	})
+
+	it('ignores PIDs whose ticks went backwards (PID reuse)', () => {
+		const prev = new Map([[1, 100]])
+		const curr = new Map([[1, 40]])
+
+		expect(sumTickDeltas(prev, curr)).toBe(0)
 	})
 })
 

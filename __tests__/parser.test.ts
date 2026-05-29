@@ -111,6 +111,18 @@ describe('parseLine', () => {
 
 			expect(result).toEqual({ status: 'error' })
 		})
+
+		it('detects all-caps "ERROR:"', () => {
+			const result = parseLine('ERROR: boom')
+
+			expect(result).toEqual({ status: 'error' })
+		})
+
+		it('classifies an error line that mentions "listening" as an error, not ready', () => {
+			const result = parseLine('Error: address already in use, not listening')
+
+			expect(result).toEqual({ status: 'error' })
+		})
 	})
 
 	describe('URL extraction', () => {

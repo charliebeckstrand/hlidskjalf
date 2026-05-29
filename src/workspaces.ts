@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs'
 import { join, resolve, sep } from 'node:path'
 
 import type { Workspace, WorkspaceKind } from './types.js'
+import { isPlainObject } from './util.js'
 
 interface PkgJson {
 	name?: string
@@ -44,7 +45,7 @@ export function normalizeFilters(raw: string[]): string[] {
  * fields (e.g. a numeric dependency version) that would otherwise throw.
  */
 function stringRecord(value: unknown): Record<string, string> | undefined {
-	if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined
+	if (!isPlainObject(value)) return undefined
 
 	const result: Record<string, string> = {}
 
@@ -58,9 +59,9 @@ function stringRecord(value: unknown): Record<string, string> | undefined {
 function readJson(path: string): PkgJson | null {
 	try {
 		const raw: unknown = JSON.parse(readFileSync(path, 'utf-8'))
-		if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null
+		if (!isPlainObject(raw)) return null
 
-		const obj = raw as Record<string, unknown>
+		const obj = raw
 
 		const name = typeof obj.name === 'string' ? obj.name : undefined
 

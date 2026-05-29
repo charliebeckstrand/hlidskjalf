@@ -1,9 +1,17 @@
-import { Box, Text, useStdout } from 'ink'
+import { Box, Text } from 'ink'
 import Spinner from 'ink-spinner'
 import { useMemo } from 'react'
 
 import { useLogScroll } from '../hooks/use-log-scroll.js'
-import { nameColumnWidth } from '../layout.js'
+import { useTerminalSize } from '../hooks/use-terminal-size.js'
+import {
+	COLUMN_WIDTHS,
+	fitNameColumnWidth,
+	logPanelHeight,
+	nameColumnWidth,
+	urlColumnWidth,
+} from '../layout.js'
+import { hyperlink, truncateEnd } from '../links.js'
 import { colors, statusDisplay } from '../theme.js'
 import type { Metrics, Process, Status, WorkspaceKind } from '../types.js'
 import { Header } from './header.js'
@@ -75,10 +83,10 @@ function ProcessRow({
 					{proc.workspace.name}
 				</Text>
 			</Box>
-			<Box width={6}>
+			<Box width={COLUMN_WIDTHS.kind}>
 				<Text color={colors.muted}>{kindLabel[proc.workspace.kind]}</Text>
 			</Box>
-			<Box width={14}>
+			<Box width={COLUMN_WIDTHS.status}>
 				<Text color={color}>
 					<StatusGlyph status={proc.status} icon={icon} /> {label}
 				</Text>
@@ -86,8 +94,12 @@ function ProcessRow({
 			{showMetrics && <MetricsCells metrics={proc.metrics} />}
 			{proc.url && urlWidth > 0 && (
 				<Box width={urlWidth}>
+					{/* Pre-truncate the label to the column width and wrap it in an OSC 8
+					    hyperlink targeting the full URL, so clicking opens the whole
+					    address even when only a shortened segment is shown. Ink's own
+					    truncator isn't link-aware and would drop the escapes. */}
 					<Text color={colors.url} wrap="truncate">
-						{proc.url}
+						{hyperlink(proc.url, truncateEnd(proc.url, urlWidth))}
 					</Text>
 				</Box>
 			)}
@@ -99,10 +111,10 @@ function MetricsCells({ metrics }: { metrics?: Metrics }) {
 	if (!metrics) {
 		return (
 			<>
-				<Box width={8}>
+				<Box width={COLUMN_WIDTHS.cpu}>
 					<Text color={colors.dim}>{'—'}</Text>
 				</Box>
-				<Box width={9}>
+				<Box width={COLUMN_WIDTHS.mem}>
 					<Text color={colors.dim}>{'—'}</Text>
 				</Box>
 			</>
@@ -111,10 +123,10 @@ function MetricsCells({ metrics }: { metrics?: Metrics }) {
 
 	return (
 		<>
-			<Box width={8}>
+			<Box width={COLUMN_WIDTHS.cpu}>
 				<Text color={metrics.cpu > 80 ? colors.error : colors.muted}>{formatCpu(metrics.cpu)}</Text>
 			</Box>
-			<Box width={9}>
+			<Box width={COLUMN_WIDTHS.mem}>
 				<Text color={memColor(metrics.mem)}>{formatMem(metrics.mem)}</Text>
 			</Box>
 		</>
@@ -176,10 +188,7 @@ function LogPanel({
 }
 
 export function Dashboard({ processes, selectedIndex, title, metrics = false }: Props) {
-	const { stdout } = useStdout()
-
-	const cols = stdout?.columns ?? 80
-	const rows = stdout?.rows ?? 24
+	const { columns: cols, rows } = useTerminalSize()
 
 	const allReady = useMemo(
 		() =>
@@ -188,12 +197,15 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 		[processes],
 	)
 
-	const nameWidth = useMemo(() => nameColumnWidth(processes), [processes])
+	// Natural width fits the longest name; clamp it so a long name on a narrow
+	// terminal can't shove the kind/status columns off-screen.
+	const naturalNameWidth = useMemo(() => nameColumnWidth(processes), [processes])
 
-	// 2 (paddingX) + 2 (indicator + space) + nameWidth + 6 (kind) + 14 (status) + optional 17 (cpu+mem)
-	const urlWidth = cols - nameWidth - 24 - (metrics ? 17 : 0)
+	const nameWidth = fitNameColumnWidth(naturalNameWidth, cols, metrics)
 
-	const logHeight = Math.max(3, rows - processes.length - 11)
+	const urlWidth = urlColumnWidth(cols, nameWidth, metrics)
+
+	const logHeight = logPanelHeight(rows, processes.length)
 
 	const safeIndex = Math.min(selectedIndex, Math.max(0, processes.length - 1))
 
@@ -224,24 +236,24 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 						Name
 					</Text>
 				</Box>
-				<Box width={6}>
+				<Box width={COLUMN_WIDTHS.kind}>
 					<Text color={colors.muted} bold>
 						Kind
 					</Text>
 				</Box>
-				<Box width={14}>
+				<Box width={COLUMN_WIDTHS.status}>
 					<Text color={colors.muted} bold>
 						Status
 					</Text>
 				</Box>
 				{metrics && (
 					<>
-						<Box width={8}>
+						<Box width={COLUMN_WIDTHS.cpu}>
 							<Text color={colors.muted} bold>
 								CPU
 							</Text>
 						</Box>
-						<Box width={9}>
+						<Box width={COLUMN_WIDTHS.mem}>
 							<Text color={colors.muted} bold>
 								MEM
 							</Text>

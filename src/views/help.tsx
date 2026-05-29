@@ -1,5 +1,6 @@
-import { Box, Text, useStdout } from 'ink'
+import { Box, Text } from 'ink'
 
+import { useTerminalSize } from '../hooks/use-terminal-size.js'
 import { colors } from '../theme.js'
 import { HINTS } from './dashboard.js'
 import { Header } from './header.js'
@@ -17,9 +18,7 @@ const BINDINGS: ReadonlyArray<readonly [keys: string, action: string]> = [
 ]
 
 export function Help({ title }: { title: string }) {
-	const { stdout } = useStdout()
-
-	const cols = stdout?.columns ?? 80
+	const { columns: cols } = useTerminalSize()
 
 	const keyWidth = Math.max(...BINDINGS.map(([keys]) => keys.length))
 

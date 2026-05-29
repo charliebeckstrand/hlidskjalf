@@ -1,13 +1,12 @@
-import { Box, Text, useStdout } from 'ink'
+import { Box, Text } from 'ink'
 import Spinner from 'ink-spinner'
 
+import { useTerminalSize } from '../hooks/use-terminal-size.js'
 import { colors } from '../theme.js'
 import { Header } from './header.js'
 
 export function Loading({ title }: { title: string }) {
-	const { stdout } = useStdout()
-
-	const cols = stdout?.columns ?? 80
+	const { columns: cols } = useTerminalSize()
 
 	return (
 		<Box flexDirection="column">

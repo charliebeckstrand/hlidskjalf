@@ -4,9 +4,9 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { loadConfig } from '../src/config-loader.js'
+import { loadConfig } from '../src/config/loader.js'
 
-const CONFIG_SRC = fileURLToPath(new URL('../src/config.ts', import.meta.url))
+const CONFIG_SRC = fileURLToPath(new URL('../src/config/config.ts', import.meta.url))
 
 describe('loadConfig', () => {
 	let tmpDir: string
