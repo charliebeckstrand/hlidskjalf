@@ -14,7 +14,7 @@ const kindLabel = {
 	service: 'svc',
 } satisfies Record<WorkspaceKind, string>
 
-const HINTS = '↑/↓ select   s stop/start   r restart   c clear   PgUp/PgDn scroll   q quit'
+export const HINTS = '? help   q quit'
 
 /** An animated spinner while building, falling back to the status glyph otherwise. */
 function StatusGlyph({ status, icon }: { status: Status; icon: string }) {
