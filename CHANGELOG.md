@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.5]
 
 ### Changed
 
@@ -64,6 +64,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`config` module folder** — `config.ts` and the renamed `loader.ts` (was
   `config-loader.ts`) now live under `src/config/`. The published package entry
   (`dist/config.js`) is unchanged.
+- **Child-control and heartbeat split out of the runner** — the process-group
+  signal helpers (`isRunning`/`killTree`/`escalateKill`) moved to `src/child.ts`
+  and the liveness sweep to a composed `Heartbeat` (`src/heartbeat.ts`), further
+  shrinking `processes.ts`. No behavior change.
 
 ## [0.3.4]
 

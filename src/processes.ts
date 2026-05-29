@@ -1,6 +1,8 @@
 import { type ChildProcess, spawn } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 
+import { escalateKill, isRunning, killTree } from './child.js'
+import { Heartbeat } from './heartbeat.js'
 import { appendLog } from './logs.js'
 import { Meter } from './meter.js'
 import { safeEnv } from './metrics.js'
@@ -11,22 +13,8 @@ const ERROR_RECOVERY_MS = 5000
 const MAX_RESTART_RETRIES = 3
 const RESTART_DELAY_MS = 1000
 const STARTUP_TIMEOUT_MS = 120_000
-const HEARTBEAT_INTERVAL_MS = 10_000
-const IDLE_THRESHOLD_MS = 300_000
 const MAX_BUFFER_SIZE = 65_536
 const MAX_LINE_LENGTH = 8192
-// Grace period after SIGTERM before a lingering child is force-killed with SIGKILL.
-const KILL_GRACE_MS = 5000
-
-/**
- * Whether a spawned child is still running — it exists and the OS hasn't reported
- * it exiting (`exitCode`) or being signalled (`signalCode`). Centralizes the
- * three-part check the lifecycle code would otherwise repeat (and risk getting
- * subtly wrong) at every teardown and metrics site.
- */
-function isRunning(child: ChildProcess | null | undefined): child is ChildProcess {
-	return !!child && child.exitCode === null && child.signalCode === null
-}
 
 interface ProcessEntry {
 	process: Process
@@ -63,7 +51,7 @@ export interface Runner extends EventEmitter<RunnerEvents> {
 class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 	private entries = new Map<string, ProcessEntry>()
 	private pendingRebuilds = new Set<ChildProcess>()
-	private heartbeatInterval: ReturnType<typeof setInterval> | null = null
+	private heartbeat: Heartbeat | null = null
 	private meter: Meter | null = null
 	private root: string
 	private stopping = false
@@ -142,7 +130,12 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 			this.spawn(workspace)
 		}
 
-		this.startHeartbeat()
+		this.heartbeat = new Heartbeat({
+			entries: () => this.entries,
+			setStatus: (name, status) => this.setStatus(name, status),
+		})
+
+		this.heartbeat.start()
 
 		if (this.metricsEnabled) {
 			this.meter = new Meter({
@@ -179,7 +172,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 	async shutdown(): Promise<void> {
 		this.stopping = true
 
-		if (this.heartbeatInterval) clearInterval(this.heartbeatInterval)
+		this.heartbeat?.stop()
 
 		this.meter?.stop()
 
@@ -200,14 +193,14 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 			waiting.push(
 				new Promise((resolve) => {
-					const escalate = this.escalateKill(child)
+					const escalate = escalateKill(child)
 
 					child.on('close', () => {
 						clearTimeout(escalate)
 						resolve()
 					})
 
-					this.killTree(child, 'SIGTERM')
+					killTree(child, 'SIGTERM')
 				}),
 			)
 		}
@@ -215,50 +208,8 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		await Promise.all(waiting)
 	}
 
-	/**
-	 * Terminate a dev child and everything it spawned. Dev processes run in their
-	 * own group (see `spawn`), so a negative PID signals the whole group — without
-	 * it, `pnpm`'s grandchild (the real server) would be orphaned and keep holding
-	 * its port, breaking the next start. Falls back to the bare child if the group
-	 * is already gone.
-	 */
-	private killTree(child: ChildProcess, signal: NodeJS.Signals): void {
-		const { pid } = child
-
-		if (pid !== undefined) {
-			try {
-				process.kill(-pid, signal)
-
-				return
-			} catch {
-				// Group already exited, or the child never became a leader.
-			}
-		}
-
-		try {
-			child.kill(signal)
-		} catch {
-			// Already dead.
-		}
-	}
-
 	private entry(name: string): ProcessEntry | undefined {
 		return this.entries.get(name)
-	}
-
-	/**
-	 * Arm a force-kill: if the child hasn't exited within the grace period after
-	 * its SIGTERM, SIGKILL its group. Returns the (unref'd) timer so the caller can
-	 * cancel it from the child's `close` handler.
-	 */
-	private escalateKill(child: ChildProcess): ReturnType<typeof setTimeout> {
-		const timer = setTimeout(() => {
-			if (child.exitCode === null) this.killTree(child, 'SIGKILL')
-		}, KILL_GRACE_MS)
-
-		timer.unref()
-
-		return timer
 	}
 
 	/** Append an internal hlidskjalf status line to a process's (bounded) log buffer. */
@@ -311,7 +262,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		if (!entry.teardownStarted) {
 			entry.teardownStarted = true
 
-			const escalate = this.escalateKill(child)
+			const escalate = escalateKill(child)
 
 			child.on('close', () => {
 				clearTimeout(escalate)
@@ -328,7 +279,7 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 			})
 		}
 
-		this.killTree(child, 'SIGTERM')
+		killTree(child, 'SIGTERM')
 	}
 
 	private waitForPackages(names: string[]): Promise<void> {
@@ -581,62 +532,6 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 			child.on('close', done)
 			child.on('error', done)
 		})
-	}
-
-	private startHeartbeat(): void {
-		this.heartbeatInterval = setInterval(() => {
-			const now = Date.now()
-
-			for (const [name, entry] of this.entries) {
-				const { status } = entry.process
-
-				const url = entry.process.url
-
-				if (status === 'idle' && url) {
-					this.probeUrl(url).then((alive) => {
-						// The probe is async; bail if the process was stopped/restarted in
-						// the meantime so we don't resurrect it to a running status.
-						if (alive && entry.process.status === 'idle') {
-							entry.lastOutputAt = Date.now()
-
-							this.setStatus(name, entry.lastGoodStatus ?? 'ready')
-						}
-					})
-
-					continue
-				}
-
-				if (status !== 'watching' && status !== 'ready') continue
-
-				if (entry.lastOutputAt && now - entry.lastOutputAt > IDLE_THRESHOLD_MS) {
-					if (url) {
-						this.probeUrl(url).then((alive) => {
-							if (alive) {
-								entry.lastOutputAt = Date.now()
-							} else if (entry.process.status === 'watching' || entry.process.status === 'ready') {
-								this.setStatus(name, 'idle')
-							}
-						})
-					} else {
-						this.setStatus(name, 'idle')
-					}
-				}
-			}
-		}, HEARTBEAT_INTERVAL_MS)
-		this.heartbeatInterval.unref()
-	}
-
-	private async probeUrl(url: string): Promise<boolean> {
-		try {
-			const res = await fetch(url, { signal: AbortSignal.timeout(3000) })
-
-			// Any response means the server is alive; drain the body so the socket frees.
-			await res.body?.cancel()
-
-			return true
-		} catch {
-			return false
-		}
 	}
 
 	private scheduleErrorRecovery(name: string): void {
