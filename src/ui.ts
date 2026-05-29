@@ -19,7 +19,6 @@ export interface ColorPalette {
 	pending: string
 	// Selection
 	highlight: string
-	highlightDim: string
 	// Text
 	muted: string
 	dim: string
@@ -28,115 +27,98 @@ export interface ColorPalette {
 	url: string
 }
 
+interface SharedColors {
+	success: string
+	warning: string
+	error: string
+	pending: string
+	highlight: string
+	muted: string
+	dim: string
+	separator: string
+}
+
+/**
+ * Neutral slots shared verbatim by every theme — the greys, the frost-white highlight,
+ * and the pending/url tones. Kept as one source of truth and spread into each palette so
+ * they can't drift apart; per-theme personality lives in the accent/status colours below.
+ */
+const SHARED: SharedColors = {
+	success: '#15FA5A',
+	warning: '#FACC15',
+	error: '#F87171',
+	pending: '#8D93A0',
+	highlight: '#faf9f6',
+	muted: '#8D93A0',
+	dim: '#6B7280',
+	separator: '#353940',
+}
+
 /**
  * Built-in palettes, named for the realms of Norse cosmology (fitting for a tool named
  * after Odin's all-seeing high seat). `success`/`warning`/`error` stay semantically
  * legible — green-ish / amber-ish / red-ish — in every theme so a status glyph never
- * misreads; the personality lives in the accent, highlight, and text greys.
+ * misreads; the personality lives in the accent and status colours, with the neutral
+ * slots pulled from {@link SHARED}.
  */
 export const themes = {
-	// The shimmering rainbow bridge — the original indigo + teal palette, the default.
+	// Rainbow bridge — indigo + teal.
 	bifrost: {
 		accent: '#7C8EF2',
-		accentBright: '#A3B1FF',
-		success: '#50E3A4',
-		warning: '#F5C542',
-		error: '#F2716B',
-		pending: '#6B7280',
-		highlight: '#5EEAD4',
-		highlightDim: '#2DD4BF',
-		muted: '#6B7280',
-		dim: '#4B5563',
-		separator: '#374151',
-		url: '#93C5FD',
+		accentBright: '#BEC7F9',
+		url: '#E8EBFD',
+		...SHARED,
 	},
-	// Primordial realm of frost and mist — glacial blues, frost-white highlights.
+	// Frost and mist — icy cyans, frost-white highlights.
 	niflheim: {
-		accent: '#7DD3FC',
-		accentBright: '#BAE6FD',
-		success: '#5EEAD4',
-		warning: '#FCD34D',
-		error: '#FB7185',
-		pending: '#64748B',
-		highlight: '#E0F2FE',
-		highlightDim: '#7DD3FC',
-		muted: '#64748B',
-		dim: '#475569',
-		separator: '#334155',
-		url: '#93C5FD',
+		accent: '#22D3EE',
+		accentBright: '#92E9F7',
+		url: '#E7FAFD',
+		...SHARED,
 	},
-	// Realm of fire — molten oranges and ember golds, a lime success to pop against the warmth.
+	// Fire — molten oranges, ember golds, lime success.
 	muspelheim: {
-		accent: '#FB923C',
-		accentBright: '#FDBA74',
-		success: '#A3E635',
-		warning: '#FBBF24',
-		error: '#EF4444',
-		pending: '#78716C',
-		highlight: '#FCD34D',
-		highlightDim: '#F59E0B',
-		muted: '#78716C',
-		dim: '#57534E',
-		separator: '#44403C',
-		url: '#FCA5A5',
+		accent: '#F97316',
+		accentBright: '#FCBB8D',
+		url: '#FEF0E6',
+		...SHARED,
 	},
-	// The world tree — mosses, leaf-greens, bark greys.
+	// World tree — mosses, leaf-greens, bark greys.
 	yggdrasil: {
-		accent: '#4ADE80',
-		accentBright: '#86EFAC',
-		success: '#34D399',
-		warning: '#FACC15',
-		error: '#F87171',
-		pending: '#6B7280',
-		highlight: '#BEF264',
-		highlightDim: '#84CC16',
-		muted: '#78716C',
-		dim: '#57534E',
-		separator: '#3F3F46',
-		url: '#A7F3D0',
-	},
-	// The shadowed underworld — muted, low-contrast greys for low-light terminals,
-	// with a faint pulse of life in the success colour.
-	helheim: {
-		accent: '#9CA3AF',
-		accentBright: '#D1D5DB',
-		success: '#6EE7B7',
-		warning: '#D6B36A',
-		error: '#E06C75',
-		pending: '#4B5563',
-		highlight: '#E5E7EB',
-		highlightDim: '#9CA3AF',
-		muted: '#6B7280',
-		dim: '#4B5563',
-		separator: '#374151',
-		url: '#9CA3AF',
-	},
-	// Norðurljós, the northern lights — a violet-to-teal shimmer.
-	aurora: {
-		accent: '#C084FC',
-		accentBright: '#E9D5FF',
-		success: '#34D399',
-		warning: '#FDE047',
-		error: '#FB7185',
-		pending: '#6B7280',
-		highlight: '#5EEAD4',
-		highlightDim: '#2DD4BF',
-		muted: '#71717A',
-		dim: '#52525B',
-		separator: '#3F3F46',
-		url: '#A5B4FC',
+		accent: '#22C55E',
+		accentBright: '#73E79E',
+		url: '#E9FBF0',
+		...SHARED,
 	},
 } as const satisfies Record<string, ColorPalette>
 
 /** Selectable theme names — the keys of {@link themes}. */
 export type ThemeName = keyof typeof themes
 
+/**
+ * Friendly elemental aliases for the Norse realm names, so `--theme=ice` resolves to
+ * `niflheim` (and `fire`→`muspelheim`, `earth`→`yggdrasil`). Accepted anywhere a theme
+ * name is — both the CLI flag and the persisted config flow through {@link parseTheme}.
+ */
+export const THEME_ALIASES = {
+	ice: 'niflheim',
+	fire: 'muspelheim',
+	earth: 'yggdrasil',
+} as const satisfies Record<string, ThemeName>
+
 /** The palette used when none is configured. */
 export const DEFAULT_THEME: ThemeName = 'bifrost'
 
-/** Narrow an untrusted value to a known theme name, or `undefined` if it isn't one. */
+/**
+ * Narrow an untrusted value to a known theme name, resolving an elemental alias
+ * ({@link THEME_ALIASES}) to its canonical realm, or `undefined` if it's neither.
+ */
 export function parseTheme(value: unknown): ThemeName | undefined {
-	return typeof value === 'string' && value in themes ? (value as ThemeName) : undefined
+	if (typeof value !== 'string') return undefined
+
+	if (value in themes) return value as ThemeName
+
+	return value in THEME_ALIASES ? THEME_ALIASES[value as keyof typeof THEME_ALIASES] : undefined
 }
 
 /**
@@ -168,6 +150,7 @@ export let statusDisplay = buildStatusDisplay(colors)
 /** Switch the active palette. Call once at startup before rendering. */
 export function setTheme(name: ThemeName): void {
 	colors = themes[name]
+
 	statusDisplay = buildStatusDisplay(colors)
 }
 
@@ -195,6 +178,7 @@ export function formatMem(bytes: number): string {
 /** Colour for a memory cell, escalating warning→error past 256M/512M. */
 export function memColor(bytes: number): string {
 	if (bytes > 512 * 1024 * 1024) return colors.error
+
 	if (bytes > 256 * 1024 * 1024) return colors.warning
 
 	return colors.muted

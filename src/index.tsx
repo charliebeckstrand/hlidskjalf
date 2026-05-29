@@ -3,7 +3,7 @@ import { render } from 'ink'
 import { App } from './app.js'
 import { loadConfig } from './config.js'
 import type { Options, SortOrder } from './types.js'
-import { DEFAULT_THEME, enterAltScreen, parseTheme, setTheme, themes } from './ui.js'
+import { DEFAULT_THEME, enterAltScreen, parseTheme, setTheme, THEME_ALIASES, themes } from './ui.js'
 import { normalizeFilters } from './workspaces.js'
 
 // `--no-watch` / `--no-metrics` aren't valid parseArgs tokens, so pull them out up
@@ -55,9 +55,8 @@ const watch = explicit.watch ?? values.watch ?? config.watch ?? true
 const flagTheme = parseTheme(values.theme)
 
 if (values.theme !== undefined && flagTheme === undefined) {
-	console.error(
-		`Ignoring --theme "${values.theme}": expected one of ${Object.keys(themes).join(', ')}.`,
-	)
+	const accepted = [...Object.keys(themes), ...Object.keys(THEME_ALIASES)].join(', ')
+	console.error(`Ignoring --theme "${values.theme}": expected one of ${accepted}.`)
 }
 const theme = flagTheme ?? config.theme ?? DEFAULT_THEME
 

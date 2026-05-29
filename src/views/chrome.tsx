@@ -29,7 +29,7 @@ export function Header({ title, ready = false, columns, hints }: HeaderProps) {
 		>
 			<Box gap={2}>
 				<Box flexShrink={0} gap={1}>
-					<Text color={ready ? colors.success : colors.accent}>{'●'}</Text>
+					<Text color={ready ? colors.success : colors.dim}>{ready ? '●' : '○'}</Text>
 					<Text color={colors.accentBright} bold>
 						{title}
 					</Text>
