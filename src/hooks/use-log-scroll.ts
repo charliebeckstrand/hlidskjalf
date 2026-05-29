@@ -7,6 +7,7 @@ import { visibleLogRange } from '../logs.js'
 // an empty `input` — so they are matched against the raw escape sequences Ink
 // emits on its stdin event emitter. These cover the common xterm/vt variants.
 const ESC = String.fromCharCode(27)
+
 const HOME_SEQUENCES = new Set([`${ESC}[H`, `${ESC}[1~`, `${ESC}[7~`, `${ESC}OH`])
 const END_SEQUENCES = new Set([`${ESC}[F`, `${ESC}[4~`, `${ESC}[8~`, `${ESC}OF`])
 
@@ -58,6 +59,7 @@ export function useLogScroll(
 	// Read by the stdin listener, whose closure would otherwise capture a stale
 	// bound when the buffer or viewport size changes between renders.
 	const maxScrollRef = useRef(maxScroll)
+
 	maxScrollRef.current = maxScroll
 
 	useInput(

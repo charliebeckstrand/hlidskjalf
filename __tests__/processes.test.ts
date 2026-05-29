@@ -237,6 +237,7 @@ describe('log handling', () => {
 		runner.clearLogs('web')
 
 		expect(runner.get('web')?.logs).toEqual([])
+
 		expect(onChange).toHaveBeenCalled()
 	})
 
