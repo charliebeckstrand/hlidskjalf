@@ -43,14 +43,14 @@ Named for the realms of Norse cosmology, to match the all-seeing high seat the t
 
 | Theme | Mood |
 | --- | --- |
-| `bifrost` | The default — the rainbow bridge, indigo accents over teal highlights. |
-| `niflheim` | Ice. Glacial blues and frost-white highlights. |
-| `muspelheim` | Fire. Molten oranges and ember golds. |
-| `yggdrasil` | The world tree. Mosses, leaf-greens, bark greys. |
-| `helheim` | The shadowed underworld. Muted, low-contrast greys for low-light terminals. |
-| `aurora` | _Norðurljós_, the northern lights. A violet-to-teal shimmer. |
+| `bifrost` | The default — the rainbow bridge. A cool steel-cyan, from frost-white to slate. |
+| `niflheim` | Ice. Glacial blues from alabaster down to deep space. |
+| `muspelheim` | Fire. A molten ramp from ink-black through oxblood to amber flame. |
+| `yggdrasil` | The world tree. Deep jungle-teal up through ferns to lemon-lime. |
+| `helheim` | The shadowed underworld. A clean greyscale from bright snow to carbon black. |
+| `aurora` | _Norðurljós_, the northern lights. Royal violet through sky-blue to aquamarine. |
 
-Status colours (running / warning / error) stay legible in every theme, so a glyph never misreads.
+Each theme is drawn from a single cohesive ramp, so the status colours are theme-toned rather than a fixed red/amber/green — the distinct glyphs (`○ ◑ ● ✖`) carry the meaning.
 
 ## Configuration
 
