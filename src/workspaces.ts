@@ -113,13 +113,25 @@ export function discover(root: string): Workspace[] {
 export function sortByDeps(workspaces: Workspace[]): Workspace[] {
 	const names = new Set(workspaces.map((w) => w.name))
 
+	// Precompute each workspace's internal dependency count once. Doing it inside
+	// the comparator instead would re-filter both operands' deps on every one of
+	// the O(n log n) comparisons.
+	const depCount = new Map<Workspace, number>()
+
+	for (const workspace of workspaces) {
+		let count = 0
+
+		for (const dep of workspace.deps) {
+			if (names.has(dep)) count++
+		}
+
+		depCount.set(workspace, count)
+	}
+
 	return [...workspaces].sort((a, b) => {
 		if (a.kind !== b.kind) return kindOrder[a.kind] - kindOrder[b.kind]
 
-		const aDeps = a.deps.filter((d) => names.has(d)).length
-		const bDeps = b.deps.filter((d) => names.has(d)).length
-
-		return aDeps - bDeps
+		return (depCount.get(a) ?? 0) - (depCount.get(b) ?? 0)
 	})
 }
 
