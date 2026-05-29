@@ -1,17 +1,9 @@
-import { type ChildProcess, execFileSync, spawn } from 'node:child_process'
+import { type ChildProcess, spawn } from 'node:child_process'
 import { EventEmitter } from 'node:events'
-import fs from 'node:fs'
-import os from 'node:os'
 
 import { appendLog } from './logs.js'
-import {
-	collectDescendants,
-	cpuPercentFromTicks,
-	parseProcStat,
-	parsePsOutput,
-	safeEnv,
-	sumTickDeltas,
-} from './metrics.js'
+import { Meter } from './meter.js'
+import { safeEnv } from './metrics.js'
 import { parseLine, sanitizeForDisplay, stripAnsi } from './parser.js'
 import type { Process, Status, Workspace } from './types.js'
 
@@ -20,11 +12,6 @@ const MAX_RESTART_RETRIES = 3
 const RESTART_DELAY_MS = 1000
 const STARTUP_TIMEOUT_MS = 120_000
 const HEARTBEAT_INTERVAL_MS = 10_000
-const METRICS_INTERVAL_MS = 3_000
-// Floor on the gap between two CPU samples. Event-driven sampling can ask for a
-// reading sooner than the periodic poll, but a delta measured over too short a
-// window is dominated by tick-granularity noise, so never sample faster than this.
-const MIN_METRICS_INTERVAL_MS = 1_000
 const IDLE_THRESHOLD_MS = 300_000
 const MAX_BUFFER_SIZE = 65_536
 const MAX_LINE_LENGTH = 8192
@@ -77,14 +64,11 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 	private entries = new Map<string, ProcessEntry>()
 	private pendingRebuilds = new Set<ChildProcess>()
 	private heartbeatInterval: ReturnType<typeof setInterval> | null = null
-	private metricsTimer: ReturnType<typeof setTimeout> | null = null
-	private lastMetricsAt = 0
+	private meter: Meter | null = null
 	private root: string
 	private stopping = false
 	private allWorkspaces: Workspace[] = []
 	private metricsEnabled: boolean
-	private prevCpuSnapshot = new Map<string, { time: number; perPid: Map<number, number> }>()
-	private numCpus: number
 
 	constructor(root: string, metrics = false) {
 		super()
@@ -92,8 +76,6 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 		this.root = root
 
 		this.metricsEnabled = metrics
-
-		this.numCpus = os.availableParallelism()
 	}
 
 	private static newEntry(workspace: Workspace): ProcessEntry {
@@ -162,14 +144,44 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		this.startHeartbeat()
 
-		if (this.metricsEnabled) this.startMetrics()
+		if (this.metricsEnabled) {
+			this.meter = new Meter({
+				roots: () => this.runningRoots(),
+				setMetrics: (name, metrics) => {
+					const entry = this.entry(name)
+
+					if (!entry) return false
+
+					entry.process.metrics = metrics
+
+					return true
+				},
+				onChange: () => this.emit('change'),
+			})
+
+			this.meter.start()
+		}
+	}
+
+	/** Running root PIDs mapped to their workspace name, for the meter to sample. */
+	private runningRoots(): Map<number, string> {
+		const roots = new Map<number, string>()
+
+		for (const [name, entry] of this.entries) {
+			if (isRunning(entry.child) && entry.child.pid !== undefined) {
+				roots.set(entry.child.pid, name)
+			}
+		}
+
+		return roots
 	}
 
 	async shutdown(): Promise<void> {
 		this.stopping = true
 
 		if (this.heartbeatInterval) clearInterval(this.heartbeatInterval)
-		if (this.metricsTimer) clearTimeout(this.metricsTimer)
+
+		this.meter?.stop()
 
 		for (const entry of this.entries.values()) {
 			if (entry.errorTimer) clearTimeout(entry.errorTimer)
@@ -795,214 +807,18 @@ class ProcessRunner extends EventEmitter<RunnerEvents> implements Runner {
 
 		this.allWorkspaces = this.allWorkspaces.filter((w) => w.name !== name)
 
-		this.prevCpuSnapshot.delete(name)
+		this.meter?.reset(name)
 
 		this.emit('change')
 	}
 
-	private startMetrics(): void {
-		// Seed per-PID baselines immediately (this sample reports 0% CPU since it
-		// has nothing to diff against) and arm the periodic fallback poll.
-		this.collectMetrics()
-
-		this.scheduleMetrics(METRICS_INTERVAL_MS)
-	}
-
-	/** (Re)arm the single metrics timer to fire after `delay`, then resume the periodic cadence. */
-	private scheduleMetrics(delay: number): void {
-		if (this.metricsTimer) clearTimeout(this.metricsTimer)
-
-		this.metricsTimer = setTimeout(() => {
-			this.metricsTimer = null
-
-			this.collectMetrics()
-
-			if (!this.stopping) this.scheduleMetrics(METRICS_INTERVAL_MS)
-		}, delay)
-
-		this.metricsTimer.unref()
-	}
-
 	/**
-	 * Ask for a CPU/memory sample sooner than the next periodic poll — used when an
-	 * event (start, restart, build, idle) likely shifted CPU use. Pulled no sooner
-	 * than `MIN_METRICS_INTERVAL_MS` after the last sample so the diff window stays
-	 * wide enough to be accurate; a no-op unless metrics are enabled.
+	 * Ask the meter for a CPU/memory sample sooner than its next periodic poll —
+	 * used when an event (start, restart, build, idle) likely shifted CPU use. A
+	 * no-op unless metrics are enabled.
 	 */
 	private requestMetricsSample(): void {
-		if (!this.metricsEnabled || this.stopping) return
-
-		const sinceLast = Date.now() - this.lastMetricsAt
-
-		this.scheduleMetrics(Math.max(0, MIN_METRICS_INTERVAL_MS - sinceLast))
-	}
-
-	private collectMetrics(): void {
-		if (this.stopping) return
-
-		this.lastMetricsAt = Date.now()
-
-		const rootPids = new Map<number, string>()
-
-		for (const [name, entry] of this.entries) {
-			if (isRunning(entry.child) && entry.child.pid !== undefined) {
-				rootPids.set(entry.child.pid, name)
-			}
-		}
-
-		if (rootPids.size === 0) return
-
-		if (process.platform === 'linux') {
-			this.collectMetricsProc(rootPids)
-		} else {
-			this.collectMetricsPs(rootPids)
-		}
-	}
-
-	private collectMetricsProc(rootPids: Map<number, string>): void {
-		const tree = this.readProcTree()
-
-		const now = Date.now()
-
-		let changed = false
-
-		for (const [rootPid, name] of rootPids) {
-			const pids = collectDescendants(rootPid, tree.children)
-
-			const updated = this.applyMetrics(name, pids, now, (pid) => {
-				const stat = tree.stats.get(pid)
-
-				return stat ? { ticks: stat.utime + stat.stime, rss: stat.rss } : undefined
-			})
-
-			changed = changed || updated
-		}
-
-		if (changed) this.emit('change')
-	}
-
-	private collectMetricsPs(rootPids: Map<number, string>): void {
-		let output: string
-
-		try {
-			output = execFileSync('ps', ['-eo', 'pid,ppid,time,rss'], {
-				encoding: 'utf8',
-				timeout: 5000,
-			})
-		} catch {
-			return
-		}
-
-		const { children, stats } = parsePsOutput(output)
-
-		const now = Date.now()
-
-		let changed = false
-
-		for (const [rootPid, name] of rootPids) {
-			const pids = collectDescendants(rootPid, children)
-
-			const updated = this.applyMetrics(name, pids, now, (pid) => {
-				const stat = stats.get(pid)
-
-				return stat ? { ticks: stat.cputimeTicks, rss: stat.rss } : undefined
-			})
-
-			changed = changed || updated
-		}
-
-		if (changed) this.emit('change')
-	}
-
-	/**
-	 * Diff a workspace's process tree against its previous snapshot to derive CPU%
-	 * and total RSS, then store the new snapshot. CPU is summed per-PID (see
-	 * `sumTickDeltas`) so a child that appears mid-startup can't dump its
-	 * since-birth ticks into one interval. Returns whether a tracked process was
-	 * updated.
-	 */
-	private applyMetrics(
-		name: string,
-		pids: number[],
-		now: number,
-		statOf: (pid: number) => { ticks: number; rss: number } | undefined,
-	): boolean {
-		const prev = this.prevCpuSnapshot.get(name)
-
-		const perPid = new Map<number, number>()
-
-		let totalMem = 0
-
-		for (const pid of pids) {
-			const stat = statOf(pid)
-
-			if (!stat) continue
-
-			perPid.set(pid, stat.ticks)
-
-			totalMem += stat.rss
-		}
-
-		const cpu = prev
-			? cpuPercentFromTicks(sumTickDeltas(prev.perPid, perPid), now - prev.time, this.numCpus)
-			: 0
-
-		this.prevCpuSnapshot.set(name, { time: now, perPid })
-
-		const entry = this.entry(name)
-
-		if (!entry) return false
-
-		entry.process.metrics = { cpu, mem: totalMem }
-
-		return true
-	}
-
-	private readProcTree(): {
-		children: Map<number, number[]>
-		stats: Map<number, { utime: number; stime: number; rss: number }>
-	} {
-		const children = new Map<number, number[]>()
-
-		const stats = new Map<number, { utime: number; stime: number; rss: number }>()
-
-		let entries: string[]
-
-		try {
-			entries = fs.readdirSync('/proc')
-		} catch {
-			return { children, stats }
-		}
-
-		for (const entry of entries) {
-			if (!/^\d+$/.test(entry)) continue
-
-			const pid = Number.parseInt(entry, 10)
-
-			try {
-				const parsed = parseProcStat(fs.readFileSync(`/proc/${pid}/stat`, 'utf8'))
-
-				if (!parsed) continue
-
-				const { ppid, utime, stime, rss } = parsed
-
-				stats.set(pid, { utime, stime, rss })
-
-				let kids = children.get(ppid)
-
-				if (!kids) {
-					kids = []
-
-					children.set(ppid, kids)
-				}
-
-				kids.push(pid)
-			} catch {
-				// process vanished between readdir and readFile
-			}
-		}
-
-		return { children, stats }
+		this.meter?.request()
 	}
 
 	private notifyDependents(failedName: string): void {

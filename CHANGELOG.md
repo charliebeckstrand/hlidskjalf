@@ -57,6 +57,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the keyboard-driven UI state (workspace selection and the help overlay toggle)
   moved into a dedicated `useControls` hook, leaving `App` a thin composition of
   runner state and views. No behavior change.
+- **Metrics sampling extracted from the runner** — the CPU/memory polling
+  (`/proc` and `ps` collection, per-PID diffing, event-driven scheduling) moved
+  out of `ProcessRunner` into a composed `Meter` (`src/meter.ts`), shrinking
+  `processes.ts` by ~180 lines. No behavior change.
+- **`config` module folder** — `config.ts` and the renamed `loader.ts` (was
+  `config-loader.ts`) now live under `src/config/`. The published package entry
+  (`dist/config.js`) is unchanged.
 
 ## [0.3.4]
 

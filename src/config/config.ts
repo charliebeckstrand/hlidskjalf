@@ -1,4 +1,4 @@
-import type { SortOrder } from './types.js'
+import type { SortOrder } from '../types.js'
 
 /**
  * User-facing configuration. Every field mirrors a CLI flag and is optional;

@@ -3,7 +3,7 @@ import { parseArgs } from 'node:util'
 import { render } from 'ink'
 
 import { App } from './app.js'
-import { loadConfig } from './config-loader.js'
+import { loadConfig } from './config/loader.js'
 import type { Options, SortOrder } from './types.js'
 import { normalizeFilters } from './workspaces.js'
 

@@ -1,11 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-
+import type { SortOrder } from '../types.js'
+import { isPlainObject } from '../util.js'
+import { normalizeFilters } from '../workspaces.js'
 import type { Config } from './config.js'
-import type { SortOrder } from './types.js'
-import { isPlainObject } from './util.js'
-import { normalizeFilters } from './workspaces.js'
 
 /**
  * Config file names tried in order, highest priority first. The `.ts` form is
