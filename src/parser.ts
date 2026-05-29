@@ -1,3 +1,5 @@
+import { stripVTControlCharacters } from 'node:util'
+
 import type { Status } from './types.js'
 
 interface ParsedLine {
@@ -39,7 +41,7 @@ function localOrigin(raw: string): string | undefined {
 // Skip DTS lines — secondary build phase, should not affect status
 const DTS = /\bDTS\b/
 
-const matchers: { pattern: RegExp; status: Status }[] = [
+const baseMatchers: { pattern: RegExp; status: Status }[] = [
 	{ pattern: /running on (https?:\/\/\S+)/, status: 'ready' },
 	{ pattern: /listening on (https?:\/\/\S+)/, status: 'ready' },
 	{ pattern: /listening at (https?:\/\/\S+)/, status: 'ready' },
@@ -58,12 +60,22 @@ const matchers: { pattern: RegExp; status: Status }[] = [
 	{ pattern: /process exit/, status: 'error' },
 ]
 
+// A matcher whose pattern embeds the `http` literal can only ever match a line
+// that contains `http`. Flag those so the loop can skip them with a single cheap
+// substring check on the dominant no-URL line, rather than running each regex.
+// Derived from the source so it stays in sync if a pattern is added or changed.
+const matchers = baseMatchers.map((m) => ({ ...m, needsHttp: m.pattern.source.includes('http') }))
+
 export function parseLine(line: string): ParsedLine {
 	const truncated = line.length > MAX_PARSE_LENGTH ? line.slice(0, MAX_PARSE_LENGTH) : line
 
 	if (DTS.test(truncated)) return {}
 
-	for (const { pattern, status } of matchers) {
+	const hasHttp = truncated.includes('http')
+
+	for (const { pattern, status, needsHttp } of matchers) {
+		if (needsHttp && !hasHttp) continue
+
 		const match = truncated.match(pattern)
 
 		if (match) {
@@ -76,7 +88,16 @@ export function parseLine(line: string): ParsedLine {
 	return {}
 }
 
-export { stripVTControlCharacters as stripAnsi } from 'node:util'
+/**
+ * Remove all ANSI escape sequences from a line before classification. Every
+ * sequence stripVTControlCharacters touches begins with ESC, so a line with no
+ * ESC byte is returned untouched without scanning it.
+ */
+export function stripAnsi(text: string): string {
+	if (!text.includes('\x1b')) return text
+
+	return stripVTControlCharacters(text)
+}
 
 /**
  * Strip all escape sequences EXCEPT SGR color/style codes (\x1b[...m).
@@ -85,6 +106,10 @@ export { stripVTControlCharacters as stripAnsi } from 'node:util'
  * paste, character set selection, and single-character ESC sequences (e.g. \x1bc reset).
  */
 export function sanitizeForDisplay(text: string): string {
+	// Every sequence the regex matches starts with ESC, so a line without one is
+	// returned as-is, skipping the whole-string replace on the common plain line.
+	if (!text.includes('\x1b')) return text
+
 	const NON_SGR_ESCAPES =
 		// biome-ignore lint/suspicious/noControlCharactersInRegex: needed to strip terminal escape sequences
 		/\x1b(?:\][^\x07\x1b]*(?:\x07|\x1b\\)|\[[?>=]*[\d;]*[A-Za-ln-z@~`]|\([A-Za-z]|[^[(\]\x1b])/g

@@ -1,4 +1,4 @@
-import type { Workspace, WorkspaceKind } from '../src/types.js'
+import type { Process, Workspace, WorkspaceKind } from '../src/types.js'
 
 /**
  * Representative dev-server log lines, one per parser branch plus the common
@@ -50,6 +50,18 @@ export function makeWorkspaces(count: number): Workspace[] {
 }
 
 /**
+ * Wrap `count` synthetic workspaces as ready Process records, matching the shape
+ * the dashboard's layout maths consumes each render.
+ */
+export function makeProcesses(count: number): Process[] {
+	return makeWorkspaces(count).map((workspace) => ({
+		workspace,
+		status: 'ready' as const,
+		logs: [],
+	}))
+}
+
+/**
  * Build deterministic `ps -eo pid,ppid,pcpu,rss` output for `count` processes
  * arranged into a shallow tree, matching what parsePsOutput consumes in the
  * metrics poll loop.
@@ -59,11 +71,11 @@ export function makePsOutput(count: number): string {
 
 	for (let i = 0; i < count; i++) {
 		const pid = 1000 + i
-		
+
 		const ppid = i === 0 ? 1 : 1000 + Math.floor(i / 3)
-		
+
 		const cpu = ((i * 7) % 500) / 10
-		
+
 		const rssKb = 50_000 + ((i * 1024) % 4_000_000)
 
 		lines.push(`${pid} ${ppid} ${cpu.toFixed(1)} ${rssKb}`)

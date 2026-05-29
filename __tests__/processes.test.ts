@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { MAX_LOGS } from '../src/logs.js'
 import { createRunner, type Runner } from '../src/processes.js'
 import type { Workspace } from '../src/types.js'
 
@@ -186,14 +187,18 @@ describe('log handling', () => {
 		await runner.start([APP])
 	})
 
-	it('caps the log buffer', () => {
-		const lines = Array.from({ length: 600 }, (_, i) => `line${i}`).join('\n')
+	it('caps the log buffer while retaining the newest output', () => {
+		// Emit far more than the buffer holds so trimming is exercised. The buffer
+		// keeps headroom above MAX_LOGS to amortize trims, so the bound is 2x.
+		const count = MAX_LOGS * 5
+		const lines = Array.from({ length: count }, (_, i) => `line${i}`).join('\n')
 		childFor('web')?.out(`${lines}\n`)
 
 		const logs = runner.get('web')?.logs ?? []
 
-		expect(logs.length).toBeLessThanOrEqual(500)
-		expect(logs.at(-1)).toBe('line599')
+		expect(logs.length).toBeLessThanOrEqual(MAX_LOGS * 2)
+		expect(logs.length).toBeGreaterThanOrEqual(MAX_LOGS)
+		expect(logs.at(-1)).toBe(`line${count - 1}`)
 	})
 
 	it('flushes and truncates an oversized line with no newline', () => {

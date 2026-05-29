@@ -1,3 +1,5 @@
+import { layoutSuite } from './layout.bench.js'
+import { logsSuite } from './logs.bench.js'
 import { metricsSuite } from './metrics.bench.js'
 import { parserSuite } from './parser.bench.js'
 import { runSuite } from './run.js'
@@ -11,6 +13,8 @@ const suites = {
 	parser: parserSuite,
 	metrics: metricsSuite,
 	workspaces: workspacesSuite,
+	logs: logsSuite,
+	layout: layoutSuite,
 } as const
 
 type SuiteName = keyof typeof suites
@@ -21,7 +25,7 @@ const unknown = requested.filter((name): name is string => !(name in suites))
 
 if (unknown.length > 0) {
 	console.error(`Unknown suite(s): ${unknown.join(', ')}`)
-	
+
 	console.error(`Available: ${Object.keys(suites).join(', ')}`)
 
 	process.exit(1)

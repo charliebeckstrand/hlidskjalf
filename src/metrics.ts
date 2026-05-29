@@ -63,7 +63,12 @@ export function collectDescendants(rootPid: number, children: Map<number, number
 
 		const kids = children.get(pid)
 
-		if (kids) stack.push(...kids)
+		// Push children one at a time rather than spreading: a spread passes every
+		// child as a function argument, which throws RangeError on a pathologically
+		// wide process tree.
+		if (kids) {
+			for (const kid of kids) stack.push(kid)
+		}
 	}
 
 	return result

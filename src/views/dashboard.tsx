@@ -1,6 +1,7 @@
 import { Box, Text, useStdout } from 'ink'
 import { useMemo } from 'react'
 
+import { nameColumnWidth } from '../layout.js'
 import { colors, statusDisplay } from '../theme.js'
 import type { Metrics, Process, WorkspaceKind } from '../types.js'
 import { Header } from './header.js'
@@ -161,10 +162,7 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 		[processes],
 	)
 
-	const nameWidth = useMemo(
-		() => Math.max(14, ...processes.map((p) => p.workspace.name.length + 2)),
-		[processes],
-	)
+	const nameWidth = useMemo(() => nameColumnWidth(processes), [processes])
 
 	// 2 (paddingX) + 2 (indicator + space) + nameWidth + 6 (kind) + 14 (status) + optional 17 (cpu+mem)
 	const urlWidth = cols - nameWidth - 24 - (metrics ? 17 : 0)
