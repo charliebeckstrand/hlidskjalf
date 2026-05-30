@@ -137,7 +137,7 @@ describe('sumTickDeltas', () => {
 })
 
 describe('parseProcStat', () => {
-	// After the comm field: index 1 = ppid, 11 = utime, 12 = stime, 21 = rss (pages).
+	// Field offsets after comm: 1 = ppid, 11 = utime, 12 = stime, 21 = rss (pages).
 	function buildStat(o: { ppid: number; utime: number; stime: number; rssPages: number }): string {
 		const fields = new Array(50).fill('0')
 

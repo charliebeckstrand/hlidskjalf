@@ -12,9 +12,9 @@ import type { Process } from './types.js'
 const MIN_NAME_WIDTH = 14
 
 /**
- * Width of the workspace-name column: the longest name plus padding, floored at
- * `min`. A plain loop rather than `Math.max(min, ...names)` so it neither allocates
- * an intermediate array per render nor risks a RangeError from spreading a huge list.
+ * Width of the workspace-name column: longest name plus padding, floored at `min`. A
+ * loop rather than `Math.max(min, ...names)` so it neither allocates an intermediate
+ * array per render nor risks a RangeError from spreading a huge list.
  */
 export function nameColumnWidth(processes: Process[], min = MIN_NAME_WIDTH): number {
 	let width = min
@@ -76,12 +76,11 @@ export interface ColumnWidths {
 }
 
 /**
- * Split the flexible space left after the fixed chrome (and optional metric columns)
- * between name and URL, giving the URL priority: its full content width is reserved
- * first so a ready URL shows in full, and the name takes what remains up to its
- * natural width — so a long name truncates before it can squeeze the URL off-screen.
- * A readable name floor is always kept, so when even that doesn't fit it's the URL
- * that shrinks (and is hidden once nothing is left for it).
+ * Split the flexible space left after fixed chrome (and optional metric columns)
+ * between name and URL, URL first: its full content width is reserved before the name
+ * takes the rest up to its natural width, so a long name truncates before it squeezes
+ * the URL off-screen. A name floor is always kept, so once even that doesn't fit it's
+ * the URL that shrinks, and hides once nothing is left for it.
  */
 export function columnWidths(
 	columns: number,

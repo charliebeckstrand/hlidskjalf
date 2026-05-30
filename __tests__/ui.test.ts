@@ -67,7 +67,7 @@ describe('colors & statusDisplay', () => {
 })
 
 describe('themes', () => {
-	// setTheme mutates the shared palette; restore the default so other suites are unaffected.
+	// setTheme mutates the shared palette; restore the default so other suites aren't polluted.
 	afterEach(() => setTheme('bifrost'))
 
 	it('every built-in palette fills every slot with a hex colour', () => {

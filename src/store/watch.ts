@@ -8,8 +8,8 @@ import { spawnWorkspace } from './spawn.js'
 import type { StoreContext } from './types.js'
 
 /**
- * Re-run discovery after a package.json change: start workspaces that appeared, drop
- * ones that vanished, and re-sort the display order.
+ * Re-run discovery after a package.json change: start workspaces that appeared, drop ones
+ * that vanished, re-sort the display order.
  */
 export function rediscover(ctx: StoreContext): void {
 	if (ctx.stopping) return
@@ -36,9 +36,9 @@ export function rediscover(ctx: StoreContext): void {
 }
 
 /**
- * Register and start a workspace discovered after startup (watch mode). No-op if
- * already tracked or shutting down. Spawned directly without startup dependency
- * gating, since the packages it may depend on are up by now.
+ * Register and start a workspace discovered after startup (watch mode). No-op if already
+ * tracked or shutting down. Spawned without dependency gating: the packages it may depend
+ * on are up by now.
  */
 export function addWorkspace(ctx: StoreContext, workspace: Workspace): void {
 	if (ctx.stopping) return
@@ -49,16 +49,16 @@ export function addWorkspace(ctx: StoreContext, workspace: Workspace): void {
 
 	ctx.entries.set(workspace.name, newEntry(workspace))
 
-	// Append so it shows immediately; `rediscover` re-sorts the order afterward.
+	// Append for immediate display; `rediscover` re-sorts afterward.
 	if (!ctx.order.includes(workspace.name)) ctx.order.push(workspace.name)
 
 	spawnWorkspace(ctx, workspace)
 }
 
 /**
- * Stop and forget a workspace that no longer exists in discovery. Cancels pending
- * timers and tears down the child's process group so its server frees its port, then
- * drops all state so it disappears from the dashboard.
+ * Stop and forget a workspace no longer present in discovery. Cancels timers, tears down
+ * the child's process group so its server frees its port, then drops all state so it
+ * leaves the dashboard.
  */
 export function removeWorkspace(ctx: StoreContext, name: string): void {
 	const entry = ctx.entries.get(name)
@@ -67,8 +67,8 @@ export function removeWorkspace(ctx: StoreContext, name: string): void {
 
 	clearTimers(entry)
 
-	// Tear the child's group down so its server frees its port. Deleting the entry
-	// also means the spawn close handler can't find it, so the exit is non-crashing.
+	// Deleting the entry next means the spawn close handler can't find it, so the
+	// exit isn't treated as a crash.
 	beginTeardown(entry, () => {})
 
 	ctx.entries.delete(name)

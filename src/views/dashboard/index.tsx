@@ -34,8 +34,8 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 		[processes],
 	)
 
-	// Natural width fits the longest name; the URL's full width is reserved first, then
-	// the name takes what's left (truncating before it can squeeze the URL).
+	// Natural width fits the longest name; the URL's full width is reserved first, then the
+	// name takes what's left (truncating before it can squeeze the URL).
 	const naturalNameWidth = useMemo(() => nameColumnWidth(processes), [processes])
 
 	const urlContent = useMemo(() => urlContentWidth(processes), [processes])
@@ -69,7 +69,6 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 		<Box flexDirection="column">
 			<Header title={title} ready={allReady} columns={cols} hints={HINTS} />
 
-			{/* Table header */}
 			<Box paddingX={1} marginLeft={2} marginTop={1}>
 				<Cell width={nameWidth}>
 					<Text color={colors.muted} bold>
@@ -105,7 +104,6 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 				</Text>
 			</Box>
 
-			{/* Process rows */}
 			{processes.map((proc, i) => (
 				<Process
 					key={proc.workspace.name}

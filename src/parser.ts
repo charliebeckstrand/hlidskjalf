@@ -37,7 +37,7 @@ function localOrigin(raw: string): string | undefined {
 	return parsed.origin
 }
 
-/** Skip DTS lines — secondary build phase, should not affect status. */
+/** Skip DTS lines — a secondary build phase that doesn't affect status. */
 const DTS = /\bDTS\b/
 
 const baseMatchers: { pattern: RegExp; status: Status }[] = [

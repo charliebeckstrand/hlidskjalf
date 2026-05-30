@@ -1,10 +1,9 @@
 /**
- * Shared presentation layer: the colour palette and status glyphs ({@link ./theme.ts}),
- * the terminal primitives the dashboard leans on — OSC 8 hyperlinks, alternate screen
- * ({@link ./terminal.ts}) — value formatters ({@link ./format.ts}), the shared hint
- * string ({@link ./hints.ts}), and the timer helpers used across the polling code
- * ({@link ./timers.ts}). Kept free of Ink/React imports so every helper can be unit
- * tested directly.
+ * Shared presentation layer: colour palette and status glyphs ({@link ./theme.ts}),
+ * terminal primitives — OSC 8 hyperlinks, alternate screen ({@link ./terminal.ts}) —
+ * value formatters ({@link ./format.ts}), the shared hint string ({@link ./hints.ts}), and
+ * the polling timer helpers ({@link ./timers.ts}). No Ink/React imports, so every helper
+ * is unit-testable.
  */
 
 export { cpuColor, formatCpu, formatMem, memColor } from './format.js'

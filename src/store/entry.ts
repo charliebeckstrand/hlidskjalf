@@ -48,13 +48,12 @@ export function clearTimers(entry: ProcessEntry): void {
 }
 
 /**
- * Kill a live child and run `onClosed` once it exits, escalating to SIGKILL if it
- * lingers. Calling this again while a teardown is already pending for the same child
- * just swaps in the latest `onClosed` rather than stacking another `close` listener —
- * otherwise a rapid stop/restart would fire two handlers and spawn duplicate servers.
- * If the child is already gone, `onClosed` runs synchronously. `signal` is the initial
- * termination signal (SIGTERM by default; SIGKILL for a force-kill); either way a
- * lingering child is still escalated to SIGKILL after the grace period.
+ * Kill a live child and run `onClosed` once it exits, escalating to SIGKILL if it lingers.
+ * Re-calling during a pending teardown swaps in the latest `onClosed` instead of stacking
+ * a second `close` listener — without that, a rapid stop/restart fires two handlers and
+ * spawns duplicate servers. If the child is already gone, `onClosed` runs synchronously.
+ * `signal` is the initial termination signal (SIGTERM default, SIGKILL for a force-kill);
+ * a lingering child escalates to SIGKILL after the grace period regardless.
  */
 export function beginTeardown(
 	entry: ProcessEntry,
@@ -75,15 +74,15 @@ export function beginTeardown(
 		return
 	}
 
-	// A SIGSTOP'd child won't act on SIGTERM until it's continued, so wake it first;
-	// otherwise the terminate would only land after the SIGKILL grace period elapsed.
+	// A SIGSTOP'd child ignores SIGTERM until continued, so wake it first; otherwise the
+	// terminate only lands after the SIGKILL grace period elapses.
 	if (entry.pausedFrom !== null) {
 		killTree(child, 'SIGCONT')
 
 		entry.pausedFrom = null
 	}
 
-	// Latest request wins; the single close handler below reads this at close time.
+	// Latest request wins; the single close handler below reads this at close.
 	entry.onClose = onClosed
 
 	if (!entry.teardownStarted) {

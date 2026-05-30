@@ -21,8 +21,7 @@ export async function start(ctx: StoreContext): Promise<boolean> {
 
 	const startOrder = sortByDeps(workspaces)
 
-	// `sortForDisplay` is itself `sortByDeps` in run order, so reuse the start order
-	// rather than computing the same sort twice.
+	// In run order `sortForDisplay` is `sortByDeps`; reuse startOrder instead of sorting twice.
 	const sorted = ctx.sortOrder === 'run' ? startOrder : sortByName(workspaces)
 
 	ctx.order = sorted.map((w) => w.name)

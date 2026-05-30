@@ -14,15 +14,15 @@ export function setStatus(ctx: StoreContext, name: string, status: Status): void
 
 	entry.process.status = status
 
-	// A stopped process has no child left to meter; drop its last reading so the
-	// dashboard doesn't keep showing stale CPU/memory for something that's gone.
+	// A stopped process has no child to meter; drop its last reading so the dashboard
+	// doesn't show stale CPU/memory for something that's gone.
 	if (status === 'stopped') entry.process.metrics = undefined
 
 	if (status === 'error' && entry.process.workspace.kind === 'package') {
 		notifyDependents(ctx, name)
 	}
 
-	// A status change usually coincides with a shift in CPU use; pull a fresh sample.
+	// A status change coincides with a shift in CPU use; pull a fresh sample.
 	if (statusChanged) ctx.meter?.request()
 
 	changed(ctx)

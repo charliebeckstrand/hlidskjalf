@@ -4,7 +4,7 @@ import type { ComponentProps, ReactNode } from 'react'
 import type { Status } from '../types.js'
 import { colors } from '../ui/index.js'
 
-/** A fixed-width table cell. Replaces the repeated `<Box width=...>` blocks in the table. */
+/** A fixed-width table cell. */
 export function Cell({ width, children }: { width: number; children: ReactNode }) {
 	return <Box width={width}>{children}</Box>
 }

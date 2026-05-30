@@ -79,10 +79,8 @@ export function Process({
 			{showMetrics && <MetricsCells metrics={proc.metrics} />}
 			{proc.url && urlWidth > 0 && (
 				<Cell width={urlWidth}>
-					{/* Pre-truncate the label to the column width and wrap it in an OSC 8
-					    hyperlink targeting the full URL, so clicking opens the whole address
-					    even when only a shortened segment is shown. Ink's own truncator isn't
-					    link-aware and would drop the escapes. */}
+					{/* Pre-truncate before wrapping in OSC 8: Ink's truncator isn't link-aware
+					    and would drop the escapes. The link still targets the full URL. */}
 					<Text color={colors.url} wrap="truncate">
 						{hyperlink(proc.url, truncateEnd(proc.url, urlWidth))}
 					</Text>

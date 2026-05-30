@@ -1,6 +1,5 @@
 /**
- * The colour palette and status glyphs. Kept free of Ink/React imports so every helper
- * here can be unit tested directly.
+ * Colour palette and status glyphs. No Ink/React imports, so every helper is unit-testable.
  */
 
 import type { Status } from '../types.js'
@@ -31,9 +30,9 @@ type SharedColors = Pick<
 >
 
 /**
- * Neutral slots shared verbatim by every theme — the greys, the frost-white highlight,
- * and the pending/url tones. Kept as one source of truth and spread into each palette so
- * they can't drift apart; per-theme personality lives in the accent/status colours below.
+ * Neutral slots shared verbatim by every theme: greys, the frost-white highlight, and the
+ * pending tone. One source of truth, spread into each palette so they can't drift apart;
+ * per-theme personality lives in the accent/status colours below.
  */
 const SHARED: SharedColors = {
 	success: '#15FA5A',
@@ -48,10 +47,9 @@ const SHARED: SharedColors = {
 
 /**
  * Built-in palettes, named for the realms of Norse cosmology (fitting for a tool named
- * after Odin's all-seeing high seat). `success`/`warning`/`error` stay semantically
- * legible — green-ish / amber-ish / red-ish — in every theme so a status glyph never
- * misreads; the personality lives in the accent and status colours, with the neutral
- * slots pulled from {@link SHARED}.
+ * after Odin's all-seeing high seat). `success`/`warning`/`error` stay green/amber/red
+ * across every theme so a status glyph never misreads; personality lives in the accent
+ * colours, with neutral slots pulled from {@link SHARED}.
  */
 export const themes = {
 	// Default — electric purples, sky blues, and starlight whites.
@@ -88,9 +86,9 @@ export const themes = {
 export type ThemeName = keyof typeof themes
 
 /**
- * Friendly elemental aliases for the Norse realm names, so `--theme=ice` resolves to
- * `niflheim` (and `fire`→`muspelheim`, `earth`→`yggdrasil`). Accepted anywhere a theme
- * name is — both the CLI flag and the persisted config flow through {@link parseTheme}.
+ * Elemental aliases for the realm names: `--theme=ice` resolves to `niflheim`
+ * (`fire`→`muspelheim`, `earth`→`yggdrasil`). Accepted anywhere a theme name is — both the
+ * CLI flag and the persisted config flow through {@link parseTheme}.
  */
 export const THEME_ALIASES = {
 	ice: 'niflheim',
@@ -115,12 +113,12 @@ export function parseTheme(value: unknown): ThemeName | undefined {
 
 /**
  * The active palette. A live binding: importers see whatever {@link setTheme} last set.
- * The dashboard picks a theme once at boot (before the first render), so render-time
- * reads of `colors.*` always resolve to the chosen palette.
+ * The dashboard picks a theme once at boot before the first render, so render-time reads
+ * of `colors.*` always resolve to the chosen palette.
  */
 export let colors: ColorPalette = themes[DEFAULT_THEME]
 
-/** Build the status → glyph map against a given palette. */
+/** Build the status → glyph map for a palette. */
 function buildStatusDisplay(
 	c: ColorPalette,
 ): Record<Status, { color: string; label: string; icon: string }> {

@@ -1,9 +1,8 @@
 import type { Bench } from 'tinybench'
 
 /**
- * Run a configured benchmark suite and print its results. Shared by every suite
- * so output formatting and error handling stay consistent — individual files
- * only declare their cases.
+ * Run a configured benchmark suite and print its results. Shared by every suite so output
+ * formatting and error handling stay consistent — individual files only declare their cases.
  *
  * tinybench warms each task up before measuring and reports a relative margin of
  * error, so a low `rme` (the ± column) means the numbers are stable enough to

@@ -41,7 +41,7 @@ export function restartProcess(ctx: StoreContext, name: string): void {
 	const workspace = entry.process.workspace
 
 	const doRestart = () => {
-		// A shutdown may have begun while the child was closing; don't respawn into it.
+		// Shutdown may have begun while the child was closing; don't respawn into it.
 		if (ctx.stopping) return
 
 		entry.restartRetries = 0
@@ -73,11 +73,11 @@ export function pauseProcess(ctx: StoreContext, name: string): void {
 
 	if (!entry) return
 
-	// Nothing to freeze if there's no live child, and pausing twice is a no-op.
+	// No live child to freeze, or already paused.
 	if (!isRunning(entry.child) || entry.pausedFrom !== null) return
 
-	// Freeze pending timers too: a startup/error/restart timer that fired while the
-	// child is suspended would flip the status out from under `paused`.
+	// A startup/error/restart timer firing while the child is suspended would flip the
+	// status out from under `paused`.
 	clearTimers(entry)
 
 	entry.pausedFrom = entry.process.status
@@ -102,8 +102,7 @@ export function resumeProcess(ctx: StoreContext, name: string): void {
 
 	if (isRunning(entry.child)) killTree(entry.child, 'SIGCONT')
 
-	// Reset the idle clock so the just-woken process isn't immediately probed for a
-	// stall it never had while suspended.
+	// Reset the idle clock so the just-woken process isn't probed for a stall it never had.
 	entry.lastOutputAt = Date.now()
 
 	note(entry, 'resumed (SIGCONT)')
@@ -122,8 +121,8 @@ export function killProcess(ctx: StoreContext, name: string): void {
 
 	const wasLive = isRunning(entry.child)
 
-	// SIGKILL straight away — no SIGTERM grace — for a wedged process that ignores
-	// a polite stop. Like stop, this doesn't schedule a restart.
+	// SIGKILL with no SIGTERM grace, for a wedged process that ignores a polite stop.
+	// Like stop, schedules no restart.
 	beginTeardown(
 		entry,
 		() => {
@@ -146,7 +145,7 @@ export function clearLogs(ctx: StoreContext, name: string): void {
 
 	if (!entry) return
 
-	// Mutate in place: the snapshot rebuild on `changed()` re-renders the empty panel.
+	// Mutate in place; the snapshot rebuild on `changed()` re-renders the empty panel.
 	entry.process.logs.length = 0
 
 	changed(ctx)
