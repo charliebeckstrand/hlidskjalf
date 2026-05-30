@@ -76,7 +76,7 @@ export const Process = memo(function Process({
 	showMetrics: boolean
 	urlWidth: number
 }) {
-	const { color, label, icon } = statusDisplay[status]
+	const { color, label, glyph } = statusDisplay[status]
 
 	return (
 		<Box paddingX={1}>
@@ -92,7 +92,7 @@ export const Process = memo(function Process({
 			</Cell>
 			<Cell width={COLUMN_WIDTHS.status}>
 				<Text color={color}>
-					<StatusGlyph status={status} icon={icon} /> {label}
+					<StatusGlyph status={status} glyph={glyph} /> {label}
 				</Text>
 			</Cell>
 			{showMetrics && <MetricsCells cpu={cpu} mem={mem} />}

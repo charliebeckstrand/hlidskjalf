@@ -25,8 +25,8 @@ export function Panel({ children, ...box }: ComponentProps<typeof Box> & { child
 }
 
 /** An animated spinner while building, falling back to the status glyph otherwise. */
-export function StatusGlyph({ status, icon }: { status: Status; icon: string }) {
+export function StatusGlyph({ status, glyph }: { status: Status; glyph: string }) {
 	if (status === 'building') return <Spinner type="dots" />
 
-	return <Text>{icon}</Text>
+	return <Text>{glyph}</Text>
 }

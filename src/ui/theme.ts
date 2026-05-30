@@ -121,19 +121,19 @@ export let colors: ColorPalette = themes[DEFAULT_THEME]
 /** Build the status → glyph map for a palette. */
 function buildStatusDisplay(
 	c: ColorPalette,
-): Record<Status, { color: string; label: string; icon: string }> {
-	// Icons stay within ● / ○ / ✖: the half-circle and pause glyphs render from an oversized
+): Record<Status, { color: string; label: string; glyph: string }> {
+	// Glyphs stay within ● / ○ / ✖: the half-circle and pause glyphs render from an oversized
 	// fallback font that breaks the baseline. Colour and label carry the rest of the state.
 	return {
-		pending: { color: c.pending, label: 'pending', icon: '○' },
-		building: { color: c.warning, label: 'building', icon: '○' },
-		watching: { color: c.success, label: 'watching', icon: '●' },
-		ready: { color: c.success, label: 'watching', icon: '●' },
-		error: { color: c.error, label: 'error', icon: '✖' },
-		stopped: { color: c.pending, label: 'stopped', icon: '○' },
-		idle: { color: c.warning, label: 'idle', icon: '○' },
-		paused: { color: c.warning, label: 'paused', icon: '○' },
-		timeout: { color: c.error, label: 'timeout', icon: '✖' },
+		pending: { color: c.pending, label: 'pending', glyph: '○' },
+		building: { color: c.warning, label: 'building', glyph: '○' },
+		watching: { color: c.success, label: 'watching', glyph: '●' },
+		ready: { color: c.success, label: 'watching', glyph: '●' },
+		error: { color: c.error, label: 'error', glyph: '✖' },
+		stopped: { color: c.pending, label: 'stopped', glyph: '○' },
+		idle: { color: c.warning, label: 'idle', glyph: '○' },
+		paused: { color: c.warning, label: 'paused', glyph: '○' },
+		timeout: { color: c.error, label: 'timeout', glyph: '✖' },
 	}
 }
 
