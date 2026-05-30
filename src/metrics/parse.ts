@@ -8,10 +8,19 @@
 export function collectDescendants(rootPid: number, children: Map<number, number[]>): number[] {
 	const result: number[] = []
 
+	// A real /proc/ps tree is acyclic (one ppid per pid), but guard anyway: a cyclic or
+	// diamond `children` map would otherwise loop forever, hanging the poll. Skipping
+	// already-seen pids also keeps a pid from being double-counted in the meter's totals.
+	const seen = new Set<number>()
+
 	const stack = [rootPid]
 
 	while (stack.length > 0) {
 		const pid = stack.pop() as number
+
+		if (seen.has(pid)) continue
+
+		seen.add(pid)
 
 		result.push(pid)
 
