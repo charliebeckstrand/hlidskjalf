@@ -1,6 +1,6 @@
 import type { ChildProcess } from 'node:child_process'
-import { createUnrefTimer } from '../util.js'
 import { KILL_GRACE_MS } from './constants.js'
+import { createUnrefTimer } from './utilities.js'
 
 /** Whether a child is still running: exists and the OS hasn't reported it exiting. */
 export function isRunning(child: ChildProcess | null | undefined): child is ChildProcess {

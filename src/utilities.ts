@@ -18,14 +18,7 @@ export function truncate(text: string, max: number): string {
 	return text.length > max ? text.slice(0, max) : text
 }
 
-/**
- * Schedule a timeout and unref it so a pending tick never keeps the process alive past
- * shutdown. Returns the handle for the caller to store and later clear.
- */
-export function createUnrefTimer(ms: number, fn: () => void): ReturnType<typeof setTimeout> {
-	const timer = setTimeout(fn, ms)
-
-	timer.unref()
-
-	return timer
+/** Narrow an unknown value to a non-null, non-array object. */
+export function isPlainObject(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value)
 }

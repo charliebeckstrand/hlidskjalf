@@ -1,8 +1,8 @@
-import { createUnrefTimer } from '../util.js'
 import { ERROR_RECOVERY_MS } from './constants.js'
 import { withEntry } from './entry.js'
 import { setStatus } from './status.js'
 import type { StoreContext } from './types.js'
+import { createUnrefTimer } from './utilities.js'
 
 export function scheduleErrorRecovery(ctx: StoreContext, name: string): void {
 	cancelErrorRecovery(ctx, name)

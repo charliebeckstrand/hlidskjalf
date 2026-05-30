@@ -4,7 +4,7 @@
  * loop that drives them lives in {@link ./meter.ts}.
  */
 
-import { clamp } from '../util.js'
+import { clamp } from '../utilities.js'
 
 /** Collect a root pid and all its (transitive) descendants from a parent→children map. */
 export function collectDescendants(rootPid: number, children: Map<number, number[]>): number[] {
