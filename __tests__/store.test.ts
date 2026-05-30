@@ -42,6 +42,9 @@ const hoisted = vi.hoisted(() => {
 
 			if (this.exitCode !== null || this.signalCode !== null) return true
 
+			// SIGSTOP/SIGCONT suspend and resume; they don't terminate the process.
+			if (this.lastSignal === 'SIGSTOP' || this.lastSignal === 'SIGCONT') return true
+
 			this.killed = true
 
 			// Model the OS delivering the signal and the process then closing.
@@ -590,6 +593,164 @@ describe('manual stop and restart', () => {
 		store.restartProcess('web')
 
 		await flush()
+
+		await flush()
+
+		expect(spawnCount('web')).toBe(2)
+
+		expect(get('web')?.status).toBe('building')
+	})
+})
+
+describe('pause and resume', () => {
+	it('suspends a running process with SIGSTOP and marks it paused', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		const child = childFor('web')
+
+		child?.out('Watching for changes\n')
+
+		const pid = child?.pid ?? 0
+
+		store.pauseProcess('web')
+
+		await flush()
+
+		expect(vi.mocked(process.kill)).toHaveBeenCalledWith(-pid, 'SIGSTOP')
+
+		// SIGSTOP doesn't terminate; the child stays alive.
+		expect(child?.killed).toBe(false)
+
+		expect(get('web')?.status).toBe('paused')
+	})
+
+	it('resumes a paused process with SIGCONT, restoring its prior status', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		const child = childFor('web')
+
+		child?.out('Watching for changes\n')
+
+		expect(get('web')?.status).toBe('watching')
+
+		store.pauseProcess('web')
+
+		const pid = child?.pid ?? 0
+
+		store.resumeProcess('web')
+
+		await flush()
+
+		expect(vi.mocked(process.kill)).toHaveBeenCalledWith(-pid, 'SIGCONT')
+
+		expect(get('web')?.status).toBe('watching')
+	})
+
+	it('does not overwrite paused status with late-draining output', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		childFor('web')?.out('Watching for changes\n')
+
+		store.pauseProcess('web')
+
+		// Output still buffered in the pipe arrives after the SIGSTOP.
+		childFor('web')?.out('running on http://localhost:3000\n')
+
+		await flush()
+
+		expect(get('web')?.status).toBe('paused')
+
+		// The line is still captured in the log buffer, just not acted on.
+		expect(get('web')?.logs.some((l) => l.includes('localhost:3000'))).toBe(true)
+	})
+
+	it('ignores pause when there is no live child, and resume when not paused', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		store.stopProcess('web')
+
+		await flush()
+
+		store.pauseProcess('web')
+
+		expect(get('web')?.status).toBe('stopped')
+
+		// Resuming a process that was never paused is a no-op.
+		store.resumeProcess('web')
+
+		expect(get('web')?.status).toBe('stopped')
+	})
+
+	it('wakes a paused process before stopping it so SIGTERM is honored', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		const child = childFor('web')
+
+		child?.out('Watching for changes\n')
+
+		store.pauseProcess('web')
+
+		const pid = child?.pid ?? 0
+
+		store.stopProcess('web')
+
+		await flush()
+
+		// Continued first so the terminate lands promptly, then torn down.
+		expect(vi.mocked(process.kill)).toHaveBeenCalledWith(-pid, 'SIGCONT')
+
+		expect(vi.mocked(process.kill)).toHaveBeenCalledWith(-pid, 'SIGTERM')
+
+		expect(get('web')?.status).toBe('stopped')
+	})
+})
+
+describe('force kill', () => {
+	it('kills a running process with SIGKILL and does not restart it', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		const child = childFor('web')
+
+		child?.out('Watching for changes\n')
+
+		const pid = child?.pid ?? 0
+
+		store.killProcess('web')
+
+		await flush()
+
+		expect(vi.mocked(process.kill)).toHaveBeenCalledWith(-pid, 'SIGKILL')
+
+		expect(get('web')?.status).toBe('stopped')
+
+		// No backoff restart was scheduled.
+		expect(spawnCount('web')).toBe(1)
+	})
+
+	it('can be restarted after a kill via restartProcess', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		store.killProcess('web')
+
+		await flush()
+
+		expect(get('web')?.status).toBe('stopped')
+
+		store.restartProcess('web')
 
 		await flush()
 

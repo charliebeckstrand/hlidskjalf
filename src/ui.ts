@@ -140,6 +140,7 @@ function buildStatusDisplay(
 		error: { color: c.error, label: 'error', icon: '✖' },
 		stopped: { color: c.pending, label: 'stopped', icon: '○' },
 		idle: { color: c.warning, label: 'idle', icon: '◑' },
+		paused: { color: c.warning, label: 'paused', icon: '⏸' },
 		timeout: { color: c.error, label: 'timeout', icon: '✖' },
 	}
 }

@@ -10,6 +10,7 @@ export type Status =
 	| 'error'
 	| 'stopped'
 	| 'idle'
+	| 'paused'
 	| 'timeout'
 
 export interface Workspace {
