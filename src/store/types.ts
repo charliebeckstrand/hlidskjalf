@@ -4,7 +4,7 @@ import type { Meter } from '../metrics/index.js'
 import type { SortOrder, Status, Workspace, WorkspaceProcess } from '../types.js'
 import type { Watcher } from '../watcher.js'
 
-export interface ProcessEntry {
+export interface WorkspaceEntry {
 	process: WorkspaceProcess
 	child: ChildProcess | null
 	errorTimer: ReturnType<typeof setTimeout> | null
@@ -52,7 +52,7 @@ export interface Store {
  * read and mutate.
  */
 export interface StoreContext {
-	entries: Map<string, ProcessEntry>
+	entries: Map<string, WorkspaceEntry>
 	/** Display order of workspace names; the snapshot is built from this. */
 	order: string[]
 	listeners: Set<() => void>
