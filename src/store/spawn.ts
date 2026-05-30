@@ -11,6 +11,7 @@ import {
 	STARTUP_TIMEOUT_MS,
 } from './constants.js'
 import { note } from './entry.js'
+import { createLineBuffer } from './lines.js'
 import { clearErrorTimer, scheduleErrorRecovery } from './recovery.js'
 import { changed } from './snapshot.js'
 import { setStatus } from './status.js'
@@ -58,37 +59,19 @@ export function spawnWorkspace(ctx: StoreContext, workspace: Workspace): void {
 
 	if (entry) entry.startupTimer = startupTimer
 
-	let buffer = ''
+	const lineBuffer = createLineBuffer(MAX_BUFFER_SIZE)
 
 	const onData = (data: Buffer) => {
-		buffer += data.toString()
-
-		if (!buffer.includes('\n') && buffer.length > MAX_BUFFER_SIZE) {
-			handleLine(ctx, workspace.name, buffer)
-
-			buffer = ''
-
-			return
-		}
-
-		const lines = buffer.split('\n')
-
-		buffer = lines.pop() ?? ''
-
-		for (const raw of lines) {
-			const line = raw.trimEnd()
-
-			if (line) handleLine(ctx, workspace.name, line)
-		}
+		for (const line of lineBuffer.push(data.toString())) handleLine(ctx, workspace.name, line)
 	}
 
 	child.stdout?.on('data', onData)
 	child.stderr?.on('data', onData)
 
 	child.on('close', (code, signal) => {
-		if (buffer.trim()) handleLine(ctx, workspace.name, buffer.trimEnd())
+		const rest = lineBuffer.flush()
 
-		buffer = ''
+		if (rest !== null) handleLine(ctx, workspace.name, rest)
 
 		if (ctx.stopping) return
 
