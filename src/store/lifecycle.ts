@@ -125,6 +125,7 @@ function waitForPackages(ctx: StoreContext, names: string[]): Promise<void> {
 
 				if (
 					status === 'watching' ||
+					status === 'ready' ||
 					status === 'error' ||
 					status === 'stopped' ||
 					status === 'timeout'

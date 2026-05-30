@@ -298,6 +298,26 @@ describe('lifecycle', () => {
 
 		expect(childFor('web')).toBeDefined()
 	})
+
+	it('gates apps on a package that signals ready rather than watching', async () => {
+		hoisted.discovered.current = [LIB, { name: 'web', kind: 'app', deps: ['lib'] }]
+
+		store = makeStore()
+
+		await store.start()
+
+		expect(childFor('web')).toBeUndefined()
+
+		// A package whose dev script runs a server settles on `ready`, not `watching`;
+		// the startup timer clears, so it must still release the app gate.
+		childFor('lib')?.out('listening on http://localhost:3000\n')
+
+		await flush()
+
+		expect(get('lib')?.status).toBe('ready')
+
+		expect(childFor('web')).toBeDefined()
+	})
 })
 
 describe('status transitions', () => {
