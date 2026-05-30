@@ -68,11 +68,11 @@ const BINDINGS: ReadonlyArray<readonly [keys: string, action: string]> = [
 	['↑/↓ · j/k', 'Navigate processes'],
 	['s', 'Stop / start process'],
 	['p', 'Pause / resume process'],
-	['x', 'Kill process (no restart)'],
+	['x', 'Kill process'],
 	['r', 'Restart process'],
 	['c', 'Clear logs'],
 	['PgUp/PgDn', 'Scroll logs'],
-	['Home/End', 'Jump to oldest / newest'],
+	['Home/End', 'Jump to oldest / newest logs'],
 	['?', 'Toggle help'],
 	['q', 'Quit'],
 ]
