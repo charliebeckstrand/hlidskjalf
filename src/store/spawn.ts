@@ -210,6 +210,7 @@ function handleUnexpectedExit(
 			.then(() => {
 				// Respawn only if still tracked and no deliberate exit intervened during the rebuild.
 				const liveEntry = ctx.entries.get(workspace.name)
+
 				if (!ctx.stopping && liveEntry && !liveEntry.intentionalExit) spawnWorkspace(ctx, workspace)
 			})
 			.catch(() => setStatus(ctx, workspace.name, 'error'))
