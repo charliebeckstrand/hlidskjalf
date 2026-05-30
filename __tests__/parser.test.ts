@@ -97,6 +97,52 @@ describe('parseLine', () => {
 		})
 	})
 
+	describe('matcher precedence', () => {
+		it('classifies a line with an error keyword and a URL as error, attaching no URL', () => {
+			// The error matcher sits above the bare `listening` fallback but below the
+			// URL-bearing `running on`/`listening on` matchers. A line with an error word but
+			// none of those URL phrases lands on error; the error matcher captures no group,
+			// so no URL surfaces.
+			expect(parseLine('error: failed to bind http://localhost:3000')).toEqual({
+				status: 'error',
+			})
+		})
+
+		it('lets a URL-bearing readiness phrase win over the bare listening fallback', () => {
+			// "failed" is not an error keyword (only `error[\s:]`/`[ERROR]`/`process exit`
+			// are), so the `listening on <url>` matcher fires first and surfaces the URL.
+			expect(parseLine('failed, not listening on http://localhost:3000')).toEqual({
+				status: 'ready',
+				url: 'http://localhost:3000',
+			})
+		})
+
+		it('keeps an error keyword above the bare listening fallback', () => {
+			// The comment in parser.ts promises a failure line mentioning "listening" stays
+			// an error; here the error matcher must beat the bare `\blistening\b` matcher.
+			expect(parseLine('error: server not listening')).toEqual({ status: 'error' })
+		})
+	})
+
+	describe('URL host and port edges', () => {
+		it('drops a URL with no port while keeping the ready status', () => {
+			// localOrigin requires an explicit port, so a portless URL classifies as ready
+			// but surfaces nothing clickable.
+			expect(parseLine('running on http://localhost')).toEqual({ status: 'ready' })
+		})
+
+		it('does not recognize a loopback IP after "started at" (localhost name only)', () => {
+			// The `started.*?(https?://localhost:\d+)` matcher is literal-localhost; a
+			// loopback IP matches no matcher and falls through to no classification.
+			expect(parseLine('Server started at http://127.0.0.1:4000')).toEqual({})
+
+			expect(parseLine('Server started at http://localhost:4000')).toEqual({
+				status: 'ready',
+				url: 'http://localhost:4000',
+			})
+		})
+	})
+
 	describe('edge cases', () => {
 		it('returns empty for unrecognized and empty lines', () => {
 			expect(parseLine('just some regular log output')).toEqual({})
@@ -106,6 +152,18 @@ describe('parseLine', () => {
 
 		it('still classifies a very long line (after truncation)', () => {
 			expect(parseLine(`Error: ${'x'.repeat(10_000)}`).status).toBe('error')
+		})
+
+		it('classifies a keyword that ends within the parse-length cap', () => {
+			// `error: boom` ends at offset 4101; with the cap at 4096 the keyword's start
+			// (4090) and the `error[\s:]` match both survive truncation.
+			expect(parseLine(`${'x'.repeat(4090)}error: boom`).status).toBe('error')
+		})
+
+		it('ignores a keyword pushed entirely past the parse-length cap', () => {
+			// Starting the keyword at offset 4096 puts it beyond the 4096-char slice, so the
+			// truncated line carries no classifiable token.
+			expect(parseLine(`${'x'.repeat(4096)}error: boom`)).toEqual({})
 		})
 	})
 })

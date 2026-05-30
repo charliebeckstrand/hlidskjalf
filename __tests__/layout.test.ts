@@ -68,6 +68,28 @@ describe('columnWidths', () => {
 
 		expect(columnWidths(0, 40, 21, true)).toEqual({ name: 1, url: 0 })
 	})
+
+	it('opens the URL column exactly one column past the name floor', () => {
+		// Row chrome is 24, the name floor 14: at 38 columns (14 available) there's no room
+		// for a URL; 39 is the first to give it a column, the name still floored.
+		expect(columnWidths(38, 40, 21, false)).toEqual({ name: 14, url: 0 })
+
+		expect(columnWidths(39, 40, 21, false)).toEqual({ name: 14, url: 1 })
+	})
+
+	it('grows the name only after the URL reaches its full content width', () => {
+		// While the URL is still short of its 21-column content, every extra column goes to
+		// the URL and the name stays floored at 14 — URL reservation has priority.
+		expect(columnWidths(40, 40, 21, false)).toEqual({ name: 14, url: 2 })
+
+		expect(columnWidths(41, 40, 21, false)).toEqual({ name: 14, url: 3 })
+
+		// Column 59 is the last where the URL has just filled out (21) with the name still
+		// floored; one more column (60) is the first the name is allowed to grow.
+		expect(columnWidths(59, 40, 21, false)).toEqual({ name: 14, url: 21 })
+
+		expect(columnWidths(60, 40, 21, false)).toEqual({ name: 15, url: 21 })
+	})
 })
 
 describe('logPanelHeight', () => {

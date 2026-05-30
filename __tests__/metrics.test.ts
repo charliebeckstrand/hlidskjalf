@@ -183,6 +183,19 @@ describe('parseProcStat', () => {
 
 		expect(parsed?.rss).toBe(0)
 	})
+
+	it('floors absent cpu-tick fields on a short stat line to 0 rather than NaN', () => {
+		// A truncated stat line (e.g. a zombie racing collection) has a valid ppid but no
+		// utime/stime. Those must floor to 0 so summed ticks can't reach the meter as NaN and
+		// poison a workspace's CPU reading.
+		const parsed = parseProcStat('1234 (comm) S 1 2 3')
+
+		expect(parsed?.ppid).toBe(1)
+
+		expect(parsed?.utime).toBe(0)
+
+		expect(parsed?.stime).toBe(0)
+	})
 })
 
 describe('cpuPercentFromTicks', () => {
@@ -198,5 +211,14 @@ describe('cpuPercentFromTicks', () => {
 		expect(cpuPercentFromTicks(100, 0, 1)).toBe(0)
 
 		expect(cpuPercentFromTicks(100, 1000, 0)).toBe(0)
+	})
+
+	it('caps at 100 when ticks overshoot a short window', () => {
+		// Whole-tick granularity or timer jitter can credit more ticks than the window ×
+		// cores can hold (100 ticks over 0.9s on one core computes to ~111%); the upper clamp
+		// reports a possible figure rather than an impossible >100% of total capacity.
+		expect(cpuPercentFromTicks(100, 900, 1)).toBe(100)
+
+		expect(cpuPercentFromTicks(200, 1000, 1)).toBe(100)
 	})
 })
