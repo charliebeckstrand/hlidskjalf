@@ -26,6 +26,27 @@ const MIN_METRICS_INTERVAL_MS = 1_000
 /** Hard cap on the `ps` call so a wedged process table can't stall the poll. */
 const PS_TIMEOUT_MS = 5_000
 
+/** Default page size assumed when the kernel's can't be read. */
+const DEFAULT_PAGE_SIZE = 4096
+
+/**
+ * The kernel page size in bytes, for converting `/proc/<pid>/stat`'s RSS (reported in
+ * pages) to bytes. Hardcoding 4096 is wrong on ARM64 Linux configured with 16K/64K pages,
+ * where RSS would be under-reported by 4x/16x. Read it once via `getconf`, falling back to
+ * 4096 if that's unavailable.
+ */
+function resolvePageSize(): number {
+	try {
+		const out = execFileSync('getconf', ['PAGE_SIZE'], { encoding: 'utf8', timeout: 1_000 })
+
+		const parsed = Number.parseInt(out.trim(), 10)
+
+		return Number.isNaN(parsed) || parsed <= 0 ? DEFAULT_PAGE_SIZE : parsed
+	} catch {
+		return DEFAULT_PAGE_SIZE
+	}
+}
+
 export interface MeterDeps {
 	/** Running root PIDs mapped to workspace name (stopped/dead children excluded). */
 	roots(): Map<number, string>
@@ -54,6 +75,9 @@ export function createMeter(deps: MeterDeps): Meter {
 	const prevCpuSnapshots = new Map<string, { time: number; perPid: Map<number, number> }>()
 
 	const numCpus = os.availableParallelism()
+
+	// Only the Linux `/proc` reader converts pages to bytes; elsewhere `ps` already reports KB.
+	const pageSize = process.platform === 'linux' ? resolvePageSize() : DEFAULT_PAGE_SIZE
 
 	let timer: ReturnType<typeof setTimeout> | null = null
 
@@ -118,7 +142,7 @@ export function createMeter(deps: MeterDeps): Meter {
 			const pid = Number.parseInt(entry, 10)
 
 			try {
-				const parsed = parseProcStat(fs.readFileSync(`/proc/${pid}/stat`, 'utf8'))
+				const parsed = parseProcStat(fs.readFileSync(`/proc/${pid}/stat`, 'utf8'), pageSize)
 
 				if (!parsed) continue
 

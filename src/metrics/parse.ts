@@ -8,10 +8,20 @@
 export function collectDescendants(rootPid: number, children: Map<number, number[]>): number[] {
 	const result: number[] = []
 
+	// A PID-reuse race across the per-process /proc reads can momentarily yield a cyclic
+	// or self-referential parent→children map; without a visited set the walk loops forever
+	// and grows `result` without bound, hanging the synchronous poll. Track seen PIDs so each
+	// is emitted once.
+	const seen = new Set<number>()
+
 	const stack = [rootPid]
 
 	while (stack.length > 0) {
 		const pid = stack.pop() as number
+
+		if (seen.has(pid)) continue
+
+		seen.add(pid)
 
 		result.push(pid)
 

@@ -48,6 +48,21 @@ describe('collectDescendants', () => {
 
 		expect(collectDescendants(1, children).sort((a, b) => a - b)).toEqual([1, 2, 3])
 	})
+
+	it('terminates on a self-referential map, emitting the pid once', () => {
+		// A PID-reuse race in the /proc snapshot can make a process its own parent; without a
+		// visited set this loops forever and hangs the synchronous poll.
+		expect(collectDescendants(1, new Map([[1, [1]]]))).toEqual([1])
+	})
+
+	it('terminates on a cyclic map, emitting each pid once', () => {
+		const children = new Map([
+			[1, [2]],
+			[2, [1]],
+		])
+
+		expect(collectDescendants(1, children).sort((a, b) => a - b)).toEqual([1, 2])
+	})
 })
 
 describe('parseCpuTime', () => {
@@ -156,6 +171,13 @@ describe('parseProcStat', () => {
 		expect(
 			parseProcStat(buildStat({ ppid: 1, utime: 100, stime: 50, rssPages: 10 }), 4096),
 		).toEqual({ ppid: 1, utime: 100, stime: 50, rss: 10 * 4096 })
+	})
+
+	it('scales rss by the supplied page size', () => {
+		// RSS is reported in pages; a 16K-page kernel (ARM64) must not be read as 4K pages.
+		const stat = buildStat({ ppid: 1, utime: 0, stime: 0, rssPages: 10 })
+
+		expect(parseProcStat(stat, 16384)?.rss).toBe(10 * 16384)
 	})
 
 	it('handles a comm field containing spaces and parens', () => {
