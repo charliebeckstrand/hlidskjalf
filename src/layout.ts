@@ -18,10 +18,13 @@ const MIN_NAME_WIDTH = 14
  */
 export function nameColumnWidth(processes: Process[], min = MIN_NAME_WIDTH): number {
 	let width = min
+
 	for (const proc of processes) {
 		const candidate = proc.workspace.name.length + 2
+
 		if (candidate > width) width = candidate
 	}
+
 	return width
 }
 
@@ -31,10 +34,13 @@ export function nameColumnWidth(processes: Process[], min = MIN_NAME_WIDTH): num
  */
 export function urlContentWidth(processes: Process[]): number {
 	let width = 0
+
 	for (const proc of processes) {
 		const length = proc.url?.length ?? 0
+
 		if (length > width) width = length
 	}
+
 	return width
 }
 
@@ -84,11 +90,15 @@ export function columnWidths(
 	metrics: boolean,
 ): ColumnWidths {
 	const available = columns - ROW_CHROME_WIDTH - (metrics ? METRICS_WIDTH : 0)
+
 	if (available <= 1) return { name: Math.max(1, available), url: 0 }
+
 	// Reserve the URL's full width, but never push the name below its floor.
 	const url = Math.max(0, Math.min(urlContent, available - MIN_NAME_WIDTH))
+
 	// The name takes the rest, capped at its natural width and floored at one column.
 	const name = Math.max(1, Math.min(naturalNameWidth, available - url))
+
 	return { name, url }
 }
 
