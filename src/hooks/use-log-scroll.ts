@@ -33,16 +33,22 @@ export function useLogScroll(
 ): LogScroll {
 	const [scroll, setScroll] = useState(0)
 
-	// Snap to the bottom whenever the selected process changes.
 	const [prevKey, setPrevKey] = useState(selectionKey)
-	if (selectionKey !== prevKey) {
-		setPrevKey(selectionKey)
-		setScroll(0)
-	}
-
-	// Keep a paused viewport anchored to the same lines as new output arrives.
 	const [prevTotal, setPrevTotal] = useState(total)
-	if (total !== prevTotal) {
+
+	// These two render-phase adjustments are mutually exclusive: a process switch changes
+	// both selectionKey and total in the same render (both derive from the selected process),
+	// so the anchor branch must not also run — its setScroll(s => s + delta) would compose on
+	// the reset's setScroll(0) and land the new process at `delta` instead of following.
+	if (selectionKey !== prevKey) {
+		// Switching processes snaps back to follow mode. Adopt the new buffer length too so
+		// the anchor branch stays dormant this render.
+		setPrevKey(selectionKey)
+		setPrevTotal(total)
+		setScroll(0)
+	} else if (total !== prevTotal) {
+		// Same process, buffer grew: keep a scrolled-up viewport anchored to the same lines as
+		// new output arrives rather than letting it scroll out from under the reader.
 		const delta = total - prevTotal
 		setPrevTotal(total)
 		if (scroll > 0 && delta > 0) setScroll((s) => s + delta)
