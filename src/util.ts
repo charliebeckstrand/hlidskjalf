@@ -1,4 +1,4 @@
-/** Small numeric/string primitives shared across layers. No domain knowledge, so trivially testable. */
+/** Small primitives shared across layers. No domain knowledge, so trivially testable. */
 
 /** Constrain `value` to the inclusive range [`min`, `max`]. Caller guarantees `min <= max`. */
 export function clamp(value: number, min: number, max: number): number {
@@ -16,4 +16,16 @@ export function clampIndex(index: number, length: number): number {
 /** Hard-cap `text` to `max` characters with no ellipsis — a length guard for hot paths. */
 export function truncate(text: string, max: number): string {
 	return text.length > max ? text.slice(0, max) : text
+}
+
+/**
+ * Schedule a timeout and unref it so a pending tick never keeps the process alive past
+ * shutdown. Returns the handle for the caller to store and later clear.
+ */
+export function createUnrefTimer(ms: number, fn: () => void): ReturnType<typeof setTimeout> {
+	const timer = setTimeout(fn, ms)
+
+	timer.unref()
+
+	return timer
 }
