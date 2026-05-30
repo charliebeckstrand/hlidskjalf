@@ -6,11 +6,11 @@ import { sortByDeps, sortByName } from '../workspaces.js'
 import { escalateKill, isRunning, killTree } from './children.js'
 import { discoverFiltered } from './discovery.js'
 import { clearTimers, createEntry, note } from './entry.js'
+import { rediscover } from './reconcile.js'
 import { markChanged } from './snapshot.js'
 import { spawnWorkspace } from './spawn.js'
 import { setStatus } from './status.js'
 import type { StoreContext } from './types.js'
-import { rediscover } from './watch.js'
 
 export async function start(ctx: StoreContext): Promise<boolean> {
 	const workspaces = discoverFiltered(ctx)
