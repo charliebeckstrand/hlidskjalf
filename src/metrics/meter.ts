@@ -142,26 +142,39 @@ export function createMeter(deps: MeterDeps): Meter {
 		return { children, stats }
 	}
 
-	const collectProc = (roots: Map<number, string>): void => {
-		const tree = readProcTree()
-
+	/**
+	 * Sample every root's tree against a parent→children map and per-PID stat lookup,
+	 * then notify on any change. The two sources (Linux `/proc`, `ps` elsewhere) differ
+	 * only in how they build `children`/`statOf`; the diff-and-dispatch loop is shared.
+	 */
+	const collectFrom = (
+		roots: Map<number, string>,
+		children: Map<number, number[]>,
+		statOf: (pid: number) => { ticks: number; rss: number } | undefined,
+	): void => {
 		const now = Date.now()
 
 		let changed = false
 
 		for (const [rootPid, name] of roots) {
-			const pids = collectDescendants(rootPid, tree.children)
+			const pids = collectDescendants(rootPid, children)
 
-			const updated = apply(name, pids, now, (pid) => {
-				const stat = tree.stats.get(pid)
-
-				return stat ? { ticks: stat.utime + stat.stime, rss: stat.rss } : undefined
-			})
+			const updated = apply(name, pids, now, statOf)
 
 			changed = changed || updated
 		}
 
 		if (changed) deps.onChange()
+	}
+
+	const collectProc = (roots: Map<number, string>): void => {
+		const tree = readProcTree()
+
+		collectFrom(roots, tree.children, (pid) => {
+			const stat = tree.stats.get(pid)
+
+			return stat ? { ticks: stat.utime + stat.stime, rss: stat.rss } : undefined
+		})
 	}
 
 	const collectPs = (roots: Map<number, string>): void => {
@@ -178,22 +191,11 @@ export function createMeter(deps: MeterDeps): Meter {
 
 		const { children, stats } = parsePsOutput(output)
 
-		const now = Date.now()
+		collectFrom(roots, children, (pid) => {
+			const stat = stats.get(pid)
 
-		let changed = false
-
-		for (const [rootPid, name] of roots) {
-			const pids = collectDescendants(rootPid, children)
-
-			const updated = apply(name, pids, now, (pid) => {
-				const stat = stats.get(pid)
-
-				return stat ? { ticks: stat.cputimeTicks, rss: stat.rss } : undefined
-			})
-
-			changed = changed || updated
-		}
-		if (changed) deps.onChange()
+			return stat ? { ticks: stat.cputimeTicks, rss: stat.rss } : undefined
+		})
 	}
 
 	const collect = (): void => {
