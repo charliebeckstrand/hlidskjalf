@@ -1,4 +1,3 @@
-import type { Metrics } from '../types.js'
 import { colors } from './theme.js'
 
 /** Right-align a CPU percentage in a fixed six-column field. */
@@ -8,13 +7,13 @@ export function formatCpu(cpu: number): string {
 
 /** Format a byte count as a right-aligned K/M/G value in a seven-column field. */
 export function formatMem(bytes: number): string {
-	let s: string
+	let formatted: string
 
-	if (bytes < 1024 * 1024) s = `${(bytes / 1024).toFixed(0)} K`
-	else if (bytes < 1024 * 1024 * 1024) s = `${(bytes / (1024 * 1024)).toFixed(1)} M`
-	else s = `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} G`
+	if (bytes < 1024 * 1024) formatted = `${(bytes / 1024).toFixed(0)} K`
+	else if (bytes < 1024 * 1024 * 1024) formatted = `${(bytes / (1024 * 1024)).toFixed(1)} M`
+	else formatted = `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} G`
 
-	return s.padStart(7)
+	return formatted.padStart(7)
 }
 
 /** Colour for a memory cell, escalating warning→error past 256M/512M. */
@@ -27,6 +26,6 @@ export function memColor(bytes: number): string {
 }
 
 /** Colour for a CPU cell, flipping to error once a workspace saturates a core. */
-export function cpuColor(metrics: Metrics): string {
-	return metrics.cpu > 80 ? colors.error : colors.muted
+export function cpuColor(cpu: number): string {
+	return cpu > 80 ? colors.error : colors.muted
 }

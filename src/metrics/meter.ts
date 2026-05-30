@@ -51,7 +51,7 @@ export interface Meter {
  * periodic fallback — but never closer together than `MIN_METRICS_INTERVAL_MS`.
  */
 export function createMeter(deps: MeterDeps): Meter {
-	const prevCpuSnapshot = new Map<string, { time: number; perPid: Map<number, number> }>()
+	const prevCpuSnapshots = new Map<string, { time: number; perPid: Map<number, number> }>()
 
 	const numCpus = os.availableParallelism()
 
@@ -71,7 +71,7 @@ export function createMeter(deps: MeterDeps): Meter {
 		now: number,
 		statOf: (pid: number) => { ticks: number; rss: number } | undefined,
 	): boolean => {
-		const prev = prevCpuSnapshot.get(name)
+		const prev = prevCpuSnapshots.get(name)
 
 		const perPid = new Map<number, number>()
 
@@ -91,7 +91,7 @@ export function createMeter(deps: MeterDeps): Meter {
 			? cpuPercentFromTicks(sumTickDeltas(prev.perPid, perPid), now - prev.time, numCpus)
 			: 0
 
-		prevCpuSnapshot.set(name, { time: now, perPid })
+		prevCpuSnapshots.set(name, { time: now, perPid })
 
 		return deps.setMetrics(name, { cpu, mem: totalMem })
 	}
@@ -237,7 +237,7 @@ export function createMeter(deps: MeterDeps): Meter {
 			schedule(Math.max(0, MIN_METRICS_INTERVAL_MS - sinceLast))
 		},
 		reset(name) {
-			prevCpuSnapshot.delete(name)
+			prevCpuSnapshots.delete(name)
 		},
 		stop() {
 			stopped = true

@@ -58,9 +58,11 @@ async function spawnAll(ctx: StoreContext, workspaces: Workspace[]): Promise<voi
 	const failedPackages = new Set<string>()
 
 	for (const pkg of packages) {
-		const s = ctx.entries.get(pkg.name)?.process.status
+		const status = ctx.entries.get(pkg.name)?.process.status
 
-		if (s === 'error' || s === 'stopped' || s === 'timeout') failedPackages.add(pkg.name)
+		if (status === 'error' || status === 'stopped' || status === 'timeout') {
+			failedPackages.add(pkg.name)
+		}
 	}
 
 	for (const workspace of apps) {
@@ -119,9 +121,14 @@ function waitForPackages(ctx: StoreContext, names: string[]): Promise<void> {
 	return new Promise((resolve) => {
 		const check = () => {
 			for (const name of [...remaining]) {
-				const s = ctx.entries.get(name)?.process.status
+				const status = ctx.entries.get(name)?.process.status
 
-				if (s === 'watching' || s === 'error' || s === 'stopped' || s === 'timeout') {
+				if (
+					status === 'watching' ||
+					status === 'error' ||
+					status === 'stopped' ||
+					status === 'timeout'
+				) {
 					remaining.delete(name)
 				}
 			}

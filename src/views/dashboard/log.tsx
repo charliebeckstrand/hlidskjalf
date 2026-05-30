@@ -20,7 +20,7 @@ export function Log({
 
 	const fillCount = height - logLines.length
 
-	const hidden = proc.logs.length - end
+	const hiddenCount = proc.logs.length - end
 
 	return (
 		<Panel height={height + 3} overflow="hidden" marginX={1} marginTop={1}>
@@ -30,7 +30,7 @@ export function Log({
 				</Text>
 				{!atBottom && (
 					<Text color={colors.warning}>
-						{'   '}⏸ scrolled · {hidden} below · End to follow
+						{'   '}⏸ scrolled · {hiddenCount} below · End to follow
 					</Text>
 				)}
 			</Box>

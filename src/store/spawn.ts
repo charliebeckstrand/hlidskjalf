@@ -41,13 +41,13 @@ export function spawnWorkspace(ctx: StoreContext, workspace: Workspace): void {
 	setStatus(ctx, workspace.name, 'building')
 
 	const startupTimer = setTimeout(() => {
-		const e = ctx.entries.get(workspace.name)
+		const liveEntry = ctx.entries.get(workspace.name)
 
-		if (e) {
-			e.startupTimer = null
+		if (liveEntry) {
+			liveEntry.startupTimer = null
 
-			if (e.process.status !== 'watching' && e.process.status !== 'ready') {
-				note(e, `startup timeout after ${STARTUP_TIMEOUT_MS / 1000}s`)
+			if (liveEntry.process.status !== 'watching' && liveEntry.process.status !== 'ready') {
+				note(liveEntry, `startup timeout after ${STARTUP_TIMEOUT_MS / 1000}s`)
 
 				setStatus(ctx, workspace.name, 'timeout')
 			}
@@ -99,12 +99,12 @@ export function spawnWorkspace(ctx: StoreContext, workspace: Workspace): void {
 	})
 
 	child.on('error', () => {
-		const e = ctx.entries.get(workspace.name)
+		const liveEntry = ctx.entries.get(workspace.name)
 
-		if (e?.startupTimer) {
-			clearTimeout(e.startupTimer)
+		if (liveEntry?.startupTimer) {
+			clearTimeout(liveEntry.startupTimer)
 
-			e.startupTimer = null
+			liveEntry.startupTimer = null
 		}
 
 		setStatus(ctx, workspace.name, 'error')
@@ -209,8 +209,9 @@ function handleUnexpectedExit(
 		rebuildFsevents(ctx)
 			.then(() => {
 				// Respawn only if still tracked and no deliberate exit intervened during the rebuild.
-				const e = ctx.entries.get(workspace.name)
-				if (!ctx.stopping && e && !e.intentionalExit) spawnWorkspace(ctx, workspace)
+				const liveEntry = ctx.entries.get(workspace.name)
+
+				if (!ctx.stopping && liveEntry && !liveEntry.intentionalExit) spawnWorkspace(ctx, workspace)
 			})
 			.catch(() => setStatus(ctx, workspace.name, 'error'))
 
