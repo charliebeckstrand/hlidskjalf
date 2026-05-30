@@ -16,7 +16,7 @@ import {
 	THEME_ALIASES,
 	themes,
 	truncateEnd,
-} from '../src/ui.js'
+} from '../src/ui/index.js'
 
 const ESC = String.fromCharCode(27)
 

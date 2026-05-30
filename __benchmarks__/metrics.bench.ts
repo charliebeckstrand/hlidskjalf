@@ -6,7 +6,7 @@ import {
 	parseProcStat,
 	parsePsOutput,
 	safeEnv,
-} from '../src/metrics.js'
+} from '../src/metrics/index.js'
 import { makePsOutput, PROC_STAT } from './fixtures.js'
 
 /**

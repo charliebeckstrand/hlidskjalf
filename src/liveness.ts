@@ -1,5 +1,5 @@
 import type { Status } from './types.js'
-import { every } from './ui.js'
+import { every } from './ui/index.js'
 
 /** How often the liveness sweep runs. */
 const HEARTBEAT_INTERVAL_MS = 10_000

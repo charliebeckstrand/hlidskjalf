@@ -7,10 +7,10 @@ import {
 	useState,
 	useSyncExternalStore,
 } from 'react'
-import { createStore } from './store.js'
+import { createStore } from './store/index.js'
 import type { Options } from './types.js'
 import { Help, Loading } from './views/chrome.js'
-import { Dashboard } from './views/dashboard.js'
+import { Dashboard } from './views/dashboard/index.js'
 
 interface Props {
 	options: Options

@@ -2,7 +2,7 @@ import { Box, Text } from 'ink'
 import Spinner from 'ink-spinner'
 import type { ComponentProps, ReactNode } from 'react'
 import type { Status } from '../types.js'
-import { colors } from '../ui.js'
+import { colors } from '../ui/index.js'
 
 /** A fixed-width table cell. Replaces the repeated `<Box width=...>` blocks in the table. */
 export function Cell({ width, children }: { width: number; children: ReactNode }) {

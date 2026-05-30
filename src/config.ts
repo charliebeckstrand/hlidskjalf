@@ -7,7 +7,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import type { SortOrder } from './types.js'
-import { parseTheme, type ThemeName } from './ui.js'
+import { parseTheme, type ThemeName } from './ui/index.js'
 import { isPlainObject, normalizeFilters } from './workspaces.js'
 
 /**

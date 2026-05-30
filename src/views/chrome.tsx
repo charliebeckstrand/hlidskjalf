@@ -1,7 +1,7 @@
 import { Box, Text } from 'ink'
 import Spinner from 'ink-spinner'
 import { useTerminalSize } from '../hooks/use-terminal-size.js'
-import { colors, HINTS } from '../ui.js'
+import { colors, HINTS } from '../ui/index.js'
 import { Cell, Panel } from './primitives.js'
 
 interface HeaderProps {
