@@ -1,5 +1,3 @@
-// --- Process control (stop / restart / pause / resume / kill / clear) ----------
-
 import { isRunning, killTree } from './children.js'
 import { beginTeardown, clearTimers, note } from './entry.js'
 import { changed } from './snapshot.js'

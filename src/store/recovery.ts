@@ -1,5 +1,3 @@
-// --- Error recovery -------------------------------------------------------------
-
 import { ERROR_RECOVERY_MS } from './constants.js'
 import { setStatus } from './status.js'
 import type { StoreContext } from './types.js'

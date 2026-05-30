@@ -3,8 +3,6 @@
  * No Ink/React imports, so each is unit-testable.
  */
 
-// --- Terminal hyperlinks -------------------------------------------------------
-
 const ESC = String.fromCharCode(27)
 
 /** OSC 8 hyperlink introducer (no params): ESC ] 8 ; ; */
@@ -41,8 +39,6 @@ export function truncateEnd(text: string, width: number): string {
 
 	return `${text.slice(0, width - 1)}...`
 }
-
-// --- Alternate screen ----------------------------------------------------------
 
 /** DECSET/DECRST 1049: switch to / restore the alternate screen buffer. */
 const ENTER_ALT_SCREEN = '\x1b[?1049h'

@@ -1,5 +1,3 @@
-// --- Spawning & output handling ------------------------------------------------
-
 import { type ChildProcess, spawn } from 'node:child_process'
 import { appendLog } from '../logs.js'
 import { safeEnv } from '../metrics/index.js'

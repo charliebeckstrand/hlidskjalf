@@ -1,5 +1,3 @@
-// --- Entry helpers -------------------------------------------------------------
-
 import { appendLog } from '../logs.js'
 import type { Workspace } from '../types.js'
 import { escalateKill, isRunning, killTree } from './children.js'

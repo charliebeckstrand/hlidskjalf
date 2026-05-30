@@ -1,5 +1,3 @@
-// --- Lifecycle (start / spawn-all / shutdown) ----------------------------------
-
 import { createHeartbeat } from '../liveness.js'
 import { createMeter } from '../metrics/index.js'
 import type { Workspace } from '../types.js'

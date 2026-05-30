@@ -1,5 +1,3 @@
-// --- Status transitions --------------------------------------------------------
-
 import type { Status } from '../types.js'
 import { note } from './entry.js'
 import { changed } from './snapshot.js'

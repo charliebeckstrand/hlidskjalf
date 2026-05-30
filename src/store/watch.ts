@@ -1,5 +1,3 @@
-// --- Watch-mode reconciliation -------------------------------------------------
-
 import type { Workspace } from '../types.js'
 import { discoverFiltered, sortForDisplay } from './discovery.js'
 import { beginTeardown, clearTimers, newEntry } from './entry.js'

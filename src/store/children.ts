@@ -1,5 +1,3 @@
-// --- Child-process helpers (this store is their only consumer) -----------------
-
 import type { ChildProcess } from 'node:child_process'
 import { KILL_GRACE_MS } from './constants.js'
 
