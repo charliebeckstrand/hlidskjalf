@@ -19,6 +19,11 @@ export function stopProcess(ctx: StoreContext, name: string): void {
 	beginTeardown(entry, () => {
 		entry.restartRetries = 0
 
+		// Only when we actually signalled a live child — beginTeardown runs this synchronously
+		// for an already-dead one, where a "stopped" note would be spurious (and the matching
+		// "stopping..." note above was likewise skipped).
+		if (wasLive) note(entry, 'stopped')
+
 		setStatus(ctx, name, 'stopped')
 	})
 
@@ -125,6 +130,8 @@ export function killProcess(ctx: StoreContext, name: string): void {
 		entry,
 		() => {
 			entry.restartRetries = 0
+
+			if (wasLive) note(entry, 'killed')
 
 			setStatus(ctx, name, 'stopped')
 		},

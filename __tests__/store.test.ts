@@ -589,6 +589,9 @@ describe('manual stop and restart', () => {
 		expect(get('web')?.status).toBe('stopped')
 
 		expect(get('web')?.logs.some((l) => l.includes('giving up'))).toBe(false)
+
+		// The teardown completion is logged, not just the request.
+		expect(get('web')?.logs.at(-1)).toContain('stopped')
 	})
 
 	it('drops teardown noise emitted after a stop', async () => {
@@ -613,8 +616,11 @@ describe('manual stop and restart', () => {
 
 		expect(logs.some((l) => l.includes('ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL'))).toBe(false)
 
-		// Only the internal "stopping process..." note was appended, not the child's noise.
-		expect(logs.length).toBe(before + 1)
+		// Only the two internal notes were appended — the request and its completion — not
+		// the child's teardown noise.
+		expect(logs.length).toBe(before + 2)
+
+		expect(logs.at(-1)).toContain('stopped')
 	})
 
 	it('restarts a stopped process when stop is toggled', async () => {
