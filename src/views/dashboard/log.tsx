@@ -34,6 +34,12 @@ export const Log = memo(
 	}) {
 		const fillCount = height - lines.length
 
+		// Output only ever appends, so a line's absolute index from the top is its stable
+		// identity across scroll and growth: window position i maps to absolute line
+		// hiddenCount + i. Blank padding keys continue past the last visible line.
+		const rows = lines.map((line, i) => ({ id: hiddenCount + i, line }))
+		const fills = Array.from({ length: fillCount }, (_, i) => hiddenCount + lines.length + i)
+
 		return (
 			<Panel height={height + 3} overflow="hidden" marginX={1} marginTop={1}>
 				<Box marginBottom={1}>
@@ -46,15 +52,13 @@ export const Log = memo(
 						</Text>
 					)}
 				</Box>
-				{lines.map((line, i) => (
-					// biome-ignore lint/suspicious/noArrayIndexKey: log lines have no stable identity
-					<Text key={i} wrap="truncate">
-						{line}
+				{rows.map((row) => (
+					<Text key={row.id} wrap="truncate">
+						{row.line}
 					</Text>
 				))}
-				{Array.from({ length: fillCount }, (_, i) => (
-					// biome-ignore lint/suspicious/noArrayIndexKey: fill lines have no stable identity
-					<Text key={`fill-${i}`}> </Text>
+				{fills.map((id) => (
+					<Text key={`fill-${id}`}> </Text>
 				))}
 			</Panel>
 		)
