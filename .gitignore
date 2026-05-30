@@ -1,4 +1,23 @@
+# dependencies
 node_modules
-dist
-.DS_Store
 package-lock.json
+
+# build
+dist
+
+# OS
+.DS_Store
+
+# Claude
+.claude/plans
+.claude/worktrees
+
+.claude/launch.json
+.claude/settings.local.json
+
+# Skill outputs
+council-transcript-*.md
+council-report-*.html
+debate-*.md
+deliberate-*.md
+deliberate-*.html
