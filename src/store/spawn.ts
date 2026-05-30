@@ -101,6 +101,12 @@ function handleLine(ctx: StoreContext, name: string, raw: string): void {
 
 	if (!entry) return
 
+	// Output draining from a child we're intentionally stopping is teardown noise: when we
+	// SIGTERM the group, `pnpm run dev` logs ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL and "Command
+	// failed with signal SIGTERM" on its way out. The stop was ours, so drop it rather than
+	// surface a failure that didn't happen. A restart clears the flag when the child respawns.
+	if (entry.intentionalExit) return
+
 	const line = raw.length > MAX_LINE_LENGTH ? raw.slice(0, MAX_LINE_LENGTH) : raw
 
 	const { process: proc } = entry
