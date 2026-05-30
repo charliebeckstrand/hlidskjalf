@@ -39,6 +39,7 @@ describe('colors & statusDisplay', () => {
 		'error',
 		'stopped',
 		'idle',
+		'paused',
 		'timeout',
 	]
 

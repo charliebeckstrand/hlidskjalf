@@ -67,6 +67,8 @@ export function Loading({ title }: { title: string }) {
 const BINDINGS: ReadonlyArray<readonly [keys: string, action: string]> = [
 	['↑/↓ · j/k', 'Navigate processes'],
 	['s', 'Stop / start process'],
+	['p', 'Pause / resume process'],
+	['x', 'Kill process (no restart)'],
 	['r', 'Restart process'],
 	['c', 'Clear logs'],
 	['PgUp/PgDn', 'Scroll logs'],

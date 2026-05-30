@@ -156,6 +156,11 @@ export function App({ options }: Props) {
 		if (input === 's') {
 			if (selected.status === 'stopped') store.restartProcess(name)
 			else store.stopProcess(name)
+		} else if (input === 'p') {
+			if (selected.status === 'paused') store.resumeProcess(name)
+			else store.pauseProcess(name)
+		} else if (input === 'x') {
+			store.killProcess(name)
 		} else if (input === 'r') {
 			store.restartProcess(name)
 		} else if (input === 'c') {

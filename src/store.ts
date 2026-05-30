@@ -31,6 +31,8 @@ interface ProcessEntry {
 	teardownStarted: boolean
 	/** Action to run once the in-flight teardown's child closes. The latest request wins. */
 	onClose: (() => void) | null
+	/** Status held before a SIGSTOP pause, to restore on resume; null when not paused. */
+	pausedFrom: Status | null
 }
 
 export interface Store {
@@ -42,6 +44,12 @@ export interface Store {
 	shutdown(): Promise<void>
 	stopProcess(name: string): void
 	restartProcess(name: string): void
+	/** Freeze a running process with SIGSTOP — its child stays alive but consumes no CPU. */
+	pauseProcess(name: string): void
+	/** Resume a paused process with SIGCONT, restoring the status it held before pausing. */
+	resumeProcess(name: string): void
+	/** Force-kill a process immediately (SIGKILL), skipping the graceful grace period; no restart. */
+	killProcess(name: string): void
 	clearLogs(name: string): void
 	/** Register and spawn a workspace discovered after startup (watch mode). */
 	addWorkspace(workspace: Workspace): void
@@ -349,6 +357,7 @@ class ProcessStore implements Store {
 			intentionalExit: false,
 			teardownStarted: false,
 			onClose: null,
+			pausedFrom: null,
 		}
 	}
 
@@ -382,9 +391,15 @@ class ProcessStore implements Store {
 	 * lingers. Calling this again while a teardown is already pending for the same child
 	 * just swaps in the latest `onClosed` rather than stacking another `close` listener —
 	 * otherwise a rapid stop/restart would fire two handlers and spawn duplicate servers.
-	 * If the child is already gone, `onClosed` runs synchronously.
+	 * If the child is already gone, `onClosed` runs synchronously. `signal` is the initial
+	 * termination signal (SIGTERM by default; SIGKILL for a force-kill); either way a
+	 * lingering child is still escalated to SIGKILL after the grace period.
 	 */
-	private beginTeardown(entry: ProcessEntry, onClosed: () => void): void {
+	private beginTeardown(
+		entry: ProcessEntry,
+		onClosed: () => void,
+		signal: NodeJS.Signals = 'SIGTERM',
+	): void {
 		entry.intentionalExit = true
 
 		const { child } = entry
@@ -392,9 +407,19 @@ class ProcessStore implements Store {
 		if (!isRunning(child)) {
 			entry.child = null
 
+			entry.pausedFrom = null
+
 			onClosed()
 
 			return
+		}
+
+		// A SIGSTOP'd child won't act on SIGTERM until it's continued, so wake it first;
+		// otherwise the terminate would only land after the SIGKILL grace period elapsed.
+		if (entry.pausedFrom !== null) {
+			killTree(child, 'SIGCONT')
+
+			entry.pausedFrom = null
 		}
 
 		// Latest request wins; the single close handler below reads this at close time.
@@ -420,7 +445,7 @@ class ProcessStore implements Store {
 			})
 		}
 
-		killTree(child, 'SIGTERM')
+		killTree(child, signal)
 	}
 
 	private waitForPackages(names: string[]): Promise<void> {
@@ -468,6 +493,8 @@ class ProcessStore implements Store {
 			entry.child = child
 
 			entry.intentionalExit = false
+
+			entry.pausedFrom = null
 		}
 
 		this.setStatus(workspace.name, 'building')
@@ -557,6 +584,14 @@ class ProcessStore implements Store {
 		appendLog(proc.logs, sanitizeForDisplay(line))
 
 		entry.lastOutputAt = Date.now()
+
+		// A paused child is frozen; any output still draining from the pipe shouldn't
+		// flip its status out of `paused`. Keep logging, but leave the status alone.
+		if (entry.pausedFrom !== null) {
+			this.changed()
+
+			return
+		}
 
 		const prevStatus = proc.status
 
@@ -781,6 +816,81 @@ class ProcessStore implements Store {
 
 		if (wasLive) {
 			this.note(entry, 'stopping process for restart...')
+
+			this.changed()
+		}
+	}
+
+	pauseProcess(name: string): void {
+		if (this.stopping) return
+
+		const entry = this.entries.get(name)
+
+		if (!entry) return
+
+		// Nothing to freeze if there's no live child, and pausing twice is a no-op.
+		if (!isRunning(entry.child) || entry.pausedFrom !== null) return
+
+		// Freeze pending timers too: a startup/error/restart timer that fired while the
+		// child is suspended would flip the status out from under `paused`.
+		this.clearTimers(entry)
+
+		entry.pausedFrom = entry.process.status
+
+		killTree(entry.child, 'SIGSTOP')
+
+		this.note(entry, 'paused (SIGSTOP)')
+
+		this.setStatus(name, 'paused')
+	}
+
+	resumeProcess(name: string): void {
+		if (this.stopping) return
+
+		const entry = this.entries.get(name)
+
+		if (!entry || entry.pausedFrom === null) return
+
+		const restore = entry.pausedFrom
+
+		entry.pausedFrom = null
+
+		if (isRunning(entry.child)) killTree(entry.child, 'SIGCONT')
+
+		// Reset the idle clock so the just-woken process isn't immediately probed for a
+		// stall it never had while suspended.
+		entry.lastOutputAt = Date.now()
+
+		this.note(entry, 'resumed (SIGCONT)')
+
+		this.setStatus(name, restore)
+	}
+
+	killProcess(name: string): void {
+		if (this.stopping) return
+
+		const entry = this.entries.get(name)
+
+		if (!entry) return
+
+		this.clearTimers(entry)
+
+		const wasLive = isRunning(entry.child)
+
+		// SIGKILL straight away — no SIGTERM grace — for a wedged process that ignores
+		// a polite stop. Like stop, this doesn't schedule a restart.
+		this.beginTeardown(
+			entry,
+			() => {
+				entry.restartRetries = 0
+
+				this.setStatus(name, 'stopped')
+			},
+			'SIGKILL',
+		)
+
+		if (wasLive) {
+			this.note(entry, 'killing process (SIGKILL)...')
 
 			this.changed()
 		}
