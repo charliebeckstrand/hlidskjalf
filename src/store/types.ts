@@ -1,11 +1,11 @@
 import type { ChildProcess } from 'node:child_process'
 import type { Heartbeat } from '../liveness.js'
 import type { Meter } from '../metrics/index.js'
-import type { Process, SortOrder, Status, Workspace } from '../types.js'
+import type { SortOrder, Status, Workspace, WorkspaceProcess } from '../types.js'
 import type { Watcher } from '../watcher.js'
 
 export interface ProcessEntry {
-	process: Process
+	process: WorkspaceProcess
 	child: ChildProcess | null
 	errorTimer: ReturnType<typeof setTimeout> | null
 	restartTimer: ReturnType<typeof setTimeout> | null
@@ -25,7 +25,7 @@ export interface ProcessEntry {
 
 export interface Store {
 	/** Immutable, referentially stable between changes — for `useSyncExternalStore`. */
-	getSnapshot(): Process[]
+	getSnapshot(): WorkspaceProcess[]
 	subscribe(listener: () => void): () => void
 	/** Discover, register, and begin spawning. Resolves false if no workspaces matched. */
 	start(): Promise<boolean>
@@ -56,7 +56,7 @@ export interface StoreContext {
 	/** Display order of workspace names; the snapshot is built from this. */
 	order: string[]
 	listeners: Set<() => void>
-	snapshot: Process[]
+	snapshot: WorkspaceProcess[]
 	dirty: boolean
 
 	pendingRebuilds: Set<ChildProcess>

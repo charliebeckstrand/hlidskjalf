@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { columnWidths, logPanelHeight, nameColumnWidth, urlContentWidth } from '../src/layout.js'
-import type { Process } from '../src/types.js'
+import type { WorkspaceProcess } from '../src/types.js'
 
-function proc(name: string, url?: string): Process {
+function proc(name: string, url?: string): WorkspaceProcess {
 	return { workspace: { name, kind: 'package', deps: [] }, status: 'ready', logs: [], url }
 }
 

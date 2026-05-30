@@ -1,6 +1,6 @@
 import { Box, Text } from 'ink'
 import { COLUMN_WIDTHS } from '../../layout.js'
-import type { Metrics, Process as ProcessInfo, WorkspaceKind } from '../../types.js'
+import type { Metrics, WorkspaceKind, WorkspaceProcess } from '../../types.js'
 import {
 	colors,
 	cpuColor,
@@ -51,7 +51,7 @@ export function Process({
 	showMetrics,
 	urlWidth,
 }: {
-	process: ProcessInfo
+	process: WorkspaceProcess
 	selected: boolean
 	nameWidth: number
 	showMetrics: boolean

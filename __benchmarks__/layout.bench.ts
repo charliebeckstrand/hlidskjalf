@@ -1,7 +1,7 @@
 import { Bench } from 'tinybench'
 
 import { nameColumnWidth } from '../src/layout.js'
-import type { Process } from '../src/types.js'
+import type { WorkspaceProcess } from '../src/types.js'
 import { makeProcesses } from './fixtures.js'
 
 /**
@@ -11,7 +11,7 @@ import { makeProcesses } from './fixtures.js'
  * it as a baseline so the loop's per-render savings — and its freedom from the spread's
  * RangeError ceiling — show in the same run.
  */
-function spreadWidth(processes: Process[], min = 14): number {
+function spreadWidth(processes: WorkspaceProcess[], min = 14): number {
 	return Math.max(min, ...processes.map((p) => p.workspace.name.length + 2))
 }
 

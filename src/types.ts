@@ -24,7 +24,7 @@ export interface Metrics {
 	mem: number
 }
 
-export interface Process {
+export interface WorkspaceProcess {
 	workspace: Workspace
 	status: Status
 	url?: string
