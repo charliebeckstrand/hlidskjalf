@@ -1,7 +1,6 @@
 import { type ChildProcess, spawn } from 'node:child_process'
-import { appendLog } from '../logs.js'
+import { appendLog, parseLine, sanitizeForDisplay, stripAnsi } from '../logs/index.js'
 import { safeEnv } from '../metrics/index.js'
-import { parseLine, sanitizeForDisplay, stripAnsi } from '../parser.js'
 import type { Workspace } from '../types.js'
 import { createUnrefTimer, truncate } from '../util.js'
 import {

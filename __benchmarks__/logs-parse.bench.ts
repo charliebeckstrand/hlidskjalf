@@ -1,6 +1,6 @@
 import { Bench } from 'tinybench'
 
-import { parseLine, sanitizeForDisplay, stripAnsi } from '../src/parser.js'
+import { parseLine, sanitizeForDisplay, stripAnsi } from '../src/logs/index.js'
 import { LOG_LINES } from './fixtures.js'
 
 /**
@@ -12,7 +12,7 @@ import { LOG_LINES } from './fixtures.js'
  * The dominant no-match line exercises parseLine's derived non-http gate: a single
  * union scan rejects a line no matcher can classify, so the per-matcher loop never runs.
  */
-export function parserSuite(): Bench {
+export function logsParseSuite(): Bench {
 	const bench = new Bench({ name: 'parser — per-log-line hot path', time: 500 })
 
 	bench

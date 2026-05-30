@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseLine, sanitizeForDisplay, stripAnsi } from '../src/parser.js'
+import { parseLine, sanitizeForDisplay, stripAnsi } from '../src/logs/index.js'
 
 describe('parseLine', () => {
 	describe('ready status', () => {
@@ -118,7 +118,7 @@ describe('parseLine', () => {
 		})
 
 		it('keeps an error keyword above the bare listening fallback', () => {
-			// The comment in parser.ts promises a failure line mentioning "listening" stays
+			// The comment in logs/parse.ts promises a failure line mentioning "listening" stays
 			// an error; here the error matcher must beat the bare `\blistening\b` matcher.
 			expect(parseLine('error: server not listening')).toEqual({ status: 'error' })
 		})

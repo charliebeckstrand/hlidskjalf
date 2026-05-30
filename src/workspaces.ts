@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs'
 import { join, resolve, sep } from 'node:path'
-import { sanitizeForDisplay } from './parser.js'
+import { sanitizeForDisplay } from './logs/index.js'
 import type { Workspace, WorkspaceKind } from './types.js'
 
 interface PkgJson {

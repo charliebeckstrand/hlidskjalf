@@ -2,7 +2,7 @@ import { parseArgs } from 'node:util'
 import { render } from 'ink'
 import { App } from './app.js'
 import { loadConfig } from './config.js'
-import { sanitizeForDisplay } from './parser.js'
+import { sanitizeForDisplay } from './logs/index.js'
 import type { Options, SortOrder } from './types.js'
 import {
 	DEFAULT_THEME,

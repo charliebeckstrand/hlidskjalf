@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { appendLog, MAX_LOGS, visibleLogRange } from '../src/logs.js'
+import { appendLog, MAX_LOGS, visibleLogRange } from '../src/logs/index.js'
 
 describe('appendLog', () => {
 	it('appends and retains every line under the trim threshold', () => {

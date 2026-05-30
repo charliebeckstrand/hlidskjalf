@@ -6,7 +6,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { sanitizeForDisplay } from './parser.js'
+import { sanitizeForDisplay } from './logs/index.js'
 import type { SortOrder } from './types.js'
 import { parseTheme, type ThemeName } from './ui/index.js'
 import { isPlainObject, normalizeFilters } from './workspaces.js'

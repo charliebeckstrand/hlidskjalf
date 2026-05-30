@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { MAX_LOGS } from '../src/logs.js'
+import { MAX_LOGS } from '../src/logs/index.js'
 import { createStore, type Store } from '../src/store/index.js'
 import type { Options, Workspace, WorkspaceProcess } from '../src/types.js'
 

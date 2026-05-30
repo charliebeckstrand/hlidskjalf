@@ -1,4 +1,4 @@
-import { appendLog } from '../logs.js'
+import { appendLog } from '../logs/index.js'
 import type { Workspace } from '../types.js'
 import { escalateKill, isRunning, killTree } from './children.js'
 import type { ProcessEntry, StoreContext } from './types.js'

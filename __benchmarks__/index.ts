@@ -1,20 +1,20 @@
 import { layoutSuite } from './layout.bench.js'
 import { linesSuite } from './lines.bench.js'
-import { logsSuite } from './logs.bench.js'
+import { logsBufferSuite } from './logs-buffer.bench.js'
+import { logsParseSuite } from './logs-parse.bench.js'
 import { metricsSuite } from './metrics.bench.js'
-import { parserSuite } from './parser.bench.js'
 import { runSuite } from './run.js'
 import { workspacesSuite } from './workspaces.bench.js'
 
 /**
  * Benchmark entry point. Runs every suite by default, or only those named on the
- * command line, e.g. `pnpm bench parser metrics`.
+ * command line, e.g. `pnpm bench logs-parse metrics`.
  */
 const suites = {
-	parser: parserSuite,
+	'logs-parse': logsParseSuite,
 	metrics: metricsSuite,
 	workspaces: workspacesSuite,
-	logs: logsSuite,
+	'logs-buffer': logsBufferSuite,
 	layout: layoutSuite,
 	lines: linesSuite,
 } as const
