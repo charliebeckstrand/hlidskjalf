@@ -52,7 +52,10 @@ const baseMatchers: { pattern: RegExp; status: Status }[] = [
 	{ pattern: /Build start/, status: 'building' },
 	{ pattern: /Watching for changes/, status: 'watching' },
 	{ pattern: /\[ERROR\]/, status: 'error' },
-	{ pattern: /error[\s:]/i, status: 'error' },
+	// Generic fallback. The negative lookbehind keeps a URL path segment — e.g. an access
+	// log's `GET /error 200` — from flipping a healthy server to error, while still catching
+	// `error:`, `error TS2304`, and suffixes like `TypeError:`.
+	{ pattern: /(?<!\/)error[\s:]/i, status: 'error' },
 	{ pattern: /process exit/, status: 'error' },
 	// Bare readiness signal — no URL on the line (e.g. Pino logs the port separately).
 	// Below URL-bearing matchers so URL extraction wins, and below the error matchers
