@@ -30,7 +30,7 @@ function createContext(opts: Options): StoreContext {
 		root: opts.root,
 		sortOrder: opts.order,
 		filter: opts.filter,
-		metricsEnabled: opts.metrics,
+		metricsEnabled: opts.showMetrics,
 		watchEnabled: opts.watch,
 	}
 }

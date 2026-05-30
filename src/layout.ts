@@ -86,9 +86,9 @@ export function columnWidths(
 	columns: number,
 	naturalNameWidth: number,
 	urlContent: number,
-	metrics: boolean,
+	showMetrics: boolean,
 ): ColumnWidths {
-	const available = columns - ROW_CHROME_WIDTH - (metrics ? METRICS_WIDTH : 0)
+	const available = columns - ROW_CHROME_WIDTH - (showMetrics ? METRICS_WIDTH : 0)
 
 	if (available <= 1) return { name: Math.max(1, available), url: 0 }
 

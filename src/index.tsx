@@ -97,7 +97,7 @@ const titleFlag = flagString(values.title)
 const title =
 	titleFlag !== undefined ? sanitizeForDisplay(titleFlag) : (config.title ?? 'Hlidskjalf')
 
-const metrics = explicit.metrics ?? config.metrics ?? false
+const showMetrics = explicit.metrics ?? config.metrics ?? false
 
 const watch = explicit.watch ?? config.watch ?? true
 
@@ -123,7 +123,7 @@ const options: Options = {
 	order,
 	filter: filter?.length ? filter : undefined,
 	title,
-	metrics,
+	showMetrics,
 	watch,
 	theme,
 }

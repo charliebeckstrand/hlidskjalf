@@ -22,10 +22,10 @@ interface Props {
 	processes: WorkspaceProcess[]
 	selectedIndex: number
 	title: string
-	metrics?: boolean
+	showMetrics?: boolean
 }
 
-export function Dashboard({ processes, selectedIndex, title, metrics = false }: Props) {
+export function Dashboard({ processes, selectedIndex, title, showMetrics = false }: Props) {
 	const { columns, rows } = useTerminalSize()
 
 	// Header dot: green (full when all up, half when partly up), amber only when something is
@@ -43,7 +43,7 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 		columns,
 		naturalNameWidth,
 		naturalUrlWidth,
-		metrics,
+		showMetrics,
 	)
 
 	const logHeight = logPanelHeight(rows, processes.length)
@@ -84,7 +84,7 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 						Status
 					</Text>
 				</Cell>
-				{metrics && (
+				{showMetrics && (
 					<>
 						<Cell width={COLUMN_WIDTHS.cpu}>
 							<Text color={colors.muted} bold>
@@ -114,7 +114,7 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 					mem={proc.metrics?.mem}
 					selected={i === safeIndex}
 					nameWidth={nameWidth}
-					showMetrics={metrics}
+					showMetrics={showMetrics}
 					urlWidth={urlWidth}
 				/>
 			))}

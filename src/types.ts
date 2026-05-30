@@ -39,7 +39,7 @@ export interface Options {
 	filter?: string[]
 	order: SortOrder
 	title: string
-	metrics: boolean
+	showMetrics: boolean
 	watch: boolean
 	theme: ThemeName
 }

@@ -139,7 +139,7 @@ function makeStore(opts: Partial<Options> = {}): Store {
 		root: '/root',
 		order: 'alphabetical',
 		title: 'Test',
-		metrics: false,
+		showMetrics: false,
 		watch: false,
 		theme: 'bifrost',
 		...opts,
@@ -1309,7 +1309,7 @@ describe('metrics', () => {
 	it('derives a bounded interval CPU from cumulative cputime deltas (no startup spike)', async () => {
 		vi.useFakeTimers()
 
-		store = makeStore({ metrics: true })
+		store = makeStore({ showMetrics: true })
 
 		await store.start()
 
@@ -1341,7 +1341,7 @@ describe('metrics', () => {
 	it('clears stale metrics once a process is stopped', async () => {
 		vi.useFakeTimers()
 
-		store = makeStore({ metrics: true })
+		store = makeStore({ showMetrics: true })
 
 		await store.start()
 

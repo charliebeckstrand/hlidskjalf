@@ -179,7 +179,7 @@ export function App({ options }: Props) {
 			processes={processes}
 			selectedIndex={cursor}
 			title={options.title}
-			metrics={options.metrics}
+			showMetrics={options.showMetrics}
 		/>
 	)
 }
