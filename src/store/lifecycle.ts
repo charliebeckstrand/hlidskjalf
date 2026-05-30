@@ -55,6 +55,11 @@ async function spawnAll(ctx: StoreContext, workspaces: Workspace[]): Promise<voi
 		)
 	}
 
+	// Shutdown may have begun while we awaited the package gate. Bail before spawning apps
+	// or arming the heartbeat/meter — those would spawn children the completed teardown has
+	// already passed, leaking them, and start timers on a torn-down store.
+	if (ctx.stopping) return
+
 	const failedPackages = new Set<string>()
 
 	for (const pkg of packages) {

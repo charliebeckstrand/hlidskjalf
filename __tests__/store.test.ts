@@ -318,6 +318,44 @@ describe('lifecycle', () => {
 
 		expect(childFor('web')).toBeDefined()
 	})
+
+	it('releases the app gate when a package never settles and times out', async () => {
+		vi.useFakeTimers()
+
+		hoisted.discovered.current = [LIB, { name: 'web', kind: 'app', deps: ['lib'] }]
+
+		store = makeStore()
+
+		await store.start()
+
+		expect(childFor('web')).toBeUndefined()
+
+		// lib emits nothing and stalls; the startup timer fires, marks it timeout, and the
+		// gate must release so the app isn't held hostage to a wedged dependency.
+		await vi.advanceTimersByTimeAsync(120_000)
+
+		expect(get('lib')?.status).toBe('timeout')
+
+		expect(childFor('web')).toBeDefined()
+	})
+
+	it('starts an app anyway, with a warning, when its package dependency fails', async () => {
+		hoisted.discovered.current = [LIB, { name: 'web', kind: 'app', deps: ['lib'] }]
+
+		store = makeStore()
+
+		await store.start()
+
+		childFor('lib')?.exit(1)
+
+		await flush()
+
+		expect(get('lib')?.status).toBe('error')
+
+		expect(childFor('web')).toBeDefined()
+
+		expect(get('web')?.logs.some((l) => l.includes('dependency lib failed'))).toBe(true)
+	})
 })
 
 describe('status transitions', () => {
@@ -847,6 +885,31 @@ describe('dynamic workspaces', () => {
 
 		expect(() => store.removeWorkspace('nonexistent')).not.toThrow()
 	})
+
+	it('wakes a paused workspace before removing it, so it is not left suspended', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		const child = childFor('web')
+
+		child?.out('Watching for changes\n')
+
+		store.pauseProcess('web')
+
+		const pid = child?.pid ?? 0
+
+		store.removeWorkspace('web')
+
+		await flush()
+
+		// A SIGSTOP'd child ignores SIGTERM; without the SIGCONT it would linger forever.
+		expect(vi.mocked(process.kill)).toHaveBeenCalledWith(-pid, 'SIGCONT')
+
+		expect(child?.killed).toBe(true)
+
+		expect(get('web')).toBeUndefined()
+	})
 })
 
 describe('shutdown', () => {
@@ -876,6 +939,28 @@ describe('shutdown', () => {
 		child?.out('late output\n')
 
 		expect(get('web')?.logs.length).toBe(before)
+	})
+
+	it('does not spawn apps after shutdown begins mid-startup', async () => {
+		hoisted.discovered.current = [LIB, { name: 'web', kind: 'app', deps: ['lib'] }]
+
+		store = makeStore()
+
+		await store.start()
+
+		// lib settles, releasing the package gate — but spawnAll's continuation (which spawns
+		// the app) is queued as a microtask and hasn't run yet.
+		childFor('lib')?.out('Watching for changes\n')
+
+		// Quit in exactly that window. The app must not be spawned into a torn-down store,
+		// where nothing would ever reap it.
+		const done = store.shutdown()
+
+		await flush()
+
+		await done
+
+		expect(childFor('web')).toBeUndefined()
 	})
 })
 
