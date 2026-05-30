@@ -2,8 +2,8 @@ import { Box, Text } from 'ink'
 import { useLogScroll } from '../../hooks/use-log-scroll.js'
 import { useTerminalSize } from '../../hooks/use-terminal-size.js'
 import {
-	COLUMN_WIDTHS,
 	columnWidths,
+	FIXED_COLUMN_WIDTHS,
 	logPanelHeight,
 	MIN_LOG_PANEL_HEIGHT,
 	nameColumnWidth,
@@ -52,7 +52,7 @@ export function Dashboard({ processes, selectedIndex, title, showMetrics = false
 
 	const selected = processes[safeIndex]
 
-	const scroll = useLogScroll(
+	const logScroll = useLogScroll(
 		selected?.logs.length ?? 0,
 		logHeight,
 		selected?.workspace.name ?? '',
@@ -74,24 +74,24 @@ export function Dashboard({ processes, selectedIndex, title, showMetrics = false
 						Name
 					</Text>
 				</Cell>
-				<Cell width={COLUMN_WIDTHS.kind}>
+				<Cell width={FIXED_COLUMN_WIDTHS.kind}>
 					<Text color={colors.muted} bold>
 						Kind
 					</Text>
 				</Cell>
-				<Cell width={COLUMN_WIDTHS.status}>
+				<Cell width={FIXED_COLUMN_WIDTHS.status}>
 					<Text color={colors.muted} bold>
 						Status
 					</Text>
 				</Cell>
 				{showMetrics && (
 					<>
-						<Cell width={COLUMN_WIDTHS.cpu}>
+						<Cell width={FIXED_COLUMN_WIDTHS.cpu}>
 							<Text color={colors.muted} bold>
 								CPU
 							</Text>
 						</Cell>
-						<Cell width={COLUMN_WIDTHS.mem}>
+						<Cell width={FIXED_COLUMN_WIDTHS.mem}>
 							<Text color={colors.muted} bold>
 								MEM
 							</Text>
@@ -122,10 +122,10 @@ export function Dashboard({ processes, selectedIndex, title, showMetrics = false
 			{/* Log panel — hidden on a terminal too short to give it a usable height. */}
 			{selected && logHeight >= MIN_LOG_PANEL_HEIGHT && (
 				<Log
-					lines={selected.logs.slice(scroll.start, scroll.end)}
+					lines={selected.logs.slice(logScroll.start, logScroll.end)}
 					height={logHeight}
-					hiddenCount={selected.logs.length - scroll.end}
-					atBottom={scroll.atBottom}
+					hiddenCount={selected.logs.length - logScroll.end}
+					atBottom={logScroll.atBottom}
 				/>
 			)}
 		</Box>

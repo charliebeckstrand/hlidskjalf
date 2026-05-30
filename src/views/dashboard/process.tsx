@@ -1,6 +1,6 @@
 import { Box, Text } from 'ink'
 import { memo } from 'react'
-import { COLUMN_WIDTHS } from '../../layout.js'
+import { FIXED_COLUMN_WIDTHS } from '../../layout.js'
 import type { Status, WorkspaceKind } from '../../types.js'
 import {
 	colors,
@@ -25,10 +25,10 @@ function MetricsCells({ cpu, mem }: { cpu?: number; mem?: number }) {
 	if (cpu === undefined || mem === undefined) {
 		return (
 			<>
-				<Cell width={COLUMN_WIDTHS.cpu}>
+				<Cell width={FIXED_COLUMN_WIDTHS.cpu}>
 					<Text color={colors.dim}>{'—'}</Text>
 				</Cell>
-				<Cell width={COLUMN_WIDTHS.mem}>
+				<Cell width={FIXED_COLUMN_WIDTHS.mem}>
 					<Text color={colors.dim}>{'—'}</Text>
 				</Cell>
 			</>
@@ -36,10 +36,10 @@ function MetricsCells({ cpu, mem }: { cpu?: number; mem?: number }) {
 	}
 	return (
 		<>
-			<Cell width={COLUMN_WIDTHS.cpu}>
+			<Cell width={FIXED_COLUMN_WIDTHS.cpu}>
 				<Text color={cpuColor(cpu)}>{formatCpu(cpu)}</Text>
 			</Cell>
-			<Cell width={COLUMN_WIDTHS.mem}>
+			<Cell width={FIXED_COLUMN_WIDTHS.mem}>
 				<Text color={memColor(mem)}>{formatMem(mem)}</Text>
 			</Cell>
 		</>
@@ -87,10 +87,10 @@ export const Process = memo(function Process({
 					{name}
 				</Text>
 			</Cell>
-			<Cell width={COLUMN_WIDTHS.kind}>
+			<Cell width={FIXED_COLUMN_WIDTHS.kind}>
 				<Text>{kindLabel[kind]}</Text>
 			</Cell>
-			<Cell width={COLUMN_WIDTHS.status}>
+			<Cell width={FIXED_COLUMN_WIDTHS.status}>
 				<Text color={color}>
 					<StatusGlyph status={status} glyph={glyph} /> {label}
 				</Text>
