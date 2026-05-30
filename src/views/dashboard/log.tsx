@@ -1,7 +1,7 @@
 import { Box, Text } from 'ink'
 import { memo } from 'react'
 import { colors } from '../../ui/index.js'
-import { Panel } from '../primitives.js'
+import { Panel } from '../primitives/index.js'
 
 /** Element-wise compare of two visible windows. The slices hold the same string instances
  * across renders, so an unchanged window compares as a cheap run of reference checks. */

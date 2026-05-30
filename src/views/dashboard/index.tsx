@@ -14,7 +14,7 @@ import type { WorkspaceProcess } from '../../types.js'
 import { colors, HINTS } from '../../ui/index.js'
 import { clampIndex } from '../../util.js'
 import { Header } from '../chrome/index.js'
-import { Cell } from '../primitives.js'
+import { Cell } from '../primitives/index.js'
 import { Log } from './log.js'
 import { Process } from './process.js'
 

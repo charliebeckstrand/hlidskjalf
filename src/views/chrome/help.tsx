@@ -1,7 +1,7 @@
 import { Box, Text } from 'ink'
 import { useTerminalSize } from '../../hooks/use-terminal-size.js'
 import { colors, HINTS } from '../../ui/index.js'
-import { Cell, Panel } from '../primitives.js'
+import { Cell, Panel } from '../primitives/index.js'
 import { Header } from './header.js'
 
 /** Every keybinding the app responds to, paired with its description. */
