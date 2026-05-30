@@ -2,12 +2,13 @@ import { Box, Text } from 'ink'
 import Spinner from 'ink-spinner'
 import { memo } from 'react'
 import { useTerminalSize } from '../hooks/use-terminal-size.js'
+import type { Activity } from '../layout.js'
 import { colors, HINTS } from '../ui/index.js'
 import { Cell, Panel } from './primitives.js'
 
 interface HeaderProps {
 	title: string
-	ready?: boolean
+	activity?: Activity
 	columns: number
 	hints?: string
 }
@@ -17,8 +18,20 @@ interface HeaderProps {
  * Memoized on its all-primitive props so a dashboard re-render driven by log output — which
  * leaves title/ready/columns untouched — doesn't re-render the bordered header subtree.
  */
-export const Header = memo(function Header({ title, ready = false, columns, hints }: HeaderProps) {
+export const Header = memo(function Header({
+	title,
+	activity = 'down',
+	columns,
+	hints,
+}: HeaderProps) {
 	const showHints = hints && columns >= 10 + hints.length + 4
+
+	// Glyph by fullness, colour by health: a half-circle for any partial state, hollow when
+	// nothing runs; amber only when something is paused, otherwise green.
+	const dotGlyph = activity === 'up' ? '●' : activity === 'down' ? '○' : '◑'
+
+	const dotColor =
+		activity === 'paused' ? colors.warning : activity === 'down' ? colors.dim : colors.success
 
 	return (
 		<Box
@@ -34,7 +47,7 @@ export const Header = memo(function Header({ title, ready = false, columns, hint
 		>
 			<Box gap={2}>
 				<Box flexShrink={0} gap={1}>
-					<Text color={ready ? colors.success : colors.dim}>{ready ? '●' : '○'}</Text>
+					<Text color={dotColor}>{dotGlyph}</Text>
 					<Text color={colors.accentBright} bold>
 						{title}
 					</Text>

@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { columnWidths, logPanelHeight, nameColumnWidth, urlContentWidth } from '../src/layout.js'
-import type { WorkspaceProcess } from '../src/types.js'
+import {
+	columnWidths,
+	logPanelHeight,
+	nameColumnWidth,
+	overallActivity,
+	urlContentWidth,
+} from '../src/layout.js'
+import type { Status, WorkspaceProcess } from '../src/types.js'
 
 function proc(name: string, url?: string): WorkspaceProcess {
 	return { workspace: { name, kind: 'package', deps: [] }, status: 'ready', logs: [], url }
@@ -113,5 +119,38 @@ describe('logPanelHeight', () => {
 		const total = 4 + 2 + count + (logPanelHeight(rows, count) + 4)
 
 		expect(total).toBeLessThanOrEqual(rows - 1)
+	})
+})
+
+describe('overallActivity', () => {
+	const withStatus = (status: Status): WorkspaceProcess => ({
+		workspace: { name: status, kind: 'package', deps: [] },
+		status,
+		logs: [],
+	})
+
+	it('is down for an empty list', () => {
+		expect(overallActivity([])).toBe('down')
+	})
+
+	it('is up only when every process is active', () => {
+		expect(overallActivity([withStatus('ready'), withStatus('watching')])).toBe('up')
+	})
+
+	it('is partial when some are active and the rest stopped, with none paused', () => {
+		expect(overallActivity([withStatus('watching'), withStatus('stopped')])).toBe('partial')
+	})
+
+	it('is paused whenever any process is paused, even among active or stopped ones', () => {
+		expect(overallActivity([withStatus('watching'), withStatus('paused')])).toBe('paused')
+
+		// The reported case: everything stopped but one paused process.
+		expect(
+			overallActivity([withStatus('stopped'), withStatus('paused'), withStatus('stopped')]),
+		).toBe('paused')
+	})
+
+	it('is down when nothing is active or paused', () => {
+		expect(overallActivity([withStatus('stopped'), withStatus('error')])).toBe('down')
 	})
 })

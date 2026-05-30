@@ -124,3 +124,34 @@ const NON_LOG_CHROME = 12
 export function logPanelHeight(rows: number, processCount: number): number {
 	return Math.max(0, rows - processCount - NON_LOG_CHROME)
 }
+
+/** Overall run state summarized for the header's status dot. */
+export type Activity = 'up' | 'partial' | 'paused' | 'down'
+
+/**
+ * Aggregate the process list into the header's status indicator:
+ * - `paused` — at least one process is paused. Takes precedence (the only amber state), so a
+ *   suspended process is always visible no matter what the others are doing.
+ * - `up` — every process is active (ready or watching).
+ * - `partial` — some but not all processes are active, none paused (e.g. some serving, the
+ *   rest stopped) — a green half state, not a warning.
+ * - `down` — nothing is active or paused (an empty list, or all stopped/error/pending).
+ */
+export function overallActivity(processes: WorkspaceProcess[]): Activity {
+	let active = 0
+
+	let paused = 0
+
+	for (const proc of processes) {
+		if (proc.status === 'ready' || proc.status === 'watching') active++
+		else if (proc.status === 'paused') paused++
+	}
+
+	if (paused > 0) return 'paused'
+
+	if (processes.length > 0 && active === processes.length) return 'up'
+
+	if (active > 0) return 'partial'
+
+	return 'down'
+}
