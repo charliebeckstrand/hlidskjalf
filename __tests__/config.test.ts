@@ -108,6 +108,17 @@ describe('loadConfig', () => {
 		expect(await loadConfig(tmpDir)).toEqual({})
 	})
 
+	// The package.json key is pure JSON (no code execution), so a hostile title there
+	// must not smuggle terminal escapes into the header that renders it raw.
+	it('strips terminal escapes from a title in the package.json key', async () => {
+		write(
+			'package.json',
+			JSON.stringify({ hlidskjalf: { title: 'My\x1b]0;pwned\x07App\x1b[2J\x07' } }),
+		)
+
+		expect(await loadConfig(tmpDir)).toEqual({ title: 'MyApp' })
+	})
+
 	it('ignores a config file that throws on import', async () => {
 		write('hlidskjalf.config.ts', 'throw new Error("boom")')
 

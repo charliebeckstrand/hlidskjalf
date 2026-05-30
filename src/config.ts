@@ -6,6 +6,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { sanitizeForDisplay } from './parser.js'
 import type { SortOrder } from './types.js'
 import { parseTheme, type ThemeName } from './ui/index.js'
 import { isPlainObject, normalizeFilters } from './workspaces.js'
@@ -80,7 +81,9 @@ function validate(raw: unknown, source: string): Config {
 
 	if (raw.order === 'run' || raw.order === 'alphabetical') config.order = raw.order
 
-	if (typeof raw.title === 'string') config.title = raw.title
+	// Strip terminal escapes/control bytes: a title from an untrusted package.json key
+	// (the no-code-exec config path) is rendered raw in the header otherwise.
+	if (typeof raw.title === 'string') config.title = sanitizeForDisplay(raw.title)
 
 	if (typeof raw.metrics === 'boolean') config.metrics = raw.metrics
 

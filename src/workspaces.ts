@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs'
 import { join, resolve, sep } from 'node:path'
+import { sanitizeForDisplay } from './parser.js'
 import type { Workspace, WorkspaceKind } from './types.js'
 
 interface PkgJson {
@@ -33,7 +34,9 @@ export function normalizeFilters(raw: string[]): string[] {
 			const name = v.endsWith('...') ? v.slice(0, -3) : v
 
 			if (!isValidPackageName(name)) {
-				console.error(`Ignoring invalid filter: ${name}`)
+				// A rejected name may come from an untrusted config/package.json and carry
+				// terminal escapes; scrub before echoing it to the terminal.
+				console.error(`Ignoring invalid filter: ${sanitizeForDisplay(name)}`)
 
 				return false
 			}
