@@ -34,8 +34,8 @@ export function normalizeFilters(raw: string[]): string[] {
 			const name = v.endsWith('...') ? v.slice(0, -3) : v
 
 			if (!isValidPackageName(name)) {
-				// A rejected name may come from an untrusted config/package.json and carry
-				// terminal escapes; scrub before echoing it to the terminal.
+				// A rejected name may come from an untrusted config and carry terminal
+				// escapes; scrub before echoing it.
 				console.error(`Ignoring invalid filter: ${sanitizeForDisplay(name)}`)
 
 				return false

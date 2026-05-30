@@ -9,12 +9,12 @@
 
 ## Trust Model
 
-Run `hlidskjalf` only in repositories you trust. Like other dev tooling (e.g.
-`vite.config.ts`), it loads a `hlidskjalf.config.{ts,mjs,js}` from the working
-directory by importing it, which executes that file's code on launch. It also
-runs each workspace's `dev` script. A hostile repository can therefore run
-arbitrary code the moment you start the tool inside it — this is inherent to
-the task, not a vulnerability.
+Run `hlidskjalf` only in repositories you trust. On launch it imports a
+`hlidskjalf.config.{ts,mjs,js}` from the working directory, which runs that
+file's code, and it starts each workspace's `dev` script. A hostile repository
+can therefore execute arbitrary code the moment you launch the tool inside it.
+As with `vite.config.ts` and similar dev tooling, this is inherent to the task,
+not a vulnerability.
 
 ## Reporting a Vulnerability
 

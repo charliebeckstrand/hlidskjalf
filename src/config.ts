@@ -81,8 +81,8 @@ function validate(raw: unknown, source: string): Config {
 
 	if (raw.order === 'run' || raw.order === 'alphabetical') config.order = raw.order
 
-	// Strip terminal escapes/control bytes: a title from an untrusted package.json key
-	// (the no-code-exec config path) is rendered raw in the header otherwise.
+	// A title from an untrusted package.json key (pure JSON, no code execution) is
+	// still rendered raw in the header — strip terminal escapes before it gets there.
 	if (typeof raw.title === 'string') config.title = sanitizeForDisplay(raw.title)
 
 	if (typeof raw.metrics === 'boolean') config.metrics = raw.metrics
