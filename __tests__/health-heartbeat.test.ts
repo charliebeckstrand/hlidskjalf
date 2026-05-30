@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createHeartbeat, type Heartbeat, type Monitored } from '../src/liveness.js'
+import { createHeartbeat, type Heartbeat, type Monitored } from '../src/health/index.js'
 import type { Status } from '../src/types.js'
 
 function entry(

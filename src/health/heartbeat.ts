@@ -1,14 +1,12 @@
-import type { Status } from './types.js'
-import { every } from './ui/index.js'
+import type { Status } from '../types.js'
+import { every } from '../ui/index.js'
+import { probe } from './probe.js'
 
-/** How often the liveness sweep runs. */
+/** How often the health sweep runs. */
 const HEARTBEAT_INTERVAL_MS = 10_000
 
 /** Output silence after which a `ready`/`watching` process is probed and, if dead, marked idle. */
 const IDLE_THRESHOLD_MS = 300_000
-
-/** Per-probe HTTP timeout. */
-const PROBE_TIMEOUT_MS = 3000
 
 /**
  * The slice of a tracked process the heartbeat reads and updates: current status/URL,
@@ -37,21 +35,8 @@ export interface Heartbeat {
 	stop(): void
 }
 
-async function probe(url: string): Promise<boolean> {
-	try {
-		const res = await fetch(url, { signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) })
-
-		// Any response means the server is alive; drain the body so the socket frees.
-		await res.body?.cancel()
-
-		return true
-	} catch {
-		return false
-	}
-}
-
 /**
- * Periodic liveness monitor. A dev server gone quiet for a while might be wedged or
+ * Periodic health monitor. A dev server gone quiet for a while might be wedged or
  * just idle; the heartbeat probes its URL to tell the difference, marking it `idle`
  * when unreachable and restoring it when output or a successful probe shows it's alive.
  */

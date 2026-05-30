@@ -1,5 +1,5 @@
 import type { ChildProcess } from 'node:child_process'
-import type { Heartbeat } from '../liveness.js'
+import type { Heartbeat } from '../health/index.js'
 import type { Meter } from '../metrics/index.js'
 import type { SortOrder, Status, Workspace, WorkspaceProcess } from '../types.js'
 import type { Watcher } from '../watcher.js'

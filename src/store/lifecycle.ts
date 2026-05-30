@@ -1,4 +1,4 @@
-import { createHeartbeat } from '../liveness.js'
+import { createHeartbeat } from '../health/index.js'
 import { createMeter } from '../metrics/index.js'
 import type { Workspace } from '../types.js'
 import { watchWorkspaces } from '../watcher.js'
