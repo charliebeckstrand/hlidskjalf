@@ -1,52 +1,17 @@
 /**
- * Public configuration surface (the `config` build entry — `defineConfig` is what a
- * `hlidskjalf.config.ts` imports) plus the loader that resolves persisted config.
+ * Loader internals for {@link ./index.ts}: the file-name table, the untrusted-input
+ * validator, and the two config sources (a `hlidskjalf` package.json key and a dedicated
+ * config file). Kept apart from the public surface so the entry stays a thin contract.
  */
 
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { sanitizeForDisplay } from './logs/index.js'
-import type { SortOrder } from './types.js'
-import { parseTheme, type ThemeName } from './ui/index.js'
-import { isPlainObject } from './utilities.js'
-import { normalizeFilters } from './workspaces.js'
-
-/**
- * User-facing configuration. Every field mirrors a CLI flag and is optional; anything
- * omitted falls back to the CLI flag, then the built-in default. Persist these in a
- * `hlidskjalf.config.ts` file or a `hlidskjalf` key in `package.json`.
- */
-export interface Config {
-	/** Include only matching workspaces. Append `...` to a name for its transitive deps. */
-	filter?: string[]
-	/** Sort the dashboard `alphabetical`ly (default) or in dependency `run` order. */
-	order?: SortOrder
-	/** Custom header title. Defaults to `Hlidskjalf`. */
-	title?: string
-	/** Show CPU and memory usage per workspace. Defaults to `false`. */
-	metrics?: boolean
-	/** Re-discover workspaces when `package.json` files change. Defaults to `true`. */
-	watch?: boolean
-	/**
-	 * Colour theme. Defaults to `bifrost` (electric purples and sky blues). Accepts a realm
-	 * name (`niflheim`, `muspelheim`, `yggdrasil`) or an elemental alias (`ice`, `fire`,
-	 * `earth`). See {@link themes} for the available palettes.
-	 */
-	theme?: ThemeName
-}
-
-/**
- * Identity helper that gives a `hlidskjalf.config.ts` full type checking:
- *
- * ```ts
- * import { defineConfig } from 'hlidskjalf'
- * export default defineConfig({ order: 'run', metrics: true })
- * ```
- */
-export function defineConfig(config: Config): Config {
-	return config
-}
+import { sanitizeForDisplay } from '../logs/index.js'
+import { parseTheme } from '../ui/index.js'
+import { isPlainObject } from '../utilities.js'
+import { normalizeFilters } from '../workspaces.js'
+import type { Config } from './types.js'
 
 /**
  * Config file names tried in order, highest priority first. The `.ts` form is the
@@ -98,7 +63,7 @@ function validate(raw: unknown, source: string): Config {
 }
 
 /** Read and validate the `hlidskjalf` key from the root package.json, if present. */
-function fromPackageJson(root: string): Config {
+export function fromPackageJson(root: string): Config {
 	const path = join(root, 'package.json')
 
 	if (!existsSync(path)) return {}
@@ -121,7 +86,7 @@ function fromPackageJson(root: string): Config {
 }
 
 /** Import the first config file that exists and validate its default export. */
-async function fromConfigFile(root: string): Promise<Config> {
+export async function fromConfigFile(root: string): Promise<Config> {
 	for (const name of CONFIG_FILES) {
 		const path = join(root, name)
 
@@ -139,17 +104,4 @@ async function fromConfigFile(root: string): Promise<Config> {
 	}
 
 	return {}
-}
-
-/**
- * Resolve persisted configuration for the project at `root`. A dedicated config file
- * takes precedence over the package.json key; CLI flags (applied by the caller) still
- * override everything here.
- */
-export async function loadConfig(root: string): Promise<Config> {
-	const fromPkg = fromPackageJson(root)
-
-	const fromFile = await fromConfigFile(root)
-
-	return { ...fromPkg, ...fromFile }
 }
