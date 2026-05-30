@@ -20,7 +20,7 @@ Write terse, technical prose optimized for information density.
 
 ## Workflow
 
-For substantial work, state the approach before implementing.
+For substantial work, surface the approach before implementing.
 
 For broad research, delegate to subagents so context stays focused. Assign one task each. Have them report findings, not narrate their steps.
 
