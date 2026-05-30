@@ -1021,6 +1021,30 @@ describe('shutdown', () => {
 		expect(get('web')?.logs.length).toBe(before)
 	})
 
+	it('wakes a paused process before terminating it so SIGTERM is honored', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		const child = childFor('web')
+
+		child?.out('Watching for changes\n')
+
+		store.pauseProcess('web')
+
+		const pid = child?.pid ?? 0
+
+		// A SIGSTOP'd child ignores SIGTERM; without the SIGCONT it would only die after the
+		// SIGKILL grace period, so quitting a paused process would hang for seconds.
+		await store.shutdown()
+
+		expect(vi.mocked(process.kill)).toHaveBeenCalledWith(-pid, 'SIGCONT')
+
+		expect(vi.mocked(process.kill)).toHaveBeenCalledWith(-pid, 'SIGTERM')
+
+		expect(child?.killed).toBe(true)
+	})
+
 	it('does not spawn apps after shutdown begins mid-startup', async () => {
 		hoisted.discovered.current = [LIB, { name: 'web', kind: 'app', deps: ['lib'] }]
 
