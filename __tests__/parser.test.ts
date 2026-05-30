@@ -100,9 +100,9 @@ describe('parseLine', () => {
 	describe('matcher precedence', () => {
 		it('classifies a line with an error keyword and a URL as error, attaching no URL', () => {
 			// The error matcher sits above the bare `listening` fallback but below the
-			// URL-bearing `running on`/`listening on` matchers. A line that carries an error
-			// word but matches none of those URL phrases must land on error, and an error
-			// matcher captures no group so no URL is surfaced.
+			// URL-bearing `running on`/`listening on` matchers. A line with an error word but
+			// none of those URL phrases lands on error; the error matcher captures no group,
+			// so no URL surfaces.
 			expect(parseLine('error: failed to bind http://localhost:3000')).toEqual({
 				status: 'error',
 			})

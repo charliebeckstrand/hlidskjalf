@@ -70,9 +70,8 @@ describe('columnWidths', () => {
 	})
 
 	it('opens the URL column exactly one column past the name floor', () => {
-		// Row chrome is 24 and the name floor is 14, so available == 14 (columns 38) is the
-		// last width with no URL; one more column (39) is the first to grant the URL a single
-		// column while the name stays floored.
+		// Row chrome is 24, the name floor 14: at 38 columns (14 available) there's no room
+		// for a URL; 39 is the first to give it a column, the name still floored.
 		expect(columnWidths(38, 40, 21, false)).toEqual({ name: 14, url: 0 })
 
 		expect(columnWidths(39, 40, 21, false)).toEqual({ name: 14, url: 1 })
