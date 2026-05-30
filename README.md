@@ -97,11 +97,13 @@ stopped and dropped from the dashboard. Pass `--watch=false` (or set
 
 | Key | Action |
 | --- | --- |
-| `↑` / `↓` | Move the selection between workspaces |
+| `↑` / `↓` (or `k` / `j`) | Move the selection between workspaces |
 | `s` | Stop the selected workspace (or start it again if stopped) |
 | `r` | Restart the selected workspace |
 | `c` | Clear the logs for the selected workspace |
 | `PgUp` / `PgDn` | Scroll the log panel up / down a page |
+| `Home` / `End` | Jump to the oldest / newest log line |
+| `?` | Toggle the keybindings overlay |
 | `q` | Quit |
 
 ## License

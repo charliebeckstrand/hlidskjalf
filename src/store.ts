@@ -177,7 +177,9 @@ class ProcessStore implements Store {
 
 		const startOrder = sortByDeps(workspaces)
 
-		const sorted = this.sortForDisplay(workspaces)
+		// `sortForDisplay` is itself `sortByDeps` in run order, so reuse the start order
+		// rather than computing the same sort twice.
+		const sorted = this.order_ === 'run' ? startOrder : sortByName(workspaces)
 
 		this.order = sorted.map((w) => w.name)
 
