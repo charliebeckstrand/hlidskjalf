@@ -26,8 +26,9 @@ interface Props {
 export function Dashboard({ processes, selectedIndex, title, metrics = false }: Props) {
 	const { columns, rows } = useTerminalSize()
 
-	const allReady =
-		processes.length > 0 && processes.every((p) => p.status === 'ready' || p.status === 'watching')
+	// Green when any process is up — a paused or stopped one shouldn't dim the header while
+	// others are still serving. (`some` is already false on an empty list.)
+	const anyActive = processes.some((p) => p.status === 'ready' || p.status === 'watching')
 
 	// Natural width fits the longest name; the URL's full width is reserved first, then the
 	// name takes what's left (truncating before it can squeeze the URL). These are cheap O(n)
@@ -63,7 +64,7 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 		// top — no frame-level clipping needed (and we avoid it deliberately: Ink's clipper
 		// slices lines through a tokenizer that miscounts OSC 8 hyperlinks).
 		<Box flexDirection="column">
-			<Header title={title} ready={allReady} columns={columns} hints={HINTS} />
+			<Header title={title} ready={anyActive} columns={columns} hints={HINTS} />
 
 			<Box paddingX={1} marginLeft={2} marginTop={1}>
 				<Cell width={nameWidth}>
