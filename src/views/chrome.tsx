@@ -16,7 +16,7 @@ interface HeaderProps {
 /**
  * Top bar shared by every screen: status dot, title, and (space permitting) key hints.
  * Memoized on its all-primitive props so a dashboard re-render driven by log output — which
- * leaves title/ready/columns untouched — doesn't re-render the bordered header subtree.
+ * leaves title/activity/columns untouched — doesn't re-render the bordered header subtree.
  */
 export const Header = memo(function Header({
 	title,
