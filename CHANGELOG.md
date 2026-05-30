@@ -12,10 +12,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Pause / resume and force-kill controls** — press `p` to suspend the selected
   workspace with `SIGSTOP` (it stays alive and holds its port but consumes no CPU)
   and again to resume it with `SIGCONT`, restoring the status it held before
-  pausing; a new `paused` status shows with a `⏸` glyph. Press `x` to force-kill a
+  pausing; a new `paused` status shows in amber. Press `x` to force-kill a
   wedged workspace with `SIGKILL` immediately — no graceful `SIGTERM` grace period
   and no restart. A paused process is woken before any stop/restart/kill so the
   signal lands promptly.
+
+### Changed
+
+- **Lighter redraws under heavy output** — the dashboard now skips re-rendering
+  rows and the log panel whose content hasn't changed, so a flood of output from
+  one workspace no longer repaints every other row.
+- **Header status dot reads three states at a glance** — green when every
+  workspace is up, green and hollow when some are up and some stopped, and amber
+  when any is paused; hollow grey when nothing is running.
+- **Consistent process-control log notes** — the stop, restart, kill, and pause
+  messages now share one wording and each shows its signal, and a stop or kill
+  appends a line when the child has actually exited, not just when requested.
+
+### Fixed
+
+- **Quitting with a paused workspace no longer hangs** — a suspended process is
+  woken so it acts on the shutdown signal at once, instead of waiting out the
+  five-second kill grace period.
+- **Stopping a workspace no longer logs a phantom failure** — the dev runner's
+  `ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL` / "command failed with signal SIGTERM"
+  complaint, emitted as it forwards the stop we sent, is dropped rather than
+  shown as an error the user didn't cause.
+- **Status glyphs sit on the baseline** — the half-circle and pause glyphs were
+  pulled from an oversized fallback font that floated them above the text;
+  indicators now stay within glyphs the primary font renders in line.
 
 ## [0.4.2]
 
