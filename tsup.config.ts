@@ -3,7 +3,7 @@ import { defineConfig } from 'tsup'
 export default defineConfig({
 	// `index` is the CLI bin; `config` is the public library surface that a
 	// `hlidskjalf.config.ts` imports `defineConfig` from.
-	entry: { index: 'src/index.tsx', config: 'src/config.ts' },
+	entry: { index: 'src/index.tsx', config: 'src/config/index.ts' },
 	format: ['esm'],
 	target: 'node22',
 	outDir: 'dist',
@@ -18,7 +18,7 @@ export default defineConfig({
 	// Ink lazily requires react-devtools-core only in dev; it isn't a runtime
 	// dependency here, so keep it external rather than failing to resolve it.
 	external: ['react-devtools-core'],
-	dts: { entry: { config: 'src/config.ts' } },
+	dts: { entry: { config: 'src/config/index.ts' } },
 	banner: {
 		// Real `require` so bundled CJS deps (signal-exit, ws, …) can require()
 		// Node built-ins from this ESM bin — esbuild's interop shim otherwise

@@ -3,9 +3,9 @@ import os from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { defineConfig, loadConfig } from '../src/config.js'
+import { defineConfig, loadConfig } from '../src/config/index.js'
 
-const CONFIG_SRC = fileURLToPath(new URL('../src/config.ts', import.meta.url))
+const CONFIG_SRC = fileURLToPath(new URL('../src/config/index.ts', import.meta.url))
 
 describe('defineConfig', () => {
 	it('returns its argument unchanged (identity helper)', () => {
