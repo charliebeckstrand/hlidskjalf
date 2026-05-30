@@ -5,4 +5,5 @@
  */
 
 export { appendLog, type LogWindow, MAX_LOGS, visibleLogRange } from './buffer.js'
+export { type LogRow, logRowKeys } from './keys.js'
 export { parseLine, sanitizeForDisplay, stripAnsi } from './parse.js'

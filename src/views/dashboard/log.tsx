@@ -1,5 +1,6 @@
 import { Box, Text } from 'ink'
 import { memo } from 'react'
+import { logRowKeys } from '../../logs/index.js'
 import { colors } from '../../ui/index.js'
 import { Panel } from '../primitives/index.js'
 
@@ -24,22 +25,17 @@ export const Log = memo(
 	function Log({
 		lines,
 		height,
+		startIndex,
 		hiddenCount,
 		atBottom,
 	}: {
 		lines: string[]
 		height: number
+		startIndex: number
 		hiddenCount: number
 		atBottom: boolean
 	}) {
-		const fillCount = height - lines.length
-
-		// Output only ever appends, so a line's absolute index from the top is its stable
-		// identity across scroll and growth: window position i maps to absolute line
-		// hiddenCount + i. Blank padding keys continue past the last visible line.
-		const rows = lines.map((line, i) => ({ id: hiddenCount + i, line }))
-		const firstFillId = hiddenCount + lines.length
-		const fills = Array.from({ length: fillCount }, (_, i) => firstFillId + i)
+		const { rows, fills } = logRowKeys(lines, startIndex, height)
 
 		return (
 			<Panel height={height + 3} overflow="hidden" marginX={1} marginTop={1}>
@@ -66,6 +62,7 @@ export const Log = memo(
 	},
 	(prev, next) =>
 		prev.height === next.height &&
+		prev.startIndex === next.startIndex &&
 		prev.hiddenCount === next.hiddenCount &&
 		prev.atBottom === next.atBottom &&
 		sameLines(prev.lines, next.lines),

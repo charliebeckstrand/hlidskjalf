@@ -124,6 +124,7 @@ export function Dashboard({ processes, selectedIndex, title, showMetrics = false
 				<Log
 					lines={selected.logs.slice(logScroll.start, logScroll.end)}
 					height={logHeight}
+					startIndex={logScroll.start}
 					hiddenCount={selected.logs.length - logScroll.end}
 					atBottom={logScroll.atBottom}
 				/>
