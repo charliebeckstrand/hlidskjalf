@@ -211,6 +211,35 @@ describe('discover', () => {
 		expect(discover(tmpDir)).toEqual([{ name: 'web', kind: 'app', deps: ['utils'] }])
 	})
 
+	it('skips a workspace whose package.json is unreadable JSON', () => {
+		const wsDir = join(tmpDir, 'packages', 'x')
+
+		fs.mkdirSync(wsDir, { recursive: true })
+
+		fs.writeFileSync(join(wsDir, 'package.json'), '{ not: valid json')
+
+		expect(discover(tmpDir)).toEqual([])
+	})
+
+	it('skips a workspace dir symlinked outside the root', () => {
+		const outside = fs.mkdtempSync(join(fs.realpathSync(os.tmpdir()), 'hlidskjalf-outside-'))
+
+		try {
+			fs.writeFileSync(
+				join(outside, 'package.json'),
+				JSON.stringify({ name: 'evil', scripts: { dev: 'x' } }),
+			)
+
+			fs.mkdirSync(join(tmpDir, 'packages'), { recursive: true })
+
+			fs.symlinkSync(outside, join(tmpDir, 'packages', 'evil'))
+
+			expect(discover(tmpDir)).toEqual([])
+		} finally {
+			fs.rmSync(outside, { recursive: true, force: true })
+		}
+	})
+
 	it('handles missing directories and discovers across many', () => {
 		expect(discover(tmpDir)).toEqual([])
 

@@ -81,6 +81,10 @@ describe('parseLine', () => {
 		it('rejects non-loopback URLs', () => {
 			expect(parseLine('running on http://example.com:3000').url).toBeUndefined()
 		})
+
+		it('keeps the ready status but drops an unparseable URL capture', () => {
+			expect(parseLine('Server running on http://[bad')).toEqual({ status: 'ready' })
+		})
 	})
 
 	describe('DTS lines', () => {

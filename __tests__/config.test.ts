@@ -49,6 +49,16 @@ describe('loadConfig', () => {
 		expect(await loadConfig(tmpDir)).toEqual({})
 	})
 
+	it('ignores a hlidskjalf key that is not an object', async () => {
+		write('package.json', JSON.stringify({ hlidskjalf: 'not-an-object' }))
+
+		const err = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+		expect(await loadConfig(tmpDir)).toEqual({})
+
+		expect(err).toHaveBeenCalled()
+	})
+
 	it('reads the default export of hlidskjalf.config.ts', async () => {
 		write('hlidskjalf.config.ts', 'export default { order: "run", title: "Mine", watch: false }')
 
@@ -104,6 +114,18 @@ describe('loadConfig', () => {
 
 	it('drops a non-array filter', async () => {
 		write('hlidskjalf.config.ts', 'export default { filter: "web" }')
+
+		expect(await loadConfig(tmpDir)).toEqual({})
+	})
+
+	it('drops a filter whose every entry is invalid', async () => {
+		write('hlidskjalf.config.ts', 'export default { filter: ["Bad Name", 42] }')
+
+		expect(await loadConfig(tmpDir)).toEqual({})
+	})
+
+	it('ignores a package.json whose top-level value is not an object', async () => {
+		write('package.json', '"just a string"')
 
 		expect(await loadConfig(tmpDir)).toEqual({})
 	})
