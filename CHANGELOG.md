@@ -5,6 +5,58 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+
+- **Terminal escapes scrubbed from the CLI `--title` and `--theme` flags** — a
+  repo's `dev` script controls argv when the operator runs `pnpm dev`, so these
+  flags are as untrusted as a config-file value. The header title and the
+  unknown-theme warning now route through the same sanitizer the config path
+  already used, closing an escape-sequence injection from a hostile repo. The
+  transitive `ws` dependency is pinned past GHSA-58qx-3vcg-4xpx — reachable only
+  under Ink's devtools websocket, which the TUI never starts, but the override
+  keeps `pnpm audit` clean.
+
+### Fixed
+
+- **An unrecognized CLI argument no longer crashes the launch** — a repo's `dev`
+  script controls argv, and an extra flag or positional it appended made
+  `parseArgs` throw a stack trace before the dashboard could start. Parsing is now
+  non-strict: unknown arguments are ignored and the known flags still apply.
+- **Startup no longer wedges when a package is paused or removed mid-launch** — the
+  gate that holds apps until their package dependencies start waited on a fixed set
+  of settled statuses. Pausing a package (which also cancels its startup timer, so it
+  never times out) or a watch-mode rediscovery removing one left the gate unresolved
+  forever, so the app tier never spawned and the metrics/liveness pollers — armed only
+  after the gate — never started. The gate now waits only while a package is still
+  starting, releasing on any other state.
+- **Switching to a longer log keeps following** — leaving a scrolled-up process for one
+  with more log lines opened it scrolled up instead of pinned to the newest line; the
+  follow-mode reset now wins over the scroll-anchor adjustment on a process switch.
+- **Metrics polling can't hang on a cyclic process tree** — the descendant walk
+  now tracks visited PIDs, so a PID-reuse race that momentarily yields a cyclic
+  parent→child map no longer loops forever and freezes the TUI. A PID reachable
+  by two parents is counted once instead of double-counting its CPU and memory.
+- **Memory reported correctly on 16K/64K-page kernels** — the `/proc` RSS
+  conversion now resolves the real page size instead of assuming 4096 bytes,
+  which under-reported memory 4×/16× on ARM64 Linux configured with large pages.
+- **No false crash when a watched workspace is re-added** — child data/close/error
+  handlers now bind to the child that produced them. Previously, when watch mode
+  removed and re-added a workspace under the same name within the five-second
+  SIGTERM grace window, the old child's delayed exit found the new entry, flipped
+  the healthy replacement into a spurious crash with a backoff restart, and leaked
+  the old child's teardown noise into the new instance's log.
+- **Fatal startup failures exit non-zero** — a startup error or an empty workspace
+  match now propagates a non-zero exit code instead of reporting success to the
+  shell and CI.
+
+### Changed
+
+- **Kind column matches the Name column** — the `pkg` / `app` / `svc` value
+  dropped its dimmer muted colour for the default foreground, matching the
+  unselected Name cell.
+
 ## [0.4.3]
 
 ### Added

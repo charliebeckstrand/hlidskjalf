@@ -1,5 +1,5 @@
 import { useInput } from 'ink'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { visibleLogRange } from '../logs.js'
 
 // Home/End aren't surfaced as named keys by Ink's `useInput` (both collapse to an
@@ -33,27 +33,37 @@ export function useLogScroll(
 ): LogScroll {
 	const [scroll, setScroll] = useState(0)
 
-	// Snap to the bottom whenever the selected process changes.
 	const [prevKey, setPrevKey] = useState(selectionKey)
-	if (selectionKey !== prevKey) {
-		setPrevKey(selectionKey)
-		setScroll(0)
-	}
 
-	// Keep a paused viewport anchored to the same lines as new output arrives.
 	const [prevTotal, setPrevTotal] = useState(total)
-	if (total !== prevTotal) {
-		const delta = total - prevTotal
+
+	// These two render-phase adjustments are mutually exclusive: a process switch changes
+	// both selectionKey and total in the same render (both derive from the selected process),
+	// so the anchor branch must not also run — its setScroll(s => s + delta) would compose on
+	// the reset's setScroll(0) and land the new process at `delta` instead of following.
+	if (selectionKey !== prevKey) {
+		// Switching processes snaps back to follow mode. Adopt the new buffer length too so
+		// the anchor branch stays dormant this render.
+		setPrevKey(selectionKey)
+
 		setPrevTotal(total)
+
+		setScroll(0)
+	} else if (total !== prevTotal) {
+		// Same process, buffer grew: keep a scrolled-up viewport anchored to the same lines as
+		// new output arrives rather than letting it scroll out from under the reader.
+		const delta = total - prevTotal
+
+		setPrevTotal(total)
+
 		if (scroll > 0 && delta > 0) setScroll((s) => s + delta)
 	}
 
 	// visibleLogRange owns the bound formula; reuse the value it returns rather than recomputing it.
 	const { start, end, maxScroll } = visibleLogRange(total, height, scroll)
-	// The input handler's closure would otherwise capture a stale bound across renders.
-	const maxScrollRef = useRef(maxScroll)
-	maxScrollRef.current = maxScroll
 
+	// Ink re-subscribes this handler every render (its inputHandler is in the effect deps), so
+	// the closure always reads the latest committed bound — no ref needed to dodge a stale one.
 	useInput(
 		(input, key) => {
 			if (key.pageUp) {
@@ -61,7 +71,7 @@ export function useLogScroll(
 			} else if (key.pageDown) {
 				setScroll((s) => Math.max(0, Math.min(s, maxScroll) - height))
 			} else if (HOME_SEQUENCES.has(input)) {
-				setScroll(maxScrollRef.current)
+				setScroll(maxScroll)
 			} else if (END_SEQUENCES.has(input)) {
 				setScroll(0)
 			}
