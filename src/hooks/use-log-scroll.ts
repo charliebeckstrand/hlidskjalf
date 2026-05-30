@@ -1,5 +1,5 @@
 import { useInput } from 'ink'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { visibleLogRange } from '../logs.js'
 
 // Home/End aren't surfaced as named keys by Ink's `useInput` (both collapse to an
@@ -62,11 +62,8 @@ export function useLogScroll(
 	// visibleLogRange owns the bound formula; reuse the value it returns rather than recomputing it.
 	const { start, end, maxScroll } = visibleLogRange(total, height, scroll)
 
-	// The input handler's closure would otherwise capture a stale bound across renders.
-	const maxScrollRef = useRef(maxScroll)
-
-	maxScrollRef.current = maxScroll
-
+	// Ink re-subscribes this handler every render (its inputHandler is in the effect deps), so
+	// the closure always reads the latest committed bound — no ref needed to dodge a stale one.
 	useInput(
 		(input, key) => {
 			if (key.pageUp) {
@@ -74,7 +71,7 @@ export function useLogScroll(
 			} else if (key.pageDown) {
 				setScroll((s) => Math.max(0, Math.min(s, maxScroll) - height))
 			} else if (HOME_SEQUENCES.has(input)) {
-				setScroll(maxScrollRef.current)
+				setScroll(maxScroll)
 			} else if (END_SEQUENCES.has(input)) {
 				setScroll(0)
 			}
