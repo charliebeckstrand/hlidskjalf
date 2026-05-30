@@ -88,7 +88,7 @@ export const Process = memo(function Process({
 				</Text>
 			</Cell>
 			<Cell width={COLUMN_WIDTHS.kind}>
-				<Text color={colors.muted}>{kindLabel[kind]}</Text>
+				<Text>{kindLabel[kind]}</Text>
 			</Cell>
 			<Cell width={COLUMN_WIDTHS.status}>
 				<Text color={color}>
