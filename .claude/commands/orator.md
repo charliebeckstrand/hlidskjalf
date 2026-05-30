@@ -21,11 +21,17 @@ Apply §3 always, then add one layer by target:
 
 - Skill files (`.claude/commands/*`, `CLAUDE.md`, `AGENTS.md`) → also §3b.
 - Any other prose (comments, docstrings, commits, PRs, READMEs, design docs, release notes, `*.md`) → also §3a.
-- In-conversation prose with no path, or an ambiguous target → §3 alone. Half-applying a layer is wrong. Resolve a directory target per file.
+- In-conversation prose with no path, or an ambiguous target → §3 alone.
+
+Half-applying a layer is wrong. Resolve a directory target per file.
 
 ## 2. Sample the voice
 
-Read, in order: `CLAUDE.md` and any `AGENTS.md` it references (declared rules win every tie); 2–3 sibling artifacts (the file's own comments, sibling READMEs, `git log --pretty=%B -n 20` for commits, sibling skill files); domain and glossary terms already in use — preserve them unaltered.
+Read, in order:
+
+1. `CLAUDE.md` and any `AGENTS.md` it references — declared rules win every tie.
+2. 2–3 sibling artifacts — the file's own comments, sibling READMEs, `git log --pretty=%B -n 20` for commits, sibling skill files.
+3. Domain and glossary terms already in use — preserve them unaltered.
 
 Lock register, tense, rhythm, punctuation, capitalization, vocabulary, markdown idioms. For skill files, also lock structural shape — TRIGGER preamble, numbered `## N.` steps, `## Rules` footer.
 
