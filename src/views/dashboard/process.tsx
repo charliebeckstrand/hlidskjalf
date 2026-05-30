@@ -35,7 +35,7 @@ function MetricsCells({ metrics }: { metrics?: Metrics }) {
 	return (
 		<>
 			<Cell width={COLUMN_WIDTHS.cpu}>
-				<Text color={cpuColor(metrics)}>{formatCpu(metrics.cpu)}</Text>
+				<Text color={cpuColor(metrics.cpu)}>{formatCpu(metrics.cpu)}</Text>
 			</Cell>
 			<Cell width={COLUMN_WIDTHS.mem}>
 				<Text color={memColor(metrics.mem)}>{formatMem(metrics.mem)}</Text>

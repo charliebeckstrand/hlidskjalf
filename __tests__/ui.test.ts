@@ -130,9 +130,9 @@ describe('formatters', () => {
 	})
 
 	it('flips CPU colour to error once a core saturates', () => {
-		expect(cpuColor({ cpu: 50, mem: 0 })).toBe(colors.muted)
+		expect(cpuColor(50)).toBe(colors.muted)
 
-		expect(cpuColor({ cpu: 95, mem: 0 })).toBe(colors.error)
+		expect(cpuColor(95)).toBe(colors.error)
 	})
 })
 

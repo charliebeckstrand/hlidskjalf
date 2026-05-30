@@ -25,7 +25,7 @@ interface Props {
 }
 
 export function Dashboard({ processes, selectedIndex, title, metrics = false }: Props) {
-	const { columns: cols, rows } = useTerminalSize()
+	const { columns, rows } = useTerminalSize()
 
 	const allReady = useMemo(
 		() =>
@@ -38,12 +38,12 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 	// name takes what's left (truncating before it can squeeze the URL).
 	const naturalNameWidth = useMemo(() => nameColumnWidth(processes), [processes])
 
-	const urlContent = useMemo(() => urlContentWidth(processes), [processes])
+	const naturalUrlWidth = useMemo(() => urlContentWidth(processes), [processes])
 
 	const { name: nameWidth, url: urlWidth } = columnWidths(
-		cols,
+		columns,
 		naturalNameWidth,
-		urlContent,
+		naturalUrlWidth,
 		metrics,
 	)
 
@@ -67,7 +67,7 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 		// top — no frame-level clipping needed (and we avoid it deliberately: Ink's clipper
 		// slices lines through a tokenizer that miscounts OSC 8 hyperlinks).
 		<Box flexDirection="column">
-			<Header title={title} ready={allReady} columns={cols} hints={HINTS} />
+			<Header title={title} ready={allReady} columns={columns} hints={HINTS} />
 
 			<Box paddingX={1} marginLeft={2} marginTop={1}>
 				<Cell width={nameWidth}>

@@ -3,18 +3,18 @@
  * keeps the process alive past shutdown; the canceller is idempotent.
  */
 export function every(ms: number, fn: () => void): () => void {
-	const t = setInterval(fn, ms)
+	const timer = setInterval(fn, ms)
 
-	t.unref()
+	timer.unref()
 
-	return () => clearInterval(t)
+	return () => clearInterval(timer)
 }
 
 /** Schedule an unref'd timeout and return a canceller. */
 export function after(ms: number, fn: () => void): () => void {
-	const t = setTimeout(fn, ms)
+	const timer = setTimeout(fn, ms)
 
-	t.unref()
+	timer.unref()
 
-	return () => clearTimeout(t)
+	return () => clearTimeout(timer)
 }
