@@ -26,9 +26,10 @@ export const Header = memo(function Header({
 }: HeaderProps) {
 	const showHints = hints && columns >= 10 + hints.length + 4
 
-	// Glyph by fullness, colour by health: a half-circle for any partial state, hollow when
-	// nothing runs; amber only when something is paused, otherwise green.
-	const dotGlyph = activity === 'up' ? '●' : activity === 'down' ? '○' : '◑'
+	// Fill marks fully-up vs not; colour marks health. Only ● and ○ are used — the terminal
+	// pulls the half-circle glyphs from an oversized fallback font that breaks the baseline.
+	// Amber only when something is paused, otherwise green; grey when nothing runs.
+	const dotGlyph = activity === 'up' ? '●' : '○'
 
 	const dotColor =
 		activity === 'paused' ? colors.warning : activity === 'down' ? colors.dim : colors.success
