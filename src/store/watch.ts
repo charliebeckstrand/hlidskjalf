@@ -1,6 +1,6 @@
 import type { Workspace } from '../types.js'
 import { discoverFiltered, sortForDisplay } from './discovery.js'
-import { beginTeardown, clearTimers, newEntry } from './entry.js'
+import { beginTeardown, clearTimers, newEntry, withEntry } from './entry.js'
 import { changed } from './snapshot.js'
 import { spawnWorkspace } from './spawn.js'
 import type { StoreContext } from './types.js'
@@ -59,23 +59,21 @@ export function addWorkspace(ctx: StoreContext, workspace: Workspace): void {
  * leaves the dashboard.
  */
 export function removeWorkspace(ctx: StoreContext, name: string): void {
-	const entry = ctx.entries.get(name)
+	withEntry(ctx, name, (entry) => {
+		clearTimers(entry)
 
-	if (!entry) return
+		// Deleting the entry next means the spawn close handler can't find it, so the
+		// exit isn't treated as a crash.
+		beginTeardown(entry, () => {})
 
-	clearTimers(entry)
+		ctx.entries.delete(name)
 
-	// Deleting the entry next means the spawn close handler can't find it, so the
-	// exit isn't treated as a crash.
-	beginTeardown(entry, () => {})
+		ctx.order = ctx.order.filter((n) => n !== name)
 
-	ctx.entries.delete(name)
+		ctx.allWorkspaces = ctx.allWorkspaces.filter((w) => w.name !== name)
 
-	ctx.order = ctx.order.filter((n) => n !== name)
+		ctx.meter?.reset(name)
 
-	ctx.allWorkspaces = ctx.allWorkspaces.filter((w) => w.name !== name)
-
-	ctx.meter?.reset(name)
-
-	changed(ctx)
+		changed(ctx)
+	})
 }

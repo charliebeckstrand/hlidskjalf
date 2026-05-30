@@ -4,14 +4,15 @@
  * loop that drives them lives in {@link ./meter.ts}.
  */
 
+import { clamp } from '../util.js'
+
 /** Collect a root pid and all its (transitive) descendants from a parent→children map. */
 export function collectDescendants(rootPid: number, children: Map<number, number[]>): number[] {
 	const result: number[] = []
 
-	// A PID-reuse race across the per-process /proc reads can momentarily yield a cyclic
-	// or self-referential parent→children map; without a visited set the walk loops forever
-	// and grows `result` without bound, hanging the synchronous poll. Track seen PIDs so each
-	// is emitted once.
+	// A real /proc/ps tree is acyclic (one ppid per pid), but guard anyway: a cyclic or
+	// diamond `children` map would otherwise loop forever, hanging the poll. Skipping
+	// already-seen pids also keeps a pid from being double-counted in the meter's totals.
 	const seen = new Set<number>()
 
 	const stack = [rootPid]
@@ -212,5 +213,5 @@ export function cpuPercentFromTicks(
 
 	const percent = (tickDelta / ticksPerSec / elapsedSec / numCpus) * 100
 
-	return Math.min(100, Math.max(0, percent))
+	return clamp(percent, 0, 100)
 }

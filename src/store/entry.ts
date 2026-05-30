@@ -1,7 +1,7 @@
 import { appendLog } from '../logs.js'
 import type { Workspace } from '../types.js'
 import { escalateKill, isRunning, killTree } from './children.js'
-import type { ProcessEntry } from './types.js'
+import type { ProcessEntry, StoreContext } from './types.js'
 
 export function newEntry(workspace: Workspace): ProcessEntry {
 	return {
@@ -23,6 +23,19 @@ export function newEntry(workspace: Workspace): ProcessEntry {
 /** Append an internal hlidskjalf status line to a process's (bounded) log buffer. */
 export function note(entry: ProcessEntry, message: string): void {
 	appendLog(entry.process.logs, `[hlidskjalf] ${message}`)
+}
+
+/** Run `fn` against the named entry, or do nothing if no such entry is tracked. */
+export function withEntry(
+	ctx: StoreContext,
+	name: string,
+	fn: (entry: ProcessEntry) => void,
+): void {
+	const entry = ctx.entries.get(name)
+
+	if (!entry) return
+
+	fn(entry)
 }
 
 export function clearTimers(entry: ProcessEntry): void {

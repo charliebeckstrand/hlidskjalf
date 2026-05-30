@@ -49,19 +49,24 @@ describe('collectDescendants', () => {
 		expect(collectDescendants(1, children).sort((a, b) => a - b)).toEqual([1, 2, 3])
 	})
 
-	it('terminates on a self-referential map, emitting the pid once', () => {
-		// A PID-reuse race in the /proc snapshot can make a process its own parent; without a
-		// visited set this loops forever and hangs the synchronous poll.
-		expect(collectDescendants(1, new Map([[1, [1]]]))).toEqual([1])
-	})
-
-	it('terminates on a cyclic map, emitting each pid once', () => {
+	it('terminates on a cyclic map without revisiting a pid', () => {
+		// A real tree never cycles, but a malformed map must not hang the poll.
 		const children = new Map([
 			[1, [2]],
 			[2, [1]],
 		])
 
 		expect(collectDescendants(1, children).sort((a, b) => a - b)).toEqual([1, 2])
+	})
+
+	it('counts a pid reachable via two parents only once', () => {
+		const children = new Map([
+			[1, [2, 3]],
+			[2, [4]],
+			[3, [4]],
+		])
+
+		expect(collectDescendants(1, children).sort((a, b) => a - b)).toEqual([1, 2, 3, 4])
 	})
 })
 

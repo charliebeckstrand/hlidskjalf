@@ -1,4 +1,5 @@
 import type { ChildProcess } from 'node:child_process'
+import { createUnrefTimer } from '../util.js'
 import { KILL_GRACE_MS } from './constants.js'
 
 /** Whether a child is still running: exists and the OS hasn't reported it exiting. */
@@ -37,11 +38,7 @@ export function killTree(child: ChildProcess, signal: NodeJS.Signals): void {
  * after its SIGTERM. Returns the unref'd timer for the caller to cancel.
  */
 export function escalateKill(child: ChildProcess): ReturnType<typeof setTimeout> {
-	const timer = setTimeout(() => {
+	return createUnrefTimer(KILL_GRACE_MS, () => {
 		if (child.exitCode === null) killTree(child, 'SIGKILL')
-	}, KILL_GRACE_MS)
-
-	timer.unref()
-
-	return timer
+	})
 }

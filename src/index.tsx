@@ -2,6 +2,7 @@ import { parseArgs } from 'node:util'
 import { render } from 'ink'
 import { App } from './app.js'
 import { loadConfig } from './config.js'
+import { sanitizeForDisplay } from './parser.js'
 import type { Options, SortOrder } from './types.js'
 import {
 	DEFAULT_THEME,
@@ -73,7 +74,11 @@ const rawOrder = values.order ?? config.order
 
 const order: SortOrder = rawOrder === 'run' ? 'run' : 'alphabetical'
 
-const title = values.title ?? config.title ?? 'Hlidskjalf'
+// A repo's `dev` script controls argv (`hlidskjalf --title=...`), so a `--title` flag is
+// as untrusted as the config-file title — scrub terminal escapes before it reaches the
+// header, matching the sanitize applied to config.title in loadConfig.
+const title =
+	values.title !== undefined ? sanitizeForDisplay(values.title) : (config.title ?? 'Hlidskjalf')
 
 const metrics = explicit.metrics ?? config.metrics ?? false
 
@@ -86,7 +91,10 @@ const flagTheme = parseTheme(values.theme)
 if (values.theme !== undefined && flagTheme === undefined) {
 	const accepted = [...Object.keys(themes), ...Object.keys(THEME_ALIASES)].join(', ')
 
-	console.error(`Ignoring --theme "${values.theme}": expected one of ${accepted}.`)
+	// values.theme can carry terminal escapes when argv comes from an untrusted dev script.
+	console.error(
+		`Ignoring --theme "${sanitizeForDisplay(values.theme)}": expected one of ${accepted}.`,
+	)
 }
 
 const theme = flagTheme ?? config.theme ?? DEFAULT_THEME
