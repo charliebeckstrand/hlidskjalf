@@ -11,7 +11,7 @@ import { sanitizeForDisplay } from '../logs/index.js'
 import { parseTheme } from '../ui/index.js'
 import { isPlainObject } from '../utilities.js'
 import { normalizeFilters } from '../workspaces.js'
-import type { Config } from './index.js'
+import type { Config } from './types.js'
 
 /**
  * Config file names tried in order, highest priority first. The `.ts` form is the
