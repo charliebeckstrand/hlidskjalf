@@ -668,6 +668,33 @@ describe('manual stop and restart', () => {
 
 		expect(get('web')?.status).toBe('building')
 	})
+
+	it('honors only the latest teardown when stop, kill, and restart race before close', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		const child = childFor('web')
+
+		child?.out('Watching for changes\n')
+
+		// Three teardown requests stack against one in-flight close. The single close handler
+		// must run only the last action (restart), not stopped-then-restart, and must not
+		// register a second handler that double-spawns.
+		store.stopProcess('web')
+
+		store.killProcess('web')
+
+		store.restartProcess('web')
+
+		await flush()
+
+		await flush()
+
+		expect(spawnCount('web')).toBe(2)
+
+		expect(get('web')?.status).toBe('building')
+	})
 })
 
 describe('pause and resume', () => {

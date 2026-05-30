@@ -136,6 +136,73 @@ describe('createHeartbeat', () => {
 		expect(fetchMock).not.toHaveBeenCalled()
 	})
 
+	it('does not resurrect an idle process that was stopped mid-probe', async () => {
+		vi.useFakeTimers()
+
+		let release: () => void = () => {}
+
+		const pending = new Promise<void>((res) => {
+			release = res
+		})
+
+		// A probe that stays in flight until we release it, so the status can change between
+		// the probe call and its resolution.
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(() => pending.then(() => ({ body: { cancel: async () => {} } }))),
+		)
+
+		const e = entry('idle', { url: 'http://localhost:3000', lastGoodStatus: 'watching' })
+
+		const setStatus = run(new Map([['web', e]]))
+
+		await vi.advanceTimersByTimeAsync(10_000)
+
+		// The process is stopped while the probe is still awaiting the network.
+		e.process.status = 'stopped'
+
+		release()
+
+		await vi.advanceTimersByTimeAsync(0)
+
+		// The guard must see the changed status and refuse to flip it back to running.
+		expect(setStatus).not.toHaveBeenCalled()
+	})
+
+	it('does not mark a ready process idle when it changed status mid-probe', async () => {
+		vi.useFakeTimers()
+
+		vi.setSystemTime(1_000_000)
+
+		let reject: () => void = () => {}
+
+		const pending = new Promise<void>((_res, rej) => {
+			reject = () => rej(new Error('unreachable'))
+		})
+
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(() => pending),
+		)
+
+		const e = entry('ready', { url: 'http://localhost:3000', lastOutputAt: 1 })
+
+		const setStatus = run(new Map([['web', e]]))
+
+		await vi.advanceTimersByTimeAsync(10_000)
+
+		// The process stops while the (about-to-fail) probe is still pending.
+		e.process.status = 'stopped'
+
+		reject()
+
+		await vi.advanceTimersByTimeAsync(0)
+
+		// An unreachable probe would normally idle a ready process; the status guard prevents
+		// idling something no longer running.
+		expect(setStatus).not.toHaveBeenCalled()
+	})
+
 	it('stops sweeping after stop()', async () => {
 		vi.useFakeTimers()
 
