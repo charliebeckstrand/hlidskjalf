@@ -98,7 +98,7 @@ vi.mock('node:child_process', () => ({
 vi.mock('../src/workspaces.js', async (importOriginal) => {
 	const actual = await importOriginal<typeof import('../src/workspaces.js')>()
 
-	return { ...actual, discover: () => hoisted.discovered.current }
+	return { ...actual, discoverWorkspaces: () => hoisted.discovered.current }
 })
 
 // Capture the re-discovery callback so watch-mode tests can fire it without real fs events.

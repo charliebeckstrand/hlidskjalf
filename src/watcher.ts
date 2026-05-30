@@ -51,7 +51,7 @@ export function watchWorkspaces(root: string, onChange: () => void): Watcher {
 	const watchChild = (dir: string) => {
 		if (closed || childWatchers.has(dir)) return
 
-		// Mirror discover()'s containment check: a symlinked workspace dir must not place
+		// Mirror discoverWorkspaces()'s containment check: a symlinked workspace dir must not place
 		// a watcher on a target outside the root.
 		try {
 			if (!realpathSync(dir).startsWith(resolvedRoot + sep)) return
