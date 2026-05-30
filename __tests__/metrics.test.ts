@@ -183,6 +183,19 @@ describe('parseProcStat', () => {
 
 		expect(parsed?.rss).toBe(0)
 	})
+
+	it('floors absent cpu-tick fields on a short stat line to 0 rather than NaN', () => {
+		// A truncated stat line (e.g. a zombie racing collection) has a valid ppid but no
+		// utime/stime. Those must floor to 0 so summed ticks can't reach the meter as NaN and
+		// poison a workspace's CPU reading.
+		const parsed = parseProcStat('1234 (comm) S 1 2 3')
+
+		expect(parsed?.ppid).toBe(1)
+
+		expect(parsed?.utime).toBe(0)
+
+		expect(parsed?.stime).toBe(0)
+	})
 })
 
 describe('cpuPercentFromTicks', () => {

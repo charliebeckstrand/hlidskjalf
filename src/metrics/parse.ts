@@ -161,12 +161,18 @@ export function parseProcStat(content: string, pageSize = 4096): ProcStat | null
 
 	const ppid = Number.parseInt(fields[1] ?? '', 10)
 
-	const utime = Number.parseInt(fields[11] ?? '', 10)
+	// A short stat line (a zombie racing collection, a truncated read) leaves the CPU/RSS
+	// fields absent. Floor each to 0 so a NaN can't reach the meter, where summed ticks feed
+	// sumTickDeltas and summed RSS feeds a workspace total — matching parsePsOutput, whose
+	// parseCpuTime already yields 0 on malformed input.
+	const utimeRaw = Number.parseInt(fields[11] ?? '', 10)
 
-	const stime = Number.parseInt(fields[12] ?? '', 10)
+	const utime = Number.isNaN(utimeRaw) ? 0 : utimeRaw
 
-	// A malformed RSS field floors to 0 (matching parsePsOutput) so it can't poison a
-	// workspace's summed memory with NaN.
+	const stimeRaw = Number.parseInt(fields[12] ?? '', 10)
+
+	const stime = Number.isNaN(stimeRaw) ? 0 : stimeRaw
+
 	const rssPages = Number.parseInt(fields[21] ?? '', 10)
 
 	const rss = (Number.isNaN(rssPages) ? 0 : rssPages) * pageSize
