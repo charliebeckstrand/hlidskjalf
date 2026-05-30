@@ -3,6 +3,8 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
 	test: {
 		include: ['__tests__/**/*.test.ts'],
+		pool: 'vmThreads',
+		sequence: { shuffle: true },
 		coverage: {
 			provider: 'v8',
 			include: ['src/**'],
