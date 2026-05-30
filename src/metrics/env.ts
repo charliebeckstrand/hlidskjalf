@@ -34,8 +34,13 @@ export function safeEnv(
 ): Record<string, string | undefined> {
 	const filtered: Record<string, string | undefined> = {}
 
-	for (const key of Object.keys(source)) {
-		if (ENV_ALLOWLIST.has(key)) filtered[key] = source[key]
+	// Iterate the small fixed allowlist, not all of `source`: process.env routinely
+	// carries dozens of vars, so a per-key lookup against the allowlist avoids both the
+	// larger scan and the intermediate array Object.keys would allocate.
+	for (const key of ENV_ALLOWLIST) {
+		const value = source[key]
+
+		if (value !== undefined) filtered[key] = value
 	}
 
 	filtered.FORCE_COLOR = '1'
