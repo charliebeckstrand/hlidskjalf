@@ -12,7 +12,7 @@ import {
 	statusDisplay,
 	truncateEnd,
 } from '../../ui/index.js'
-import { Cell, StatusGlyph } from '../primitives.js'
+import { Cell, StatusGlyph } from '../primitives/index.js'
 
 const kindLabel = {
 	package: 'pkg',
