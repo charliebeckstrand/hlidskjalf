@@ -68,12 +68,29 @@ const baseMatchers: { pattern: RegExp; status: Status }[] = [
 // no-URL line, rather than running each regex. Derived from source to stay in sync.
 const matchers = baseMatchers.map((m) => ({ ...m, needsHttp: m.pattern.source.includes('http') }))
 
+// The non-http matchers OR'd into one gate. On a line with no `http` — the dominant log
+// line, which the loop already restricts to these matchers — a failure here means none of
+// them can match, so the line is rejected after a single scan instead of running each
+// regex. Built from the same `matchers` array (it can't drift out of sync) and excludes
+// the http matchers, keeping the gate free of their heavy `\S+`/`.*?` patterns; an http
+// line skips the gate and runs the full loop as before. Compiled case-insensitively, which
+// only widens it — the loop still makes the authoritative, ordered, case-correct decision.
+const ANY_NON_HTTP_MATCHER = new RegExp(
+	matchers
+		.filter((m) => !m.needsHttp)
+		.map((m) => `(?:${m.pattern.source})`)
+		.join('|'),
+	'i',
+)
+
 export function parseLine(line: string): ParsedLine {
 	const truncated = line.length > MAX_PARSE_LENGTH ? line.slice(0, MAX_PARSE_LENGTH) : line
 
 	if (DTS.test(truncated)) return {}
 
 	const hasHttp = truncated.includes('http')
+
+	if (!hasHttp && !ANY_NON_HTTP_MATCHER.test(truncated)) return {}
 
 	for (const { pattern, status, needsHttp } of matchers) {
 		if (needsHttp && !hasHttp) continue
