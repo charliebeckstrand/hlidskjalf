@@ -4,9 +4,9 @@ import { filterWorkspaces, isValidPackageName, sortByDeps, sortByName } from '..
 import { makeWorkspaces } from './fixtures.js'
 
 /**
- * Workspace discovery and ordering run at startup (and `discover` again is I/O
- * bound, so it's excluded here). These pure transforms scale with the number of
- * workspaces, so they're benchmarked against a sizeable synthetic monorepo.
+ * Workspace discovery and ordering run at startup. `discover` is I/O bound and excluded
+ * here; these pure transforms scale with the workspace count, so they run against a
+ * sizeable synthetic monorepo.
  */
 export function workspacesSuite(): Bench {
 	const bench = new Bench({ name: 'workspaces — discovery & ordering', time: 500 })

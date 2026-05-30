@@ -13,7 +13,7 @@ export interface ProcessEntry {
 	lastGoodStatus: Status | null
 	restartRetries: number
 	lastOutputAt: number
-	/** Set when stop/restart deliberately kills the child, so its close isn't treated as a crash. */
+	/** Set when stop/restart deliberately kills the child, so its close isn't a crash. */
 	intentionalExit: boolean
 	/** True while a deliberate kill is in flight, so a second stop/restart doesn't stack a close handler. */
 	teardownStarted: boolean
@@ -36,7 +36,7 @@ export interface Store {
 	pauseProcess(name: string): void
 	/** Resume a paused process with SIGCONT, restoring the status it held before pausing. */
 	resumeProcess(name: string): void
-	/** Force-kill a process immediately (SIGKILL), skipping the graceful grace period; no restart. */
+	/** Force-kill a process immediately (SIGKILL), skipping the SIGTERM grace period; no restart. */
 	killProcess(name: string): void
 	clearLogs(name: string): void
 	/** Register and spawn a workspace discovered after startup (watch mode). */
@@ -46,10 +46,10 @@ export interface Store {
 }
 
 /**
- * The shared mutable state behind a {@link Store}. Each concern module (lifecycle,
- * spawn, control, recovery, watch, …) operates over this context rather than a class
- * instance, so the store's behaviour is split across small files without losing the
- * single source of truth they all read and mutate.
+ * Shared mutable state behind a {@link Store}. Each concern module (lifecycle, spawn,
+ * control, recovery, watch, …) operates over this context rather than a class instance,
+ * splitting the store across small files while keeping one source of truth they all
+ * read and mutate.
  */
 export interface StoreContext {
 	entries: Map<string, ProcessEntry>

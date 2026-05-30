@@ -1,5 +1,3 @@
-// --- External-store interface --------------------------------------------------
-
 import type { Process } from '../types.js'
 import type { StoreContext } from './types.js'
 

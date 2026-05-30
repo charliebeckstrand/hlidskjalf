@@ -3,8 +3,8 @@ import { MAX_LOGS } from '../src/logs.js'
 import { createStore, type Store } from '../src/store/index.js'
 import type { Options, Process, Workspace } from '../src/types.js'
 
-// A controllable stand-in for a spawned child process. Lets tests drive stdout/stderr
-// output and exit/signal events deterministically.
+// Controllable stand-in for a spawned child: drives stdout/stderr and exit/signal events
+// deterministically.
 const hoisted = vi.hoisted(() => {
 	const { EventEmitter } = require('node:events') as typeof import('node:events')
 
@@ -47,7 +47,7 @@ const hoisted = vi.hoisted(() => {
 
 			this.killed = true
 
-			// Model the OS delivering the signal and the process then closing.
+			// Model the OS delivering the signal, then the process closing.
 			queueMicrotask(() => {
 				if (this.exitCode === null && this.signalCode === null) {
 					this.signalCode = this.lastSignal
@@ -59,12 +59,10 @@ const hoisted = vi.hoisted(() => {
 			return true
 		}
 
-		/** Push a chunk of output as the child would on stdout. */
 		out(text: string): void {
 			this.stdout.emit('data', Buffer.from(text))
 		}
 
-		/** Simulate the process exiting on its own (a crash or clean stop). */
 		exit(code: number | null, signal: string | null = null): void {
 			this.exitCode = code
 
@@ -94,7 +92,7 @@ vi.mock('node:child_process', () => ({
 	execFileSync: () => hoisted.psOutput.current,
 }))
 
-// Keep the real sort/filter logic; only stub discovery so tests control the workspace set.
+// Keep real sort/filter logic; stub only discovery so tests control the workspace set.
 vi.mock('../src/workspaces.js', async (importOriginal) => {
 	const actual = await importOriginal<typeof import('../src/workspaces.js')>()
 
@@ -140,8 +138,8 @@ function makeStore(opts: Partial<Options> = {}): Store {
 beforeEach(() => {
 	hoisted.discovered.current = [APP]
 
-	// killTree signals the child's group via process.kill(-pid). The fake pids aren't
-	// real groups, so intercept and drive the matching fake child instead.
+	// killTree signals the child's group via process.kill(-pid). Fake pids aren't real
+	// groups, so intercept and drive the matching fake child instead.
 	vi.spyOn(process, 'kill').mockImplementation(((pid: number, signal?: NodeJS.Signals) => {
 		const child = hoisted.spawned.find((c) => c.pid === Math.abs(pid))
 
@@ -235,11 +233,11 @@ describe('external-store contract', () => {
 
 		store.subscribe(listener)
 
-		// Each chunk is a separate data event, as a chatty dev server would emit.
+		// Each chunk is a separate data event, like a chatty dev server.
 		for (let i = 0; i < 50; i++) childFor('web')?.out(`line ${i}\n`)
 
-		// The store notifies per line, but a single read rebuilds the snapshot just once
-		// and reflects every line — the trailing-edge guarantee the UI relies on.
+		// Store notifies per line; one read rebuilds the snapshot once and reflects every
+		// line — the trailing-edge guarantee the UI relies on.
 		expect(listener.mock.calls.length).toBeGreaterThanOrEqual(50)
 
 		const snap = store.getSnapshot()
@@ -290,7 +288,6 @@ describe('lifecycle', () => {
 
 		await store.start()
 
-		// The package spawns first; the app waits until the package settles.
 		expect(childFor('lib')).toBeDefined()
 
 		expect(childFor('web')).toBeUndefined()
@@ -485,7 +482,7 @@ describe('unexpected exit', () => {
 
 		await flush()
 
-		// A pnpm rebuild fsevents child is spawned, then closes, then the workspace respawns.
+		// pnpm rebuilds fsevents, that child closes, then the workspace respawns.
 		const rebuild = hoisted.spawned.find((c) => c.args[0] === 'rebuild')
 
 		expect(rebuild).toBeDefined()
@@ -659,14 +656,14 @@ describe('pause and resume', () => {
 
 		store.pauseProcess('web')
 
-		// Output still buffered in the pipe arrives after the SIGSTOP.
+		// Output buffered in the pipe arrives after the SIGSTOP.
 		childFor('web')?.out('running on http://localhost:3000\n')
 
 		await flush()
 
 		expect(get('web')?.status).toBe('paused')
 
-		// The line is still captured in the log buffer, just not acted on.
+		// The line is captured in the log buffer, just not acted on.
 		expect(get('web')?.logs.some((l) => l.includes('localhost:3000'))).toBe(true)
 	})
 
@@ -706,7 +703,7 @@ describe('pause and resume', () => {
 
 		await flush()
 
-		// Continued first so the terminate lands promptly, then torn down.
+		// SIGCONT first so the SIGTERM lands promptly, then torn down.
 		expect(vi.mocked(process.kill)).toHaveBeenCalledWith(-pid, 'SIGCONT')
 
 		expect(vi.mocked(process.kill)).toHaveBeenCalledWith(-pid, 'SIGTERM')
@@ -866,7 +863,7 @@ describe('metrics', () => {
 	const realPlatform = process.platform
 
 	beforeEach(() => {
-		// Force the `ps`-based path so the poll reads our controllable fixture.
+		// Force the `ps`-based path so the poll reads the controllable fixture.
 		Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true })
 
 		hoisted.psOutput.current = ''

@@ -19,11 +19,11 @@ export interface LogScroll {
 }
 
 /**
- * Drives the log panel's scroll offset, measured in lines above the tail. Offset 0
- * follows new output; PgUp/PgDn page by a viewport and Home/End jump to the
- * oldest/newest lines. Switching processes (or clearing the buffer) snaps back to
- * follow mode, and while paused the viewport stays anchored to the same lines as fresh
- * output arrives rather than scrolling out from under the reader.
+ * Drives the log panel's scroll offset, measured in lines above the tail. Offset 0 follows
+ * new output; PgUp/PgDn page by a viewport, Home/End jump to the oldest/newest lines.
+ * Switching processes (or clearing the buffer) snaps back to follow mode. While paused, the
+ * viewport stays anchored to the same lines as fresh output arrives rather than scrolling
+ * out from under the reader.
  */
 export function useLogScroll(
 	total: number,
@@ -49,8 +49,7 @@ export function useLogScroll(
 	}
 
 	const maxScroll = Math.max(0, total - height)
-	// Read by the input handler, whose closure would otherwise capture a stale bound
-	// when the buffer or viewport size changes between renders.
+	// The input handler's closure would otherwise capture a stale bound across renders.
 	const maxScrollRef = useRef(maxScroll)
 	maxScrollRef.current = maxScroll
 

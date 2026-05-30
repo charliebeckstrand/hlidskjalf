@@ -25,10 +25,10 @@ export function App({ options }: Props) {
 
 	// Bridge the external store into React. The store notifies per output line; a chatty
 	// dev server emits hundreds a second, and `useSyncExternalStore` schedules a
-	// synchronous re-render on every notification. Forwarding each one trips React's
-	// nested-update guard ("Maximum update depth exceeded") and pegs the CPU, so coalesce
-	// a burst into a single React update per event-loop turn. `getSnapshot` still returns
-	// the latest state synchronously, so no output is dropped — only the render is batched.
+	// synchronous re-render on each. Forwarding every one trips React's nested-update
+	// guard ("Maximum update depth exceeded") and pegs the CPU, so coalesce a burst into
+	// one React update per event-loop turn. `getSnapshot` still returns the latest state
+	// synchronously, so no output is dropped — only the render is batched.
 	// (`useDeferredValue` below additionally de-prioritizes rendering that batched value.)
 	const subscribe = useCallback(
 		(onStoreChange: () => void) => {

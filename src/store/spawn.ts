@@ -1,5 +1,3 @@
-// --- Spawning & output handling ------------------------------------------------
-
 import { type ChildProcess, spawn } from 'node:child_process'
 import { appendLog } from '../logs.js'
 import { safeEnv } from '../metrics/index.js'
@@ -23,11 +21,10 @@ export function spawnWorkspace(ctx: StoreContext, workspace: Workspace): void {
 		cwd: ctx.root,
 		stdio: 'pipe',
 		env: safeEnv(),
-		// Put each dev process in its own process group. Otherwise it shares ours, and
-		// when a dev toolchain tears itself down by signalling its whole group
-		// (`kill -- -<pgid>`), the signal also lands on hlidskjalf — whose SIGTERM
-		// handler then exits the entire UI. A dedicated group also lets us reap the
-		// real server under `pnpm` instead of orphaning it.
+		// Own process group per dev process. Sharing ours means a toolchain that tears
+		// itself down via `kill -- -<pgid>` also signals hlidskjalf, whose SIGTERM handler
+		// then exits the UI. A dedicated group also reaps the real server under `pnpm`
+		// instead of orphaning it.
 		detached: true,
 	})
 
@@ -129,8 +126,8 @@ function handleLine(ctx: StoreContext, name: string, raw: string): void {
 
 	entry.lastOutputAt = Date.now()
 
-	// A paused child is frozen; any output still draining from the pipe shouldn't
-	// flip its status out of `paused`. Keep logging, but leave the status alone.
+	// Output draining from a paused child's pipe must not flip its status out of
+	// `paused`. Keep logging, leave the status alone.
 	if (entry.pausedFrom !== null) {
 		changed(ctx)
 
@@ -165,8 +162,7 @@ function handleLine(ctx: StoreContext, name: string, raw: string): void {
 	}
 	if (url) proc.url = url
 
-	// A status shift parsed from output tends to bracket a burst of CPU; refresh
-	// metrics promptly rather than on the next poll.
+	// A parsed status shift brackets a burst of CPU; refresh metrics now, not next poll.
 	if (proc.status !== prevStatus) ctx.meter?.request()
 
 	changed(ctx)
@@ -212,8 +208,7 @@ function handleUnexpectedExit(
 	if (signal === 'SIGABRT') {
 		rebuildFsevents(ctx)
 			.then(() => {
-				// The workspace may have been stopped or removed while the rebuild ran;
-				// only respawn if it's still tracked and no deliberate exit intervened.
+				// Respawn only if still tracked and no deliberate exit intervened during the rebuild.
 				const e = ctx.entries.get(workspace.name)
 				if (!ctx.stopping && e && !e.intentionalExit) spawnWorkspace(ctx, workspace)
 			})

@@ -1,5 +1,3 @@
-// --- Value formatters (dashboard metric cells) ---------------------------------
-
 import type { Metrics } from '../types.js'
 import { colors } from './theme.js'
 

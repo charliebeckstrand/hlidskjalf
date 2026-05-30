@@ -20,7 +20,7 @@ describe('loadConfig', () => {
 	beforeEach(() => {
 		tmpDir = fs.mkdtempSync(join(fs.realpathSync(os.tmpdir()), 'hlidskjalf-config-'))
 
-		// Validation warnings are expected in several cases — keep test output clean.
+		// Several cases expect validation warnings; silence them to keep output clean.
 		vi.spyOn(console, 'error').mockImplementation(() => {})
 	})
 
@@ -73,8 +73,8 @@ describe('loadConfig', () => {
 		expect(await loadConfig(tmpDir)).toEqual({ order: 'alphabetical', metrics: true })
 	})
 
-	// Each case uses its own (fresh) tmpDir so the dynamic import isn't served from
-	// the module cache, which keys on the config file's path.
+	// Each case uses a fresh tmpDir: the dynamic import caches on the config file's path,
+	// so a reused path would serve a stale module.
 	it('drops fields with the wrong type or out-of-range values', async () => {
 		write(
 			'hlidskjalf.config.ts',

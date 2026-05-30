@@ -8,10 +8,9 @@ import { LOG_LINES } from './fixtures.js'
  * dev server fills the buffer past MAX_LOGS within seconds, so the steady state
  * — appending into an already-full buffer — is what matters.
  *
- * The previous implementation spliced one line off the front on every append
- * once full; splicing from the front shifts every retained line, so that was
- * O(MAX_LOGS) per line. `naiveAppend` reproduces it here as a baseline so the
- * amortized batch-trim's win is visible in the same run.
+ * The previous implementation spliced one line off the front on every append once full;
+ * a front splice shifts every retained line, so that was O(MAX_LOGS) per line. `naiveAppend`
+ * reproduces it as a baseline so the amortized batch-trim's win shows in the same run.
  */
 function naiveAppend(logs: string[], line: string): void {
 	logs.push(line)
@@ -24,8 +23,8 @@ export function logsSuite(): Bench {
 
 	const line = LOG_LINES.plain
 
-	// Prefill to capacity so we measure steady-state appends, not the initial
-	// fill. Each task mutates its own buffer; both self-regulate via trimming.
+	// Prefill to capacity to measure steady-state appends, not the initial fill. Each task
+	// mutates its own buffer; both self-regulate via trimming.
 	const amortized = Array.from({ length: MAX_LOGS }, () => line)
 
 	const naive = Array.from({ length: MAX_LOGS }, () => line)

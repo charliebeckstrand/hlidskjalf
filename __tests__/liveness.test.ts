@@ -13,10 +13,9 @@ function entry(
 	}
 }
 
-/** A fetch that resolves (server reachable), draining the body like the real probe expects. */
+/** Resolving fetch with a cancelable body, matching what the real probe drains. */
 const reachable = () => vi.fn(async () => ({ body: { cancel: async () => {} } }))
 
-/** A fetch that rejects (server unreachable). */
 const unreachable = () =>
 	vi.fn(async () => {
 		throw new Error('unreachable')

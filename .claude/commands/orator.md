@@ -19,17 +19,6 @@ Ask one specific clarifying question if no target resolves from context.
 
 ---
 
-## 0. Manifest
-
-Read `./manifest.json`. If missing, halt with a pointer to `/repo:manifest`.
-
-Pull:
-
-- `packages[*].path`, `packages[*].name`.
-- `conventions.files`, `conventions.principles`, `conventions.vocabularyGlossary`.
-
----
-
 ## 1. Rule set
 
 Pick by target path:
@@ -49,9 +38,9 @@ Ambiguous target: apply §3 alone — half-applying §3a or §3b is wrong. Direc
 
 Read, in order:
 
-1. `CLAUDE.md` and any file in `conventions.files`. Declared rules win every tie.
+1. `CLAUDE.md`, and any `AGENTS.md` it references. Declared rules win every tie.
 2. 2–3 sibling artifacts — comments inside the file, READMEs for a README task, `git log --pretty=%B -n 20` for commits, skill files for skill-file work.
-3. `conventions.vocabularyGlossary`. Preserve glossary terms unaltered.
+3. Domain and glossary terms already in use across the codebase. Preserve them unaltered.
 
 Lock: register, tense, sentence rhythm, punctuation, capitalization, vocabulary, markdown idioms. Skill-file targets: also lock structural shape — TRIGGER preamble, numbered `## N.` steps, `## Arguments`, `## Rules` footer.
 

@@ -1,5 +1,3 @@
-// --- Discovery -----------------------------------------------------------------
-
 import type { Workspace } from '../types.js'
 import { discover, filterWorkspaces, sortByDeps, sortByName } from '../workspaces.js'
 import type { StoreContext } from './types.js'

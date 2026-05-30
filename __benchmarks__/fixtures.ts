@@ -1,12 +1,11 @@
 import type { Process, Workspace, WorkspaceKind } from '../src/types.js'
 
 /**
- * Representative dev-server log lines, one per parser branch plus the common
- * "no match" case that dominates real output. Built once and reused so the
- * benchmark measures parsing, not fixture construction.
+ * Dev-server log lines, one per parser branch plus the dominant "no match" case.
+ * Built once so the benchmark measures parsing, not fixture construction.
  */
 export const LOG_LINES = {
-	/** The overwhelmingly common case: a line that matches no status pattern. */
+	/** The dominant case: a line matching no status pattern. */
 	plain: '[12:04:51] info  - compiled successfully in 1243 ms (482 modules)',
 	/** Vite-style ready line carrying a local URL to extract. */
 	ready: '  ➜  Local:   http://localhost:5173/',
@@ -27,9 +26,8 @@ export const LOG_LINES = {
 const KINDS: readonly WorkspaceKind[] = ['package', 'app', 'service']
 
 /**
- * Build a deterministic monorepo of `count` workspaces where each one depends on
- * a few earlier packages. Deterministic so successive benchmark runs see an
- * identical dependency graph and stay comparable.
+ * Build a deterministic monorepo of `count` workspaces, each depending on a few earlier
+ * packages. Determinism keeps successive runs comparable against an identical graph.
  */
 export function makeWorkspaces(count: number): Workspace[] {
 	const workspaces: Workspace[] = []
@@ -50,8 +48,8 @@ export function makeWorkspaces(count: number): Workspace[] {
 }
 
 /**
- * Wrap `count` synthetic workspaces as ready Process records, matching the shape
- * the dashboard's layout maths consumes each render.
+ * Wrap `count` synthetic workspaces as ready Process records, the shape the
+ * dashboard's layout maths consumes each render.
  */
 export function makeProcesses(count: number): Process[] {
 	return makeWorkspaces(count).map((workspace) => ({
@@ -62,9 +60,9 @@ export function makeProcesses(count: number): Process[] {
 }
 
 /**
- * Build deterministic `ps -eo pid,ppid,time,rss` output for `count` processes
- * arranged into a shallow tree, matching what parsePsOutput consumes in the
- * metrics poll loop. The TIME column is cumulative CPU time as `MM:SS`.
+ * Build deterministic `ps -eo pid,ppid,time,rss` output for `count` processes in
+ * a shallow tree, as parsePsOutput consumes in the metrics poll loop. TIME is
+ * cumulative CPU time as `MM:SS`.
  */
 export function makePsOutput(count: number): string {
 	const lines = ['  PID  PPID     TIME   RSS']

@@ -5,12 +5,11 @@ import type { Process } from '../src/types.js'
 import { makeProcesses } from './fixtures.js'
 
 /**
- * The dashboard recomputes the name-column width whenever the process list
- * changes — up to once per render frame. The previous spread form
- * (`Math.max(min, ...processes.map(...))`) allocated an intermediate array and
- * spread it as call arguments; `spreadWidth` reproduces it as a baseline so the
- * loop's per-render savings (and freedom from the spread's RangeError ceiling)
- * are visible in the same run.
+ * The dashboard recomputes the name-column width whenever the process list changes — up to
+ * once per render frame. The previous spread form (`Math.max(min, ...processes.map(...))`)
+ * allocated an intermediate array and spread it as call arguments; `spreadWidth` reproduces
+ * it as a baseline so the loop's per-render savings — and its freedom from the spread's
+ * RangeError ceiling — show in the same run.
  */
 function spreadWidth(processes: Process[], min = 14): number {
 	return Math.max(min, ...processes.map((p) => p.workspace.name.length + 2))

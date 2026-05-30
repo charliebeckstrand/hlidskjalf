@@ -1,9 +1,7 @@
 /**
  * Terminal escape-sequence helpers: OSC 8 hyperlinks and the alternate screen buffer.
- * Kept free of Ink/React imports so each can be unit tested directly.
+ * No Ink/React imports, so each is unit-testable.
  */
-
-// --- Terminal hyperlinks -------------------------------------------------------
 
 const ESC = String.fromCharCode(27)
 
@@ -12,25 +10,25 @@ const OSC8 = `${ESC}]8;;`
 
 /**
  * OSC terminator. The spec allows BEL or ST, but Ink's renderer
- * (`@alcalzone/ansi-tokenize`) only recognises the BEL form — feeding it ST makes
- * the tokenizer miss the terminator, drop the label on narrow columns, and strand
- * a BEL that rings the bell on every re-render. So we terminate with BEL.
+ * (`@alcalzone/ansi-tokenize`) recognises only BEL — feeding it ST makes the tokenizer
+ * miss the terminator, drop the label on narrow columns, and strand a BEL that rings the
+ * bell on every re-render. Terminate with BEL.
  */
 const BEL = String.fromCharCode(7)
 
 /**
- * Wrap `label` in an OSC 8 hyperlink pointing at `url`. The clickable target is
- * always the full `url` while only `label` is rendered, so a truncated label still
- * opens the complete address. Terminals without OSC 8 show `label` as plain text.
+ * Wrap `label` in an OSC 8 hyperlink pointing at `url`. The clickable target is always
+ * the full `url` while only `label` renders, so a truncated label still opens the complete
+ * address. Terminals without OSC 8 show `label` as plain text.
  */
 export function hyperlink(url: string, label: string = url): string {
 	return `${OSC8}${url}${BEL}${label}${OSC8}${BEL}`
 }
 
 /**
- * Truncate `text` to at most `width` display columns with a single-column ellipsis
- * when shortened. Used to pre-fit a hyperlink label so Ink never truncates it
- * itself (its truncator isn't OSC 8 aware). URLs are ASCII, so chars map 1:1 to columns.
+ * Truncate `text` to at most `width` display columns, with a single-column ellipsis when
+ * shortened. Pre-fits a hyperlink label so Ink never truncates it itself (its truncator
+ * isn't OSC 8 aware). URLs are ASCII, so chars map 1:1 to columns.
  */
 export function truncateEnd(text: string, width: number): string {
 	if (width <= 0) return ''
@@ -42,17 +40,15 @@ export function truncateEnd(text: string, width: number): string {
 	return `${text.slice(0, width - 1)}...`
 }
 
-// --- Alternate screen ----------------------------------------------------------
-
 /** DECSET/DECRST 1049: switch to / restore the alternate screen buffer. */
 const ENTER_ALT_SCREEN = '\x1b[?1049h'
 const EXIT_ALT_SCREEN = '\x1b[?1049l'
 
 /**
- * Switch `stream` to the alternate screen (the buffer vim/htop use, so frames never
- * land in scrollback) and return an idempotent restore function. A `process.exit`
- * listener guarantees the primary screen returns even on an abrupt exit. No-op on a
- * non-TTY stream (piped output, tests).
+ * Switch `stream` to the alternate screen (the buffer vim/htop use, so frames never land
+ * in scrollback) and return an idempotent restore function. A `process.exit` listener
+ * restores the primary screen even on an abrupt exit. No-op on a non-TTY stream (piped
+ * output, tests).
  */
 export function enterAltScreen(stream: NodeJS.WriteStream = process.stdout): () => void {
 	if (!stream.isTTY) return () => {}

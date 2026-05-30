@@ -19,9 +19,8 @@ import {
 /** Periodic fallback poll interval. */
 const METRICS_INTERVAL_MS = 3_000
 
-// Floor on the gap between two CPU samples. Event-driven sampling can ask sooner than
-// the periodic poll, but a delta over too short a window is dominated by tick-granularity
-// noise, so never sample faster than this.
+// Floor on the gap between two CPU samples: a delta over too short a window is dominated
+// by tick-granularity noise, so never sample faster than this even when request() asks.
 const MIN_METRICS_INTERVAL_MS = 1_000
 
 /** Hard cap on the `ps` call so a wedged process table can't stall the poll. */
