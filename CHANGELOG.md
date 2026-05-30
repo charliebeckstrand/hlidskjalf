@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Pause / resume and force-kill controls** — press `p` to suspend the selected
+  workspace with `SIGSTOP` (it stays alive and holds its port but consumes no CPU)
+  and again to resume it with `SIGCONT`, restoring the status it held before
+  pausing; a new `paused` status shows with a `⏸` glyph. Press `x` to force-kill a
+  wedged workspace with `SIGKILL` immediately — no graceful `SIGTERM` grace period
+  and no restart. A paused process is woken before any stop/restart/kill so the
+  signal lands promptly.
+
 ## [0.4.2]
 
 ### Changed
