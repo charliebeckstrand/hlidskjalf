@@ -20,6 +20,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Startup no longer wedges when a package is paused or removed mid-launch** — the
+  gate that holds apps until their package dependencies start waited on a fixed set
+  of settled statuses. Pausing a package (which also cancels its startup timer, so it
+  never times out) or a watch-mode rediscovery removing one left the gate unresolved
+  forever, so the app tier never spawned and the metrics/liveness pollers — armed only
+  after the gate — never started. The gate now waits only while a package is still
+  starting, releasing on any other state.
+- **Switching to a longer log keeps following** — leaving a scrolled-up process for one
+  with more log lines opened it scrolled up instead of pinned to the newest line; the
+  follow-mode reset now wins over the scroll-anchor adjustment on a process switch.
 - **Metrics polling can't hang on a cyclic process tree** — the descendant walk
   now tracks visited PIDs, so a PID-reuse race that momentarily yields a cyclic
   parent→child map no longer loops forever and freezes the TUI. A PID reachable
