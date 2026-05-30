@@ -1,7 +1,7 @@
 import type { Workspace } from '../types.js'
 import { discoverFiltered, sortForDisplay } from './discovery.js'
-import { beginTeardown, clearTimers, newEntry, withEntry } from './entry.js'
-import { changed } from './snapshot.js'
+import { beginTeardown, clearTimers, createEntry, withEntry } from './entry.js'
+import { markChanged } from './snapshot.js'
 import { spawnWorkspace } from './spawn.js'
 import type { StoreContext } from './types.js'
 
@@ -30,7 +30,7 @@ export function rediscover(ctx: StoreContext): void {
 
 	ctx.order = sortForDisplay(ctx, fresh).map((w) => w.name)
 
-	changed(ctx)
+	markChanged(ctx)
 }
 
 /**
@@ -45,7 +45,7 @@ export function addWorkspace(ctx: StoreContext, workspace: Workspace): void {
 
 	ctx.allWorkspaces.push(workspace)
 
-	ctx.entries.set(workspace.name, newEntry(workspace))
+	ctx.entries.set(workspace.name, createEntry(workspace))
 
 	// Append for immediate display; `rediscover` re-sorts afterward.
 	if (!ctx.order.includes(workspace.name)) ctx.order.push(workspace.name)
@@ -74,6 +74,6 @@ export function removeWorkspace(ctx: StoreContext, name: string): void {
 
 		ctx.meter?.reset(name)
 
-		changed(ctx)
+		markChanged(ctx)
 	})
 }

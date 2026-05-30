@@ -3,7 +3,7 @@ import type { Workspace } from '../types.js'
 import { escalateKill, isRunning, killTree } from './children.js'
 import type { ProcessEntry, StoreContext } from './types.js'
 
-export function newEntry(workspace: Workspace): ProcessEntry {
+export function createEntry(workspace: Workspace): ProcessEntry {
 	return {
 		process: { workspace, status: 'pending', logs: [] },
 		child: null,

@@ -22,7 +22,7 @@ export function getSnapshot(ctx: StoreContext): WorkspaceProcess[] {
 }
 
 /** Mark the snapshot stale and notify subscribers (React + internal waiters). */
-export function changed(ctx: StoreContext): void {
+export function markChanged(ctx: StoreContext): void {
 	ctx.dirty = true
 
 	for (const listener of ctx.listeners) listener()

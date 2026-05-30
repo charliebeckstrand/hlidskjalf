@@ -14,7 +14,7 @@ import {
 import { note } from './entry.js'
 import { createLineBuffer } from './lines.js'
 import { clearErrorTimer, scheduleErrorRecovery } from './recovery.js'
-import { changed } from './snapshot.js'
+import { markChanged } from './snapshot.js'
 import { setStatus } from './status.js'
 import type { StoreContext } from './types.js'
 
@@ -133,7 +133,7 @@ function handleLine(ctx: StoreContext, name: string, raw: string): void {
 	// Output draining from a paused child's pipe must not flip its status out of
 	// `paused`. Keep logging, leave the status alone.
 	if (entry.pausedFrom !== null) {
-		changed(ctx)
+		markChanged(ctx)
 
 		return
 	}
@@ -169,7 +169,7 @@ function handleLine(ctx: StoreContext, name: string, raw: string): void {
 	// A parsed status shift brackets a burst of CPU; refresh metrics now, not next poll.
 	if (proc.status !== prevStatus) ctx.meter?.request()
 
-	changed(ctx)
+	markChanged(ctx)
 }
 
 function handleUnexpectedExit(
