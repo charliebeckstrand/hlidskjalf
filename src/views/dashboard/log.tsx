@@ -38,7 +38,8 @@ export const Log = memo(
 		// identity across scroll and growth: window position i maps to absolute line
 		// hiddenCount + i. Blank padding keys continue past the last visible line.
 		const rows = lines.map((line, i) => ({ id: hiddenCount + i, line }))
-		const fills = Array.from({ length: fillCount }, (_, i) => hiddenCount + lines.length + i)
+		const firstFillId = hiddenCount + lines.length
+		const fills = Array.from({ length: fillCount }, (_, i) => firstFillId + i)
 
 		return (
 			<Panel height={height + 3} overflow="hidden" marginX={1} marginTop={1}>
