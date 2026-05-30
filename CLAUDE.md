@@ -22,6 +22,14 @@ Write terse, technical prose optimized for information density.
 
 For substantial work, surface the approach before implementing.
 
+When I'm weighing a decision, suggest the matching tool.
+
+**Don't auto-run.** Move on if I pass.
+
+- `/debate` — a straight X-or-Y
+- `/deliberate` — a thorny choice that needs depth
+- `/council` — high stakes, hard to reverse, several competing tradeoffs
+
 For broad research, delegate to subagents so context stays focused. Assign one task each. Have them report findings, not narrate their steps.
 
 Prove it works. Flag anything left unverified.
