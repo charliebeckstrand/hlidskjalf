@@ -128,15 +128,13 @@ function waitForPackages(ctx: StoreContext, names: string[]): Promise<void> {
 			for (const name of [...remaining]) {
 				const status = ctx.entries.get(name)?.process.status
 
-				if (
-					status === 'watching' ||
-					status === 'ready' ||
-					status === 'error' ||
-					status === 'stopped' ||
-					status === 'timeout'
-				) {
-					remaining.delete(name)
-				}
+				// Wait only while a package is still starting (pending/building). Any other
+				// state releases the gate: it settled (ready/watching/error/stopped/timeout),
+				// was paused (which also clears its startup timer, so it can never time out),
+				// or was removed by a rediscovery (status undefined). Gating on a positive
+				// "settled" set instead would wedge the app tier — and the meter/heartbeat
+				// armed after this gate — on a package that will never reach it.
+				if (status !== 'pending' && status !== 'building') remaining.delete(name)
 			}
 
 			if (remaining.size === 0) {

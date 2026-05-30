@@ -352,6 +352,46 @@ describe('lifecycle', () => {
 		expect(childFor('web')).toBeDefined()
 	})
 
+	it('releases the app gate when a package is paused mid-startup', async () => {
+		hoisted.discovered.current = [LIB, { name: 'web', kind: 'app', deps: ['lib'] }]
+
+		store = makeStore()
+
+		await store.start()
+
+		expect(childFor('web')).toBeUndefined()
+
+		// Pausing clears lib's startup timer, so it can never reach `timeout`. The gate must
+		// still release on `paused` rather than wedge the app tier on a package frozen forever.
+		store.pauseProcess('lib')
+
+		await flush()
+
+		expect(get('lib')?.status).toBe('paused')
+
+		expect(childFor('web')).toBeDefined()
+	})
+
+	it('releases the app gate when a package is removed mid-startup', async () => {
+		hoisted.discovered.current = [LIB, { name: 'web', kind: 'app', deps: ['lib'] }]
+
+		store = makeStore()
+
+		await store.start()
+
+		expect(childFor('web')).toBeUndefined()
+
+		// A rediscovery drops lib while it's still building (reachable in watch mode). Its entry
+		// vanishes, so the gate must release on the missing status rather than wait forever.
+		store.removeWorkspace('lib')
+
+		await flush()
+
+		expect(get('lib')).toBeUndefined()
+
+		expect(childFor('web')).toBeDefined()
+	})
+
 	it('starts an app anyway, with a warning, when its package dependency fails', async () => {
 		hoisted.discovered.current = [LIB, { name: 'web', kind: 'app', deps: ['lib'] }]
 
