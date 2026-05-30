@@ -11,6 +11,7 @@ import {
 	STARTUP_TIMEOUT_MS,
 } from './constants.js'
 import { note } from './entry.js'
+import { createLineBuffer } from './lines.js'
 import { clearErrorTimer, scheduleErrorRecovery } from './recovery.js'
 import { changed } from './snapshot.js'
 import { setStatus } from './status.js'
@@ -58,37 +59,19 @@ export function spawnWorkspace(ctx: StoreContext, workspace: Workspace): void {
 
 	if (entry) entry.startupTimer = startupTimer
 
-	let buffer = ''
+	const lineBuffer = createLineBuffer(MAX_BUFFER_SIZE)
 
 	const onData = (data: Buffer) => {
-		buffer += data.toString()
-
-		if (!buffer.includes('\n') && buffer.length > MAX_BUFFER_SIZE) {
-			handleLine(ctx, workspace.name, buffer)
-
-			buffer = ''
-
-			return
-		}
-
-		const lines = buffer.split('\n')
-
-		buffer = lines.pop() ?? ''
-
-		for (const raw of lines) {
-			const line = raw.trimEnd()
-
-			if (line) handleLine(ctx, workspace.name, line)
-		}
+		for (const line of lineBuffer.push(data.toString())) handleLine(ctx, workspace.name, line)
 	}
 
 	child.stdout?.on('data', onData)
 	child.stderr?.on('data', onData)
 
 	child.on('close', (code, signal) => {
-		if (buffer.trim()) handleLine(ctx, workspace.name, buffer.trimEnd())
+		const rest = lineBuffer.flush()
 
-		buffer = ''
+		if (rest !== null) handleLine(ctx, workspace.name, rest)
 
 		if (ctx.stopping) return
 
@@ -117,6 +100,12 @@ function handleLine(ctx: StoreContext, name: string, raw: string): void {
 	const entry = ctx.entries.get(name)
 
 	if (!entry) return
+
+	// Output draining from a child we're intentionally stopping is teardown noise: when we
+	// SIGTERM the group, `pnpm run dev` logs ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL and "Command
+	// failed with signal SIGTERM" on its way out. The stop was ours, so drop it rather than
+	// surface a failure that didn't happen. A restart clears the flag when the child respawns.
+	if (entry.intentionalExit) return
 
 	const line = raw.length > MAX_LINE_LENGTH ? raw.slice(0, MAX_LINE_LENGTH) : raw
 

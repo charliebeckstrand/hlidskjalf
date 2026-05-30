@@ -23,6 +23,15 @@ export const LOG_LINES = {
 	long: `${'lorem ipsum dolor sit amet '.repeat(160)}listening on http://localhost:8080`,
 } as const
 
+/**
+ * A stdout chunk of `lineCount` complete log lines (newline-terminated), the burst a
+ * chatty dev server can deliver in a single `data` event. Built from the dominant
+ * no-match line so the line buffer measures reassembly, not fixture construction.
+ */
+export function makeChunk(lineCount: number): string {
+	return `${Array.from({ length: lineCount }, (_, i) => `${LOG_LINES.plain} #${i}`).join('\n')}\n`
+}
+
 const KINDS: readonly WorkspaceKind[] = ['package', 'app', 'service']
 
 /**

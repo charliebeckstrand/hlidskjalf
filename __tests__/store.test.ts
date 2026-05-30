@@ -589,6 +589,38 @@ describe('manual stop and restart', () => {
 		expect(get('web')?.status).toBe('stopped')
 
 		expect(get('web')?.logs.some((l) => l.includes('giving up'))).toBe(false)
+
+		// The teardown completion is logged, not just the request.
+		expect(get('web')?.logs.at(-1)).toContain('stopped')
+	})
+
+	it('drops teardown noise emitted after a stop', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		const child = childFor('web')
+
+		child?.out('Watching for changes\n')
+
+		const before = get('web')?.logs.length ?? 0
+
+		store.stopProcess('web')
+
+		// pnpm's complaint as it forwards our SIGTERM — must not land in the log as a failure.
+		child?.out('ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  Command failed with signal "SIGTERM"\n')
+
+		await flush()
+
+		const logs = get('web')?.logs ?? []
+
+		expect(logs.some((l) => l.includes('ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL'))).toBe(false)
+
+		// Only the two internal notes were appended — the request and its completion — not
+		// the child's teardown noise.
+		expect(logs.length).toBe(before + 2)
+
+		expect(logs.at(-1)).toContain('stopped')
 	})
 
 	it('restarts a stopped process when stop is toggled', async () => {
@@ -1019,6 +1051,30 @@ describe('shutdown', () => {
 		child?.out('late output\n')
 
 		expect(get('web')?.logs.length).toBe(before)
+	})
+
+	it('wakes a paused process before terminating it so SIGTERM is honored', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		const child = childFor('web')
+
+		child?.out('Watching for changes\n')
+
+		store.pauseProcess('web')
+
+		const pid = child?.pid ?? 0
+
+		// A SIGSTOP'd child ignores SIGTERM; without the SIGCONT it would only die after the
+		// SIGKILL grace period, so quitting a paused process would hang for seconds.
+		await store.shutdown()
+
+		expect(vi.mocked(process.kill)).toHaveBeenCalledWith(-pid, 'SIGCONT')
+
+		expect(vi.mocked(process.kill)).toHaveBeenCalledWith(-pid, 'SIGTERM')
+
+		expect(child?.killed).toBe(true)
 	})
 
 	it('does not spawn apps after shutdown begins mid-startup', async () => {

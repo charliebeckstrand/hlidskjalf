@@ -1,49 +1,67 @@
 import { Box, Text } from 'ink'
-import type { WorkspaceProcess } from '../../types.js'
+import { memo } from 'react'
 import { colors } from '../../ui/index.js'
 import { Panel } from '../primitives.js'
 
-export function Log({
-	process: proc,
-	height,
-	start,
-	end,
-	atBottom,
-}: {
-	process: WorkspaceProcess
-	height: number
-	start: number
-	end: number
-	atBottom: boolean
-}) {
-	const logLines = proc.logs.slice(start, end)
+/** Element-wise compare of two visible windows. The slices hold the same string instances
+ * across renders, so an unchanged window compares as a cheap run of reference checks. */
+function sameLines(a: string[], b: string[]): boolean {
+	if (a.length !== b.length) return false
 
-	const fillCount = height - logLines.length
+	for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false
 
-	const hiddenCount = proc.logs.length - end
-
-	return (
-		<Panel height={height + 3} overflow="hidden" marginX={1} marginTop={1}>
-			<Box marginBottom={1}>
-				<Text color={colors.accentBright} bold>
-					Logs
-				</Text>
-				{!atBottom && (
-					<Text color={colors.warning}>
-						{'   '}⏸ scrolled · {hiddenCount} below · End to follow
-					</Text>
-				)}
-			</Box>
-			{logLines.map((line, i) => (
-				// biome-ignore lint/suspicious/noArrayIndexKey: log lines have no stable identity
-				<Text key={i} wrap="truncate">
-					{line}
-				</Text>
-			))}
-			{Array.from({ length: fillCount }, (_, i) => (
-				// biome-ignore lint/suspicious/noArrayIndexKey: fill lines have no stable identity
-				<Text key={`fill-${i}`}> </Text>
-			))}
-		</Panel>
-	)
+	return true
 }
+
+/**
+ * The log scrollback. Presentational — it takes the already-sliced visible lines rather
+ * than the process, and is memoized on that content: output from a process other than the
+ * selected one re-renders the dashboard but leaves this window's lines untouched, so the
+ * panel skips rebuilding its rows. Custom compare because the slice is a fresh array each
+ * render; its element strings are stable, so the comparison short-circuits to pointer checks.
+ */
+export const Log = memo(
+	function Log({
+		lines,
+		height,
+		hiddenCount,
+		atBottom,
+	}: {
+		lines: string[]
+		height: number
+		hiddenCount: number
+		atBottom: boolean
+	}) {
+		const fillCount = height - lines.length
+
+		return (
+			<Panel height={height + 3} overflow="hidden" marginX={1} marginTop={1}>
+				<Box marginBottom={1}>
+					<Text color={colors.accentBright} bold>
+						Logs
+					</Text>
+					{!atBottom && (
+						<Text color={colors.warning}>
+							{'   '}⏸ scrolled · {hiddenCount} below · End to follow
+						</Text>
+					)}
+				</Box>
+				{lines.map((line, i) => (
+					// biome-ignore lint/suspicious/noArrayIndexKey: log lines have no stable identity
+					<Text key={i} wrap="truncate">
+						{line}
+					</Text>
+				))}
+				{Array.from({ length: fillCount }, (_, i) => (
+					// biome-ignore lint/suspicious/noArrayIndexKey: fill lines have no stable identity
+					<Text key={`fill-${i}`}> </Text>
+				))}
+			</Panel>
+		)
+	},
+	(prev, next) =>
+		prev.height === next.height &&
+		prev.hiddenCount === next.hiddenCount &&
+		prev.atBottom === next.atBottom &&
+		sameLines(prev.lines, next.lines),
+)

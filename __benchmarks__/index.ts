@@ -1,4 +1,5 @@
 import { layoutSuite } from './layout.bench.js'
+import { linesSuite } from './lines.bench.js'
 import { logsSuite } from './logs.bench.js'
 import { metricsSuite } from './metrics.bench.js'
 import { parserSuite } from './parser.bench.js'
@@ -15,6 +16,7 @@ const suites = {
 	workspaces: workspacesSuite,
 	logs: logsSuite,
 	layout: layoutSuite,
+	lines: linesSuite,
 } as const
 
 type SuiteName = keyof typeof suites

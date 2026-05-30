@@ -122,15 +122,17 @@ export let colors: ColorPalette = themes[DEFAULT_THEME]
 function buildStatusDisplay(
 	c: ColorPalette,
 ): Record<Status, { color: string; label: string; icon: string }> {
+	// Icons stay within ● / ○ / ✖: the half-circle and pause glyphs render from an oversized
+	// fallback font that breaks the baseline. Colour and label carry the rest of the state.
 	return {
 		pending: { color: c.pending, label: 'pending', icon: '○' },
-		building: { color: c.warning, label: 'building', icon: '◑' },
+		building: { color: c.warning, label: 'building', icon: '○' },
 		watching: { color: c.success, label: 'watching', icon: '●' },
 		ready: { color: c.success, label: 'watching', icon: '●' },
 		error: { color: c.error, label: 'error', icon: '✖' },
 		stopped: { color: c.pending, label: 'stopped', icon: '○' },
-		idle: { color: c.warning, label: 'idle', icon: '◑' },
-		paused: { color: c.warning, label: 'paused', icon: '⏸' },
+		idle: { color: c.warning, label: 'idle', icon: '○' },
+		paused: { color: c.warning, label: 'paused', icon: '○' },
 		timeout: { color: c.error, label: 'timeout', icon: '✖' },
 	}
 }

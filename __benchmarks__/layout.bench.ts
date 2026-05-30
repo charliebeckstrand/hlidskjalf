@@ -1,6 +1,6 @@
 import { Bench } from 'tinybench'
 
-import { nameColumnWidth } from '../src/layout.js'
+import { columnWidths, nameColumnWidth, urlContentWidth } from '../src/layout.js'
 import type { WorkspaceProcess } from '../src/types.js'
 import { makeProcesses } from './fixtures.js'
 
@@ -22,6 +22,13 @@ export function layoutSuite(): Bench {
 
 	const large = makeProcesses(200)
 
+	// Every process carries a URL, the worst case for the urlContentWidth scan.
+	const withUrls = large.map((proc) => ({ ...proc, url: 'http://localhost:5173/' }))
+
+	const natural = nameColumnWidth(large)
+
+	const urls = urlContentWidth(withUrls)
+
 	bench
 		.add('nameColumnWidth: loop, 200 processes', () => {
 			nameColumnWidth(large)
@@ -31,6 +38,12 @@ export function layoutSuite(): Bench {
 		})
 		.add('nameColumnWidth: loop, 20 processes', () => {
 			nameColumnWidth(small)
+		})
+		.add('urlContentWidth: 200 processes', () => {
+			urlContentWidth(withUrls)
+		})
+		.add('columnWidths: split flexible space', () => {
+			columnWidths(120, natural, urls, true)
 		})
 
 	return bench

@@ -180,6 +180,11 @@ export async function shutdown(ctx: StoreContext): Promise<void> {
 					resolve()
 				})
 
+				// A SIGSTOP'd child ignores SIGTERM until continued, so wake it first; otherwise
+				// the terminate only lands after the SIGKILL grace period elapses — matching the
+				// per-process teardown in beginTeardown.
+				if (entry.pausedFrom !== null) killTree(child, 'SIGCONT')
+
 				killTree(child, 'SIGTERM')
 			}),
 		)

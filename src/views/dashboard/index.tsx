@@ -1,5 +1,4 @@
 import { Box, Text } from 'ink'
-import { useMemo } from 'react'
 import { useLogScroll } from '../../hooks/use-log-scroll.js'
 import { useTerminalSize } from '../../hooks/use-terminal-size.js'
 import {
@@ -8,6 +7,7 @@ import {
 	logPanelHeight,
 	MIN_LOG_PANEL_HEIGHT,
 	nameColumnWidth,
+	overallActivity,
 	urlContentWidth,
 } from '../../layout.js'
 import type { WorkspaceProcess } from '../../types.js'
@@ -27,18 +27,16 @@ interface Props {
 export function Dashboard({ processes, selectedIndex, title, metrics = false }: Props) {
 	const { columns, rows } = useTerminalSize()
 
-	const allReady = useMemo(
-		() =>
-			processes.length > 0 &&
-			processes.every((p) => p.status === 'ready' || p.status === 'watching'),
-		[processes],
-	)
+	// Header dot: green (full when all up, half when partly up), amber only when something is
+	// paused, grey when nothing is running.
+	const activity = overallActivity(processes)
 
 	// Natural width fits the longest name; the URL's full width is reserved first, then the
-	// name takes what's left (truncating before it can squeeze the URL).
-	const naturalNameWidth = useMemo(() => nameColumnWidth(processes), [processes])
+	// name takes what's left (truncating before it can squeeze the URL). These are cheap O(n)
+	// passes recomputed each render — not worth memoizing for the dashboard's process counts.
+	const naturalNameWidth = nameColumnWidth(processes)
 
-	const naturalUrlWidth = useMemo(() => urlContentWidth(processes), [processes])
+	const naturalUrlWidth = urlContentWidth(processes)
 
 	const { name: nameWidth, url: urlWidth } = columnWidths(
 		columns,
@@ -67,7 +65,7 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 		// top — no frame-level clipping needed (and we avoid it deliberately: Ink's clipper
 		// slices lines through a tokenizer that miscounts OSC 8 hyperlinks).
 		<Box flexDirection="column">
-			<Header title={title} ready={allReady} columns={columns} hints={HINTS} />
+			<Header title={title} activity={activity} columns={columns} hints={HINTS} />
 
 			<Box paddingX={1} marginLeft={2} marginTop={1}>
 				<Cell width={nameWidth}>
@@ -107,7 +105,12 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 			{processes.map((proc, i) => (
 				<Process
 					key={proc.workspace.name}
-					process={proc}
+					name={proc.workspace.name}
+					kind={proc.workspace.kind}
+					status={proc.status}
+					url={proc.url}
+					cpu={proc.metrics?.cpu}
+					mem={proc.metrics?.mem}
 					selected={i === safeIndex}
 					nameWidth={nameWidth}
 					showMetrics={metrics}
@@ -118,10 +121,9 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 			{/* Log panel — hidden on a terminal too short to give it a usable height. */}
 			{selected && logHeight >= MIN_LOG_PANEL_HEIGHT && (
 				<Log
-					process={selected}
+					lines={selected.logs.slice(scroll.start, scroll.end)}
 					height={logHeight}
-					start={scroll.start}
-					end={scroll.end}
+					hiddenCount={selected.logs.length - scroll.end}
 					atBottom={scroll.atBottom}
 				/>
 			)}

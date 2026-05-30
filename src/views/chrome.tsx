@@ -1,19 +1,38 @@
 import { Box, Text } from 'ink'
 import Spinner from 'ink-spinner'
+import { memo } from 'react'
 import { useTerminalSize } from '../hooks/use-terminal-size.js'
+import type { Activity } from '../layout.js'
 import { colors, HINTS } from '../ui/index.js'
 import { Cell, Panel } from './primitives.js'
 
 interface HeaderProps {
 	title: string
-	ready?: boolean
+	activity?: Activity
 	columns: number
 	hints?: string
 }
 
-/** Top bar shared by every screen: status dot, title, and (space permitting) key hints. */
-export function Header({ title, ready = false, columns, hints }: HeaderProps) {
+/**
+ * Top bar shared by every screen: status dot, title, and (space permitting) key hints.
+ * Memoized on its all-primitive props so a dashboard re-render driven by log output — which
+ * leaves title/activity/columns untouched — doesn't re-render the bordered header subtree.
+ */
+export const Header = memo(function Header({
+	title,
+	activity = 'down',
+	columns,
+	hints,
+}: HeaderProps) {
 	const showHints = hints && columns >= 10 + hints.length + 4
+
+	// Fill marks fully-up vs not; colour marks health. Only ● and ○ are used — the terminal
+	// pulls the half-circle glyphs from an oversized fallback font that breaks the baseline.
+	// Amber only when something is paused, otherwise green; grey when nothing runs.
+	const dotGlyph = activity === 'up' ? '●' : '○'
+
+	const dotColor =
+		activity === 'paused' ? colors.warning : activity === 'down' ? colors.dim : colors.success
 
 	return (
 		<Box
@@ -29,7 +48,7 @@ export function Header({ title, ready = false, columns, hints }: HeaderProps) {
 		>
 			<Box gap={2}>
 				<Box flexShrink={0} gap={1}>
-					<Text color={ready ? colors.success : colors.dim}>{ready ? '●' : '○'}</Text>
+					<Text color={dotColor}>{dotGlyph}</Text>
 					<Text color={colors.accentBright} bold>
 						{title}
 					</Text>
@@ -44,7 +63,7 @@ export function Header({ title, ready = false, columns, hints }: HeaderProps) {
 			</Box>
 		</Box>
 	)
-}
+})
 
 /** Initial discovery screen, shown until the store registers its workspaces. */
 export function Loading({ title }: { title: string }) {

@@ -1,6 +1,7 @@
 import { Box, Text } from 'ink'
+import { memo } from 'react'
 import { COLUMN_WIDTHS } from '../../layout.js'
-import type { Metrics, WorkspaceKind, WorkspaceProcess } from '../../types.js'
+import type { Status, WorkspaceKind } from '../../types.js'
 import {
 	colors,
 	cpuColor,
@@ -19,8 +20,9 @@ const kindLabel = {
 	service: 'svc',
 } satisfies Record<WorkspaceKind, string>
 
-function MetricsCells({ metrics }: { metrics?: Metrics }) {
-	if (!metrics) {
+function MetricsCells({ cpu, mem }: { cpu?: number; mem?: number }) {
+	// A reading of 0 is real, so distinguish "no sample yet" by undefined, not falsiness.
+	if (cpu === undefined || mem === undefined) {
 		return (
 			<>
 				<Cell width={COLUMN_WIDTHS.cpu}>
@@ -35,29 +37,46 @@ function MetricsCells({ metrics }: { metrics?: Metrics }) {
 	return (
 		<>
 			<Cell width={COLUMN_WIDTHS.cpu}>
-				<Text color={cpuColor(metrics.cpu)}>{formatCpu(metrics.cpu)}</Text>
+				<Text color={cpuColor(cpu)}>{formatCpu(cpu)}</Text>
 			</Cell>
 			<Cell width={COLUMN_WIDTHS.mem}>
-				<Text color={memColor(metrics.mem)}>{formatMem(metrics.mem)}</Text>
+				<Text color={memColor(mem)}>{formatMem(mem)}</Text>
 			</Cell>
 		</>
 	)
 }
 
-export function Process({
-	process: proc,
+/**
+ * One table row. Memoized on primitive props rather than the WorkspaceProcess object: the
+ * store mutates each process in place, so the object reference is stable across renders and
+ * a reference (or field) comparison would never see a status/url/metric change. Passing the
+ * displayed fields as primitives lets memo skip the rows a store update didn't touch — the
+ * common case, since a log line for one process leaves every row's visible state unchanged.
+ */
+export const Process = memo(function Process({
+	name,
+	kind,
+	status,
+	url,
+	cpu,
+	mem,
 	selected,
 	nameWidth,
 	showMetrics,
 	urlWidth,
 }: {
-	process: WorkspaceProcess
+	name: string
+	kind: WorkspaceKind
+	status: Status
+	url?: string
+	cpu?: number
+	mem?: number
 	selected: boolean
 	nameWidth: number
 	showMetrics: boolean
 	urlWidth: number
 }) {
-	const { color, label, icon } = statusDisplay[proc.status]
+	const { color, label, icon } = statusDisplay[status]
 
 	return (
 		<Box paddingX={1}>
@@ -65,27 +84,27 @@ export function Process({
 			<Text> </Text>
 			<Cell width={nameWidth}>
 				<Text color={selected ? colors.highlight : undefined} bold={selected} wrap="truncate">
-					{proc.workspace.name}
+					{name}
 				</Text>
 			</Cell>
 			<Cell width={COLUMN_WIDTHS.kind}>
-				<Text color={colors.muted}>{kindLabel[proc.workspace.kind]}</Text>
+				<Text color={colors.muted}>{kindLabel[kind]}</Text>
 			</Cell>
 			<Cell width={COLUMN_WIDTHS.status}>
 				<Text color={color}>
-					<StatusGlyph status={proc.status} icon={icon} /> {label}
+					<StatusGlyph status={status} icon={icon} /> {label}
 				</Text>
 			</Cell>
-			{showMetrics && <MetricsCells metrics={proc.metrics} />}
-			{proc.url && urlWidth > 0 && (
+			{showMetrics && <MetricsCells cpu={cpu} mem={mem} />}
+			{url && urlWidth > 0 && (
 				<Cell width={urlWidth}>
 					{/* Pre-truncate before wrapping in OSC 8: Ink's truncator isn't link-aware
 					    and would drop the escapes. The link still targets the full URL. */}
 					<Text color={colors.url} wrap="truncate">
-						{hyperlink(proc.url, truncateEnd(proc.url, urlWidth))}
+						{hyperlink(url, truncateEnd(url, urlWidth))}
 					</Text>
 				</Cell>
 			)}
 		</Box>
 	)
-}
+})

@@ -19,11 +19,16 @@ export function stopProcess(ctx: StoreContext, name: string): void {
 	beginTeardown(entry, () => {
 		entry.restartRetries = 0
 
+		// Only when we actually signalled a live child — beginTeardown runs this synchronously
+		// for an already-dead one, where a "stopped" note would be spurious (and the matching
+		// "stopping..." note above was likewise skipped).
+		if (wasLive) note(entry, 'stopped')
+
 		setStatus(ctx, name, 'stopped')
 	})
 
 	if (wasLive) {
-		note(entry, 'stopping process...')
+		note(entry, 'stopping (SIGTERM)...')
 
 		changed(ctx)
 	}
@@ -46,7 +51,7 @@ export function restartProcess(ctx: StoreContext, name: string): void {
 
 		entry.process.url = undefined
 
-		note(entry, 'restarting process...')
+		note(entry, 'restarting...')
 
 		spawnWorkspace(ctx, workspace)
 	}
@@ -58,7 +63,7 @@ export function restartProcess(ctx: StoreContext, name: string): void {
 	beginTeardown(entry, doRestart)
 
 	if (wasLive) {
-		note(entry, 'stopping process for restart...')
+		note(entry, 'stopping for restart (SIGTERM)...')
 
 		changed(ctx)
 	}
@@ -126,13 +131,15 @@ export function killProcess(ctx: StoreContext, name: string): void {
 		() => {
 			entry.restartRetries = 0
 
+			if (wasLive) note(entry, 'killed')
+
 			setStatus(ctx, name, 'stopped')
 		},
 		'SIGKILL',
 	)
 
 	if (wasLive) {
-		note(entry, 'killing process (SIGKILL)...')
+		note(entry, 'killing (SIGKILL)...')
 
 		changed(ctx)
 	}

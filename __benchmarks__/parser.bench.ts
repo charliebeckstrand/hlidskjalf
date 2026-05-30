@@ -8,6 +8,9 @@ import { LOG_LINES } from './fixtures.js'
  * hottest path in the app. These cases cover each status branch, the dominant
  * no-match line, the ANSI strippers, and the full per-line pipeline as it runs
  * in processes.ts (sanitize for display + strip + classify).
+ *
+ * The dominant no-match line exercises parseLine's derived non-http gate: a single
+ * union scan rejects a line no matcher can classify, so the per-matcher loop never runs.
  */
 export function parserSuite(): Bench {
 	const bench = new Bench({ name: 'parser — per-log-line hot path', time: 500 })
