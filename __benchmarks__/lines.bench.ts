@@ -19,7 +19,7 @@ export function linesSuite(): Bench {
 
 	const burst = makeChunk(50)
 
-	// A newline-less run just past the cap, to exercise the overflow flush each iteration.
+	// A newline-less run past the cap, to exercise the overflow flush each iteration.
 	const flood = 'x'.repeat(MAX_BUFFER_SIZE + 1)
 
 	// One buffer per case, hoisted out of the measured call so each case times push, not

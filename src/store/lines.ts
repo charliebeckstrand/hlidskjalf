@@ -9,11 +9,10 @@
 
 export interface LineBuffer {
 	/**
-	 * Feed one stream chunk; return the complete lines it completes, in order, each
-	 * right-trimmed with blank lines dropped. A trailing partial line is retained for the
-	 * next chunk. A newline-less chunk that pushes the buffer past `maxBufferSize` is
-	 * flushed whole as a single line, so a server that never emits a newline can't buffer
-	 * without bound.
+	 * Feed one stream chunk; return the lines it completes, in order, each right-trimmed
+	 * with blank lines dropped. A trailing partial line is retained for the next chunk. A
+	 * newline-less chunk that pushes the buffer past `maxBufferSize` is flushed whole as a
+	 * single line, so a server that never emits a newline can't buffer without bound.
 	 */
 	push(chunk: string): string[]
 	/** Emit any buffered partial line at stream close, or null when only whitespace remains. */
