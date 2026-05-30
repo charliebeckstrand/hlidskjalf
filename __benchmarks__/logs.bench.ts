@@ -1,6 +1,6 @@
 import { Bench } from 'tinybench'
 
-import { appendLog, MAX_LOGS } from '../src/logs.js'
+import { appendLog, MAX_LOGS, visibleLogRange } from '../src/logs.js'
 import { LOG_LINES } from './fixtures.js'
 
 /**
@@ -35,6 +35,13 @@ export function logsSuite(): Bench {
 		})
 		.add('naive splice-per-line (full buffer)', () => {
 			naiveAppend(naive, line)
+		})
+		// visibleLogRange resolves the slice to draw on every render of the log panel.
+		.add('visibleLogRange: follow mode (tail)', () => {
+			visibleLogRange(MAX_LOGS, 40, 0)
+		})
+		.add('visibleLogRange: paged back, clamped', () => {
+			visibleLogRange(MAX_LOGS, 40, 10_000)
 		})
 
 	return bench
