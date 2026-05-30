@@ -1,5 +1,6 @@
 import { Box, Text } from 'ink'
 import { memo } from 'react'
+import { logRowKeys } from '../../logs/index.js'
 import { colors } from '../../ui/index.js'
 import { Panel } from '../primitives/index.js'
 
@@ -24,15 +25,17 @@ export const Log = memo(
 	function Log({
 		lines,
 		height,
+		startIndex,
 		hiddenCount,
 		atBottom,
 	}: {
 		lines: string[]
 		height: number
+		startIndex: number
 		hiddenCount: number
 		atBottom: boolean
 	}) {
-		const fillCount = height - lines.length
+		const { rows, fills } = logRowKeys(lines, startIndex, height)
 
 		return (
 			<Panel height={height + 3} overflow="hidden" marginX={1} marginTop={1}>
@@ -46,21 +49,20 @@ export const Log = memo(
 						</Text>
 					)}
 				</Box>
-				{lines.map((line, i) => (
-					// biome-ignore lint/suspicious/noArrayIndexKey: log lines have no stable identity
-					<Text key={i} wrap="truncate">
-						{line}
+				{rows.map((row) => (
+					<Text key={row.id} wrap="truncate">
+						{row.line}
 					</Text>
 				))}
-				{Array.from({ length: fillCount }, (_, i) => (
-					// biome-ignore lint/suspicious/noArrayIndexKey: fill lines have no stable identity
-					<Text key={`fill-${i}`}> </Text>
+				{fills.map((id) => (
+					<Text key={`fill-${id}`}> </Text>
 				))}
 			</Panel>
 		)
 	},
 	(prev, next) =>
 		prev.height === next.height &&
+		prev.startIndex === next.startIndex &&
 		prev.hiddenCount === next.hiddenCount &&
 		prev.atBottom === next.atBottom &&
 		sameLines(prev.lines, next.lines),
