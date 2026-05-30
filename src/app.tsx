@@ -91,12 +91,13 @@ export function App({ options }: Props) {
 					setPhase('running')
 				} else {
 					console.error('No matching workspaces found.')
-					exit()
+					// Exit with an error so the CLI reports a non-zero status to its caller.
+					exit(new Error('no matching workspaces'))
 				}
 			})
 			.catch((err) => {
 				console.error('Fatal:', err instanceof Error ? err.message : 'unexpected error')
-				exit()
+				exit(err instanceof Error ? err : new Error('startup failed'))
 			})
 
 		process.on('SIGTERM', stop)

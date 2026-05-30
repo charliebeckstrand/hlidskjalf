@@ -115,12 +115,18 @@ const options: Options = {
 // restore the primary screen however we exit.
 const restoreScreen = enterAltScreen()
 
+let exitCode = 0
+
 try {
 	const { waitUntilExit } = render(<App options={options} />, { exitOnCtrlC: false })
 
+	// `App` rejects this (via Ink's `exit(error)`) on a fatal startup failure or when no
+	// workspaces match, so the CLI surfaces a non-zero status instead of a silent success.
 	await waitUntilExit()
+} catch {
+	exitCode = 1
 } finally {
 	restoreScreen()
 }
 
-process.exit(0)
+process.exit(exitCode)

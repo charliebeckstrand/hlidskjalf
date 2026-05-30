@@ -178,6 +178,13 @@ describe('parseProcStat', () => {
 		).toEqual({ ppid: 1, utime: 100, stime: 50, rss: 10 * 4096 })
 	})
 
+	it('scales rss by the supplied page size', () => {
+		// RSS is reported in pages; a 16K-page kernel (ARM64) must not be read as 4K pages.
+		const stat = buildStat({ ppid: 1, utime: 0, stime: 0, rssPages: 10 })
+
+		expect(parseProcStat(stat, 16384)?.rss).toBe(10 * 16384)
+	})
+
 	it('handles a comm field containing spaces and parens', () => {
 		const fields = new Array(50).fill('0')
 
