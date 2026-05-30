@@ -103,7 +103,7 @@ stopped and dropped from the dashboard. Pass `--watch=false` (or set
 | `c` | Clear the logs for the selected workspace |
 | `PgUp` / `PgDn` | Scroll the log panel up / down a page |
 | `Home` / `End` | Jump to the oldest / newest log line |
-| `?` | Toggle the keybindings overlay |
+| `?` | Toggle help |
 | `q` | Quit |
 
 ## License
