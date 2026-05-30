@@ -97,13 +97,15 @@ stopped and dropped from the dashboard. Pass `--watch=false` (or set
 
 | Key | Action |
 | --- | --- |
-| `↑` / `↓` | Move the selection between workspaces |
+| `↑` / `↓` (or `k` / `j`) | Move the selection between workspaces |
 | `s` | Stop the selected workspace (or start it again if stopped) |
 | `p` | Pause the selected workspace with `SIGSTOP` (or resume it with `SIGCONT` if paused) |
 | `x` | Force-kill the selected workspace with `SIGKILL`, without restarting it |
 | `r` | Restart the selected workspace |
 | `c` | Clear the logs for the selected workspace |
 | `PgUp` / `PgDn` | Scroll the log panel up / down a page |
+| `Home` / `End` | Jump to the oldest / newest log line |
+| `?` | Toggle help |
 | `q` | Quit |
 
 ## License

@@ -65,13 +65,14 @@ export function Loading({ title }: { title: string }) {
 
 /** Every keybinding the app responds to, paired with its description. */
 const BINDINGS: ReadonlyArray<readonly [keys: string, action: string]> = [
-	['↑/↓', 'Navigate processes'],
+	['↑/↓ · j/k', 'Navigate processes'],
 	['s', 'Stop / start process'],
 	['p', 'Pause / resume process'],
 	['x', 'Kill process (no restart)'],
 	['r', 'Restart process'],
 	['c', 'Clear logs'],
 	['PgUp/PgDn', 'Scroll logs'],
+	['Home/End', 'Jump to oldest / newest'],
 	['?', 'Toggle help'],
 	['q', 'Quit'],
 ]

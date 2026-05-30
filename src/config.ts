@@ -27,9 +27,9 @@ export interface Config {
 	/** Re-discover workspaces when `package.json` files change. Defaults to `true`. */
 	watch?: boolean
 	/**
-	 * Colour theme. Defaults to `bifrost` (icy blues and purples). Accepts a realm name
-	 * (`niflheim`, `muspelheim`, `yggdrasil`) or an elemental alias (`ice`, `fire`, `earth`).
-	 * See {@link themes} for the palettes or define your own with {@link parseTheme}.
+	 * Colour theme. Defaults to `bifrost` (electric purples and sky blues). Accepts a realm
+	 * name (`niflheim`, `muspelheim`, `yggdrasil`) or an elemental alias (`ice`, `fire`,
+	 * `earth`). See {@link themes} for the available palettes.
 	 */
 	theme?: ThemeName
 }
