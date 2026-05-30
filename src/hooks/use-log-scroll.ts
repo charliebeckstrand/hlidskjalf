@@ -34,6 +34,7 @@ export function useLogScroll(
 	const [scroll, setScroll] = useState(0)
 
 	const [prevKey, setPrevKey] = useState(selectionKey)
+
 	const [prevTotal, setPrevTotal] = useState(total)
 
 	// These two render-phase adjustments are mutually exclusive: a process switch changes
@@ -44,20 +45,26 @@ export function useLogScroll(
 		// Switching processes snaps back to follow mode. Adopt the new buffer length too so
 		// the anchor branch stays dormant this render.
 		setPrevKey(selectionKey)
+
 		setPrevTotal(total)
+
 		setScroll(0)
 	} else if (total !== prevTotal) {
 		// Same process, buffer grew: keep a scrolled-up viewport anchored to the same lines as
 		// new output arrives rather than letting it scroll out from under the reader.
 		const delta = total - prevTotal
+
 		setPrevTotal(total)
+
 		if (scroll > 0 && delta > 0) setScroll((s) => s + delta)
 	}
 
 	// visibleLogRange owns the bound formula; reuse the value it returns rather than recomputing it.
 	const { start, end, maxScroll } = visibleLogRange(total, height, scroll)
+
 	// The input handler's closure would otherwise capture a stale bound across renders.
 	const maxScrollRef = useRef(maxScroll)
+
 	maxScrollRef.current = maxScroll
 
 	useInput(
