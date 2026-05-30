@@ -48,7 +48,8 @@ export function useLogScroll(
 		if (scroll > 0 && delta > 0) setScroll((s) => s + delta)
 	}
 
-	const maxScroll = Math.max(0, total - height)
+	// visibleLogRange owns the bound formula; reuse the value it returns rather than recomputing it.
+	const { start, end, maxScroll } = visibleLogRange(total, height, scroll)
 	// The input handler's closure would otherwise capture a stale bound across renders.
 	const maxScrollRef = useRef(maxScroll)
 	maxScrollRef.current = maxScroll
@@ -68,6 +69,5 @@ export function useLogScroll(
 		{ isActive: enabled },
 	)
 
-	const { start, end } = visibleLogRange(total, height, scroll)
 	return { start, end, atBottom: Math.min(scroll, maxScroll) === 0 }
 }

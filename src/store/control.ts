@@ -1,5 +1,5 @@
 import { isRunning, killTree } from './children.js'
-import { beginTeardown, clearTimers, note } from './entry.js'
+import { beginTeardown, clearTimers, note, withEntry } from './entry.js'
 import { changed } from './snapshot.js'
 import { spawnWorkspace } from './spawn.js'
 import { setStatus } from './status.js'
@@ -8,150 +8,140 @@ import type { StoreContext } from './types.js'
 export function stopProcess(ctx: StoreContext, name: string): void {
 	if (ctx.stopping) return
 
-	const entry = ctx.entries.get(name)
+	withEntry(ctx, name, (entry) => {
+		clearTimers(entry)
 
-	if (!entry) return
+		const wasLive = isRunning(entry.child)
 
-	clearTimers(entry)
+		beginTeardown(entry, () => {
+			entry.restartRetries = 0
 
-	const wasLive = isRunning(entry.child)
+			// Only when we actually signalled a live child — beginTeardown runs this synchronously
+			// for an already-dead one, where a "stopped" note would be spurious (and the matching
+			// "stopping..." note above was likewise skipped).
+			if (wasLive) note(entry, 'stopped')
 
-	beginTeardown(entry, () => {
-		entry.restartRetries = 0
+			setStatus(ctx, name, 'stopped')
+		})
 
-		// Only when we actually signalled a live child — beginTeardown runs this synchronously
-		// for an already-dead one, where a "stopped" note would be spurious (and the matching
-		// "stopping..." note above was likewise skipped).
-		if (wasLive) note(entry, 'stopped')
+		if (wasLive) {
+			note(entry, 'stopping (SIGTERM)...')
 
-		setStatus(ctx, name, 'stopped')
+			changed(ctx)
+		}
 	})
-
-	if (wasLive) {
-		note(entry, 'stopping (SIGTERM)...')
-
-		changed(ctx)
-	}
 }
 
 export function restartProcess(ctx: StoreContext, name: string): void {
 	if (ctx.stopping) return
 
-	const entry = ctx.entries.get(name)
+	withEntry(ctx, name, (entry) => {
+		const workspace = entry.process.workspace
 
-	if (!entry) return
+		const doRestart = () => {
+			// Shutdown may have begun while the child was closing; don't respawn into it.
+			if (ctx.stopping) return
 
-	const workspace = entry.process.workspace
+			entry.restartRetries = 0
 
-	const doRestart = () => {
-		// Shutdown may have begun while the child was closing; don't respawn into it.
-		if (ctx.stopping) return
+			entry.process.url = undefined
 
-		entry.restartRetries = 0
+			note(entry, 'restarting...')
 
-		entry.process.url = undefined
+			spawnWorkspace(ctx, workspace)
+		}
 
-		note(entry, 'restarting...')
+		clearTimers(entry)
 
-		spawnWorkspace(ctx, workspace)
-	}
+		const wasLive = isRunning(entry.child)
 
-	clearTimers(entry)
+		beginTeardown(entry, doRestart)
 
-	const wasLive = isRunning(entry.child)
+		if (wasLive) {
+			note(entry, 'stopping for restart (SIGTERM)...')
 
-	beginTeardown(entry, doRestart)
-
-	if (wasLive) {
-		note(entry, 'stopping for restart (SIGTERM)...')
-
-		changed(ctx)
-	}
+			changed(ctx)
+		}
+	})
 }
 
 export function pauseProcess(ctx: StoreContext, name: string): void {
 	if (ctx.stopping) return
 
-	const entry = ctx.entries.get(name)
+	withEntry(ctx, name, (entry) => {
+		// No live child to freeze, or already paused.
+		if (!isRunning(entry.child) || entry.pausedFrom !== null) return
 
-	if (!entry) return
+		// A startup/error/restart timer firing while the child is suspended would flip the
+		// status out from under `paused`.
+		clearTimers(entry)
 
-	// No live child to freeze, or already paused.
-	if (!isRunning(entry.child) || entry.pausedFrom !== null) return
+		entry.pausedFrom = entry.process.status
 
-	// A startup/error/restart timer firing while the child is suspended would flip the
-	// status out from under `paused`.
-	clearTimers(entry)
+		killTree(entry.child, 'SIGSTOP')
 
-	entry.pausedFrom = entry.process.status
+		note(entry, 'paused (SIGSTOP)')
 
-	killTree(entry.child, 'SIGSTOP')
-
-	note(entry, 'paused (SIGSTOP)')
-
-	setStatus(ctx, name, 'paused')
+		setStatus(ctx, name, 'paused')
+	})
 }
 
 export function resumeProcess(ctx: StoreContext, name: string): void {
 	if (ctx.stopping) return
 
-	const entry = ctx.entries.get(name)
+	withEntry(ctx, name, (entry) => {
+		if (entry.pausedFrom === null) return
 
-	if (!entry || entry.pausedFrom === null) return
+		const restore = entry.pausedFrom
 
-	const restore = entry.pausedFrom
+		entry.pausedFrom = null
 
-	entry.pausedFrom = null
+		if (isRunning(entry.child)) killTree(entry.child, 'SIGCONT')
 
-	if (isRunning(entry.child)) killTree(entry.child, 'SIGCONT')
+		// Reset the idle clock so the just-woken process isn't probed for a stall it never had.
+		entry.lastOutputAt = Date.now()
 
-	// Reset the idle clock so the just-woken process isn't probed for a stall it never had.
-	entry.lastOutputAt = Date.now()
+		note(entry, 'resumed (SIGCONT)')
 
-	note(entry, 'resumed (SIGCONT)')
-
-	setStatus(ctx, name, restore)
+		setStatus(ctx, name, restore)
+	})
 }
 
 export function killProcess(ctx: StoreContext, name: string): void {
 	if (ctx.stopping) return
 
-	const entry = ctx.entries.get(name)
+	withEntry(ctx, name, (entry) => {
+		clearTimers(entry)
 
-	if (!entry) return
+		const wasLive = isRunning(entry.child)
 
-	clearTimers(entry)
+		// SIGKILL with no SIGTERM grace, for a wedged process that ignores a polite stop.
+		// Like stop, schedules no restart.
+		beginTeardown(
+			entry,
+			() => {
+				entry.restartRetries = 0
 
-	const wasLive = isRunning(entry.child)
+				if (wasLive) note(entry, 'killed')
 
-	// SIGKILL with no SIGTERM grace, for a wedged process that ignores a polite stop.
-	// Like stop, schedules no restart.
-	beginTeardown(
-		entry,
-		() => {
-			entry.restartRetries = 0
+				setStatus(ctx, name, 'stopped')
+			},
+			'SIGKILL',
+		)
 
-			if (wasLive) note(entry, 'killed')
+		if (wasLive) {
+			note(entry, 'killing (SIGKILL)...')
 
-			setStatus(ctx, name, 'stopped')
-		},
-		'SIGKILL',
-	)
-
-	if (wasLive) {
-		note(entry, 'killing (SIGKILL)...')
-
-		changed(ctx)
-	}
+			changed(ctx)
+		}
+	})
 }
 
 export function clearLogs(ctx: StoreContext, name: string): void {
-	const entry = ctx.entries.get(name)
+	withEntry(ctx, name, (entry) => {
+		// Mutate in place; the snapshot rebuild on `changed()` re-renders the empty panel.
+		entry.process.logs.length = 0
 
-	if (!entry) return
-
-	// Mutate in place; the snapshot rebuild on `changed()` re-renders the empty panel.
-	entry.process.logs.length = 0
-
-	changed(ctx)
+		changed(ctx)
+	})
 }

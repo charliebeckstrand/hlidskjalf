@@ -20,4 +20,4 @@ export {
 	type ThemeName,
 	themes,
 } from './theme.js'
-export { after, every } from './timers.js'
+export { every } from './timers.js'

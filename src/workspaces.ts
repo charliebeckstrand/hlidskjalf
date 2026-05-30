@@ -131,6 +131,15 @@ export function discover(root: string): Workspace[] {
 	return results
 }
 
+/**
+ * Order by kind bucket (packages before apps/services). Returns null only when the kinds are
+ * equal so callers fall through to their tiebreaker — distinct kinds that share a bucket (app
+ * vs service) still short-circuit to 0, keeping them in discovery order.
+ */
+function compareByKind(a: Workspace, b: Workspace): number | null {
+	return a.kind === b.kind ? null : kindOrder[a.kind] - kindOrder[b.kind]
+}
+
 export function sortByDeps(workspaces: Workspace[]): Workspace[] {
 	const names = new Set(workspaces.map((w) => w.name))
 
@@ -148,19 +157,13 @@ export function sortByDeps(workspaces: Workspace[]): Workspace[] {
 		depCount.set(workspace, count)
 	}
 
-	return [...workspaces].sort((a, b) => {
-		if (a.kind !== b.kind) return kindOrder[a.kind] - kindOrder[b.kind]
-
-		return (depCount.get(a) ?? 0) - (depCount.get(b) ?? 0)
-	})
+	return [...workspaces].sort(
+		(a, b) => compareByKind(a, b) ?? (depCount.get(a) ?? 0) - (depCount.get(b) ?? 0),
+	)
 }
 
 export function sortByName(workspaces: Workspace[]): Workspace[] {
-	return [...workspaces].sort((a, b) => {
-		if (a.kind !== b.kind) return kindOrder[a.kind] - kindOrder[b.kind]
-
-		return a.name.localeCompare(b.name)
-	})
+	return [...workspaces].sort((a, b) => compareByKind(a, b) ?? a.name.localeCompare(b.name))
 }
 
 export function filterWorkspaces(workspaces: Workspace[], patterns: string[]): Workspace[] {

@@ -9,6 +9,7 @@ import {
 } from 'react'
 import { createStore } from './store/index.js'
 import type { Options } from './types.js'
+import { clampIndex } from './util.js'
 import { Help, Loading } from './views/chrome.js'
 import { Dashboard } from './views/dashboard/index.js'
 
@@ -111,7 +112,7 @@ export function App({ options }: Props) {
 
 	// Clamp to the live list length: a removed workspace shrinks the list under a
 	// stationary cursor, so the actionable and highlighted indices can't diverge.
-	const cursor = Math.min(cursorState, Math.max(0, processes.length - 1))
+	const cursor = clampIndex(cursorState, processes.length)
 
 	useInput((input, key) => {
 		if (input === 'q' || (key.ctrl && input === 'c')) {

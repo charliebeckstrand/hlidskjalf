@@ -3,6 +3,7 @@ import { appendLog } from '../logs.js'
 import { safeEnv } from '../metrics/index.js'
 import { parseLine, sanitizeForDisplay, stripAnsi } from '../parser.js'
 import type { Workspace } from '../types.js'
+import { createUnrefTimer, truncate } from '../util.js'
 import {
 	MAX_BUFFER_SIZE,
 	MAX_LINE_LENGTH,
@@ -41,7 +42,7 @@ export function spawnWorkspace(ctx: StoreContext, workspace: Workspace): void {
 
 	setStatus(ctx, workspace.name, 'building')
 
-	const startupTimer = setTimeout(() => {
+	const startupTimer = createUnrefTimer(STARTUP_TIMEOUT_MS, () => {
 		const liveEntry = ctx.entries.get(workspace.name)
 
 		if (liveEntry) {
@@ -53,9 +54,7 @@ export function spawnWorkspace(ctx: StoreContext, workspace: Workspace): void {
 				setStatus(ctx, workspace.name, 'timeout')
 			}
 		}
-	}, STARTUP_TIMEOUT_MS)
-
-	startupTimer.unref()
+	})
 
 	if (entry) entry.startupTimer = startupTimer
 
@@ -107,7 +106,7 @@ function handleLine(ctx: StoreContext, name: string, raw: string): void {
 	// surface a failure that didn't happen. A restart clears the flag when the child respawns.
 	if (entry.intentionalExit) return
 
-	const line = raw.length > MAX_LINE_LENGTH ? raw.slice(0, MAX_LINE_LENGTH) : raw
+	const line = truncate(raw, MAX_LINE_LENGTH)
 
 	const { process: proc } = entry
 
@@ -207,15 +206,11 @@ function handleUnexpectedExit(
 		return
 	}
 
-	const timer = setTimeout(() => {
+	entry.restartTimer = createUnrefTimer(delay, () => {
 		entry.restartTimer = null
 
 		if (!ctx.stopping) spawnWorkspace(ctx, workspace)
-	}, delay)
-
-	timer.unref()
-
-	entry.restartTimer = timer
+	})
 }
 
 function rebuildFsevents(ctx: StoreContext): Promise<void> {

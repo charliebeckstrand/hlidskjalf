@@ -6,6 +6,8 @@
  * its snapshot array, not by copying this buffer per line.
  */
 
+import { clamp } from './util.js'
+
 /** Maximum log lines retained per process for display scrollback. */
 export const MAX_LOGS = 500
 
@@ -43,7 +45,7 @@ export interface LogWindow {
 export function visibleLogRange(total: number, height: number, scroll: number): LogWindow {
 	const maxScroll = Math.max(0, total - height)
 
-	const clamped = Math.min(Math.max(0, scroll), maxScroll)
+	const clamped = clamp(scroll, 0, maxScroll)
 
 	const end = total - clamped
 
