@@ -10,7 +10,7 @@ import {
 import { createStore } from './store/index.js'
 import type { Options } from './types.js'
 import { clampIndex } from './util.js'
-import { Help, Loading } from './views/chrome.js'
+import { Help, Loading } from './views/chrome/index.js'
 import { Dashboard } from './views/dashboard/index.js'
 
 interface Props {
