@@ -27,16 +27,10 @@ export interface ColorPalette {
 	url: string
 }
 
-interface SharedColors {
-	success: string
-	warning: string
-	error: string
-	pending: string
-	highlight: string
-	muted: string
-	dim: string
-	separator: string
-}
+type SharedColors = Pick<
+	ColorPalette,
+	'success' | 'warning' | 'error' | 'pending' | 'highlight' | 'muted' | 'dim' | 'separator'
+>
 
 /**
  * Neutral slots shared verbatim by every theme — the greys, the frost-white highlight,
