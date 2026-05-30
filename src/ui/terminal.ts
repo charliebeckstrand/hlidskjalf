@@ -35,9 +35,11 @@ export function truncateEnd(text: string, width: number): string {
 
 	if (text.length <= width) return text
 
-	if (width === 1) return '...'
+	// A one-column ellipsis (U+2026), not '...': the result must fit `width` exactly, or
+	// the over-long label defeats the pre-fit and Ink's truncator chops the OSC 8 escape.
+	if (width === 1) return '…'
 
-	return `${text.slice(0, width - 1)}...`
+	return `${text.slice(0, width - 1)}…`
 }
 
 /** DECSET/DECRST 1049: switch to / restore the alternate screen buffer. */
