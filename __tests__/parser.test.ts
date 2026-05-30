@@ -48,6 +48,20 @@ describe('parseLine', () => {
 		])('detects an error in %j', (line) => {
 			expect(parseLine(line)).toEqual({ status: 'error' })
 		})
+
+		it.each([
+			'TypeError: undefined is not a function',
+			'ReferenceError: x is not defined',
+		])('detects a suffixed *Error in %j', (line) => {
+			expect(parseLine(line)).toEqual({ status: 'error' })
+		})
+
+		it.each([
+			'GET /error 200 12ms',
+			'127.0.0.1 - GET /error 304',
+		])('does not flag a /error url path in an access log: %j', (line) => {
+			expect(parseLine(line)).toEqual({})
+		})
 	})
 
 	describe('URL extraction', () => {
@@ -66,6 +80,10 @@ describe('parseLine', () => {
 
 		it('rejects non-loopback URLs', () => {
 			expect(parseLine('running on http://example.com:3000').url).toBeUndefined()
+		})
+
+		it('keeps the ready status but drops an unparseable URL capture', () => {
+			expect(parseLine('Server running on http://[bad')).toEqual({ status: 'ready' })
 		})
 	})
 

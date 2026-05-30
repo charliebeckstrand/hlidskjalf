@@ -171,6 +171,18 @@ describe('parseProcStat', () => {
 
 		expect(parseProcStat('1234 (comm) S notanumber')).toBeNull()
 	})
+
+	it('floors a malformed rss field to 0 rather than NaN', () => {
+		const fields = new Array(50).fill('0')
+
+		fields[1] = '1'
+
+		fields[21] = 'bogus'
+
+		const parsed = parseProcStat(`1234 (comm) S ${fields.slice(1).join(' ')}`, 4096)
+
+		expect(parsed?.rss).toBe(0)
+	})
 })
 
 describe('cpuPercentFromTicks', () => {

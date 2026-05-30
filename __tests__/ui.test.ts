@@ -172,9 +172,19 @@ describe('truncateEnd', () => {
 	})
 
 	it('appends a single-column ellipsis when shortened', () => {
-		expect(truncateEnd('http://localhost:3000', 10)).toBe('http://lo...')
+		expect(truncateEnd('http://localhost:3000', 10)).toBe('http://lo…')
 
-		expect(truncateEnd('http://localhost', 1)).toBe('...')
+		expect(truncateEnd('http://localhost', 1)).toBe('…')
+	})
+
+	it('never exceeds the requested width', () => {
+		const text = 'http://localhost:3000/some/long/path'
+
+		// The whole point of pre-fitting: the label must fit the cell exactly, else Ink's
+		// truncator runs and strips the OSC 8 escape it isn't aware of.
+		for (let width = 1; width <= text.length + 2; width++) {
+			expect(truncateEnd(text, width).length).toBeLessThanOrEqual(width)
+		}
 	})
 
 	it('returns empty for a non-positive width', () => {

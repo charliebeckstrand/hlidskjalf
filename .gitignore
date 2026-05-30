@@ -5,6 +5,9 @@ package-lock.json
 # build
 dist
 
+# coverage
+coverage
+
 # OS
 .DS_Store
 

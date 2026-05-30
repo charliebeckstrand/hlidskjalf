@@ -78,7 +78,9 @@ const hoisted = vi.hoisted(() => {
 
 	const discovered = { current: [] as Workspace[] }
 
-	return { FakeChild, spawned, psOutput, discovered }
+	const watchOnChange = { current: null as null | (() => void) }
+
+	return { FakeChild, spawned, psOutput, discovered, watchOnChange }
 })
 
 vi.mock('node:child_process', () => ({
@@ -98,6 +100,15 @@ vi.mock('../src/workspaces.js', async (importOriginal) => {
 
 	return { ...actual, discover: () => hoisted.discovered.current }
 })
+
+// Capture the re-discovery callback so watch-mode tests can fire it without real fs events.
+vi.mock('../src/watcher.js', () => ({
+	watchWorkspaces: (_root: string, onChange: () => void) => {
+		hoisted.watchOnChange.current = onChange
+
+		return { close: () => {} }
+	},
+}))
 
 const APP: Workspace = { name: 'web', kind: 'app', deps: [] }
 
@@ -165,6 +176,8 @@ afterEach(async () => {
 	hoisted.spawned.length = 0
 
 	hoisted.psOutput.current = ''
+
+	hoisted.watchOnChange.current = null
 
 	vi.restoreAllMocks()
 })
@@ -297,6 +310,64 @@ describe('lifecycle', () => {
 		await flush()
 
 		expect(childFor('web')).toBeDefined()
+	})
+
+	it('gates apps on a package that signals ready rather than watching', async () => {
+		hoisted.discovered.current = [LIB, { name: 'web', kind: 'app', deps: ['lib'] }]
+
+		store = makeStore()
+
+		await store.start()
+
+		expect(childFor('web')).toBeUndefined()
+
+		// A package whose dev script runs a server settles on `ready`, not `watching`;
+		// the startup timer clears, so it must still release the app gate.
+		childFor('lib')?.out('listening on http://localhost:3000\n')
+
+		await flush()
+
+		expect(get('lib')?.status).toBe('ready')
+
+		expect(childFor('web')).toBeDefined()
+	})
+
+	it('releases the app gate when a package never settles and times out', async () => {
+		vi.useFakeTimers()
+
+		hoisted.discovered.current = [LIB, { name: 'web', kind: 'app', deps: ['lib'] }]
+
+		store = makeStore()
+
+		await store.start()
+
+		expect(childFor('web')).toBeUndefined()
+
+		// lib emits nothing and stalls; the startup timer fires, marks it timeout, and the
+		// gate must release so the app isn't held hostage to a wedged dependency.
+		await vi.advanceTimersByTimeAsync(120_000)
+
+		expect(get('lib')?.status).toBe('timeout')
+
+		expect(childFor('web')).toBeDefined()
+	})
+
+	it('starts an app anyway, with a warning, when its package dependency fails', async () => {
+		hoisted.discovered.current = [LIB, { name: 'web', kind: 'app', deps: ['lib'] }]
+
+		store = makeStore()
+
+		await store.start()
+
+		childFor('lib')?.exit(1)
+
+		await flush()
+
+		expect(get('lib')?.status).toBe('error')
+
+		expect(childFor('web')).toBeDefined()
+
+		expect(get('web')?.logs.some((l) => l.includes('dependency lib failed'))).toBe(true)
 	})
 })
 
@@ -827,6 +898,71 @@ describe('dynamic workspaces', () => {
 
 		expect(() => store.removeWorkspace('nonexistent')).not.toThrow()
 	})
+
+	it('rediscovers on a watch event: spawns appeared workspaces, drops vanished ones', async () => {
+		hoisted.discovered.current = [APP]
+
+		store = makeStore({ watch: true })
+
+		await store.start()
+
+		expect(get('web')).toBeDefined()
+
+		// A package.json change adds lib and removes web; the watcher fires the callback.
+		hoisted.discovered.current = [LIB]
+
+		hoisted.watchOnChange.current?.()
+
+		await flush()
+
+		expect(get('lib')).toBeDefined()
+
+		expect(childFor('lib')).toBeDefined()
+
+		expect(get('web')).toBeUndefined()
+	})
+
+	it('leaves the snapshot untouched when a watch event changes nothing', async () => {
+		hoisted.discovered.current = [APP]
+
+		store = makeStore({ watch: true })
+
+		await store.start()
+
+		const before = store.getSnapshot()
+
+		hoisted.watchOnChange.current?.()
+
+		await flush()
+
+		// No add/remove means no snapshot rebuild, so the reference is stable.
+		expect(store.getSnapshot()).toBe(before)
+	})
+
+	it('wakes a paused workspace before removing it, so it is not left suspended', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		const child = childFor('web')
+
+		child?.out('Watching for changes\n')
+
+		store.pauseProcess('web')
+
+		const pid = child?.pid ?? 0
+
+		store.removeWorkspace('web')
+
+		await flush()
+
+		// A SIGSTOP'd child ignores SIGTERM; without the SIGCONT it would linger forever.
+		expect(vi.mocked(process.kill)).toHaveBeenCalledWith(-pid, 'SIGCONT')
+
+		expect(child?.killed).toBe(true)
+
+		expect(get('web')).toBeUndefined()
+	})
 })
 
 describe('shutdown', () => {
@@ -856,6 +992,137 @@ describe('shutdown', () => {
 		child?.out('late output\n')
 
 		expect(get('web')?.logs.length).toBe(before)
+	})
+
+	it('does not spawn apps after shutdown begins mid-startup', async () => {
+		hoisted.discovered.current = [LIB, { name: 'web', kind: 'app', deps: ['lib'] }]
+
+		store = makeStore()
+
+		await store.start()
+
+		// lib settles, releasing the package gate — but spawnAll's continuation (which spawns
+		// the app) is queued as a microtask and hasn't run yet.
+		childFor('lib')?.out('Watching for changes\n')
+
+		// Quit in exactly that window. The app must not be spawned into a torn-down store,
+		// where nothing would ever reap it.
+		const done = store.shutdown()
+
+		await flush()
+
+		await done
+
+		expect(childFor('web')).toBeUndefined()
+	})
+})
+
+describe('edge cases and guards', () => {
+	it('clears a pending error recovery when a good status follows', async () => {
+		vi.useFakeTimers()
+
+		store = makeStore()
+
+		await store.start()
+
+		const child = childFor('web')
+
+		child?.out('[ERROR] transient\n')
+
+		expect(get('web')?.status).toBe('error')
+
+		// A good line cancels the scheduled recovery and adopts the new status immediately.
+		child?.out('Watching for changes\n')
+
+		expect(get('web')?.status).toBe('watching')
+
+		vi.advanceTimersByTime(5000)
+
+		expect(get('web')?.status).toBe('watching')
+	})
+
+	it('marks a process errored when its child emits an error event', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		childFor('web')?.emit('error', new Error('spawn ENOENT'))
+
+		expect(get('web')?.status).toBe('error')
+	})
+
+	it('notifies dependents when a package enters the error state', async () => {
+		hoisted.discovered.current = [LIB, { name: 'web', kind: 'app', deps: ['lib'] }]
+
+		store = makeStore()
+
+		await store.start()
+
+		childFor('lib')?.out('Watching for changes\n')
+
+		await flush()
+
+		childFor('lib')?.exit(1)
+
+		expect(get('web')?.logs.some((l) => l.includes('dependency lib entered error state'))).toBe(
+			true,
+		)
+	})
+
+	it('ignores all controls once shutdown has begun', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		await store.shutdown()
+
+		const count = spawnCount('web')
+
+		store.stopProcess('web')
+		store.restartProcess('web')
+		store.pauseProcess('web')
+		store.resumeProcess('web')
+		store.killProcess('web')
+
+		expect(spawnCount('web')).toBe(count)
+	})
+
+	it('treats stopping an already-stopped process as a quiet no-op', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		childFor('web')?.exit(0)
+
+		expect(get('web')?.status).toBe('stopped')
+
+		const logsBefore = get('web')?.logs.length ?? 0
+
+		store.stopProcess('web')
+
+		// No live child, so no "stopping..." note is appended.
+		expect(get('web')?.logs.length).toBe(logsBefore)
+
+		expect(get('web')?.status).toBe('stopped')
+	})
+
+	it('re-sorts in dependency order on a watch event when order is "run"', async () => {
+		hoisted.discovered.current = [APP]
+
+		store = makeStore({ watch: true, order: 'run' })
+
+		await store.start()
+
+		hoisted.discovered.current = [LIB, { name: 'web', kind: 'app', deps: ['lib'] }]
+
+		hoisted.watchOnChange.current?.()
+
+		await flush()
+
+		// Run order puts packages ahead of the apps that depend on them.
+		const names = store.getSnapshot().map((p) => p.workspace.name)
+
+		expect(names).toEqual(['lib', 'web'])
 	})
 })
 
