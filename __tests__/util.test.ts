@@ -8,6 +8,7 @@ describe('clamp', () => {
 
 	it('saturates to the bounds outside the range', () => {
 		expect(clamp(-3, 0, 10)).toBe(0)
+
 		expect(clamp(42, 0, 10)).toBe(10)
 	})
 
@@ -27,6 +28,7 @@ describe('clampIndex', () => {
 
 	it('yields 0 for an empty list rather than -1', () => {
 		expect(clampIndex(0, 0)).toBe(0)
+
 		expect(clampIndex(3, 0)).toBe(0)
 	})
 })
@@ -34,6 +36,7 @@ describe('clampIndex', () => {
 describe('truncate', () => {
 	it('leaves a string within the cap untouched', () => {
 		expect(truncate('hello', 10)).toBe('hello')
+
 		expect(truncate('hello', 5)).toBe('hello')
 	})
 
@@ -53,9 +56,11 @@ describe('createUnrefTimer', () => {
 		createUnrefTimer(1000, fn)
 
 		vi.advanceTimersByTime(999)
+
 		expect(fn).not.toHaveBeenCalled()
 
 		vi.advanceTimersByTime(1)
+
 		expect(fn).toHaveBeenCalledTimes(1)
 	})
 
@@ -67,6 +72,7 @@ describe('createUnrefTimer', () => {
 		clearTimeout(createUnrefTimer(1000, fn))
 
 		vi.advanceTimersByTime(2000)
+
 		expect(fn).not.toHaveBeenCalled()
 	})
 })
