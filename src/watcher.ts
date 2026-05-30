@@ -1,5 +1,5 @@
-import { existsSync, type FSWatcher, readdirSync, watch } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, type FSWatcher, readdirSync, realpathSync, watch } from 'node:fs'
+import { join, resolve, sep } from 'node:path'
 
 /** Parent directories Turborepo workspaces live under. */
 const WORKSPACE_DIRS = ['packages', 'apps', 'services']
@@ -24,6 +24,8 @@ export interface Watcher {
  * for every nested `node_modules` directory.
  */
 export function watchWorkspaces(root: string, onChange: () => void): Watcher {
+	const resolvedRoot = resolve(root)
+
 	const parentWatchers: FSWatcher[] = []
 
 	const childWatchers = new Map<string, FSWatcher>()
@@ -48,6 +50,14 @@ export function watchWorkspaces(root: string, onChange: () => void): Watcher {
 
 	const watchChild = (dir: string) => {
 		if (closed || childWatchers.has(dir)) return
+
+		// Mirror discover()'s containment check: a symlinked workspace dir must not place
+		// a watcher on a target outside the root.
+		try {
+			if (!realpathSync(dir).startsWith(resolvedRoot + sep)) return
+		} catch {
+			return
+		}
 
 		try {
 			const w = watch(dir, (_event, filename) => {

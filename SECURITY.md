@@ -7,6 +7,15 @@
 | 0.4.x   | :white_check_mark: |
 | < 0.4   | :x:                |
 
+## Trust Model
+
+Run `hlidskjalf` only in repositories you trust. On launch it imports a
+`hlidskjalf.config.{ts,mjs,js}` from the working directory, which runs that
+file's code, and it starts each workspace's `dev` script. A hostile repository
+can therefore execute arbitrary code the moment you launch the tool inside it.
+As with `vite.config.ts` and similar dev tooling, this is inherent to the task,
+not a vulnerability.
+
 ## Reporting a Vulnerability
 
 If you discover a security vulnerability in this project, please report it responsibly.
