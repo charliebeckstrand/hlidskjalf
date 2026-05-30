@@ -1,4 +1,4 @@
-import type { ThemeName } from './ui.js'
+import type { ThemeName } from './ui/index.js'
 
 export type WorkspaceKind = 'package' | 'app' | 'service'
 

@@ -7,7 +7,7 @@ import {
 	parsePsOutput,
 	safeEnv,
 	sumTickDeltas,
-} from '../src/metrics.js'
+} from '../src/metrics/index.js'
 
 describe('safeEnv', () => {
 	it('keeps only allowlisted variables and drops secrets', () => {

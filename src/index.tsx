@@ -3,7 +3,14 @@ import { render } from 'ink'
 import { App } from './app.js'
 import { loadConfig } from './config.js'
 import type { Options, SortOrder } from './types.js'
-import { DEFAULT_THEME, enterAltScreen, parseTheme, setTheme, THEME_ALIASES, themes } from './ui.js'
+import {
+	DEFAULT_THEME,
+	enterAltScreen,
+	parseTheme,
+	setTheme,
+	THEME_ALIASES,
+	themes,
+} from './ui/index.js'
 import { normalizeFilters } from './workspaces.js'
 
 // `--metrics` / `--watch` accept an optional `=true` / `=false` value that parseArgs won't
