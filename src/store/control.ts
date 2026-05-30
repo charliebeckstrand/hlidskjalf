@@ -23,7 +23,7 @@ export function stopProcess(ctx: StoreContext, name: string): void {
 	})
 
 	if (wasLive) {
-		note(entry, 'stopping process...')
+		note(entry, 'stopping (SIGTERM)...')
 
 		changed(ctx)
 	}
@@ -46,7 +46,7 @@ export function restartProcess(ctx: StoreContext, name: string): void {
 
 		entry.process.url = undefined
 
-		note(entry, 'restarting process...')
+		note(entry, 'restarting...')
 
 		spawnWorkspace(ctx, workspace)
 	}
@@ -58,7 +58,7 @@ export function restartProcess(ctx: StoreContext, name: string): void {
 	beginTeardown(entry, doRestart)
 
 	if (wasLive) {
-		note(entry, 'stopping process for restart...')
+		note(entry, 'stopping for restart (SIGTERM)...')
 
 		changed(ctx)
 	}
@@ -132,7 +132,7 @@ export function killProcess(ctx: StoreContext, name: string): void {
 	)
 
 	if (wasLive) {
-		note(entry, 'killing process (SIGKILL)...')
+		note(entry, 'killing (SIGKILL)...')
 
 		changed(ctx)
 	}
