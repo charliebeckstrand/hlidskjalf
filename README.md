@@ -30,12 +30,12 @@ pnpm dev
 
 | Option | Description |
 | --- | --- |
-| `filter` | Include specific workspaces (`--filter=web`). Append `...` for transitive deps (`--filter=web...`). |
-| `order` | Sort by `alphabetical` (default) or `run` (`--order=run`) dependency order. |
+| `filter` | Include specific workspaces (`--filter=web`). Append `...` for transitive dependencies (`--filter=web...`). |
+| `order` | Sort by `alphabetical` or `run` (`--order=run`). Defaults to `alphabetical`. |
 | `title` | Custom title for the header (`--title="My App"`). Defaults to `Hlidskjalf`. |
+| `theme` | Colour theme (`--theme=niflheim` or `--theme=ice`). Defaults to `bifrost`. |
 | `metrics` | Show CPU and memory usage per workspace. Defaults to `false`. |
-| `watch` | Re-discover workspaces when `package.json` files change. Defaults to `true`; disable with `--no-watch`. |
-| `theme` | Colour theme (`--theme=niflheim` or `--theme=ice`). One of `bifrost` (default), `niflheim`, `muspelheim`, and `yggdrasil`. |
+| `watch` | Re-discover workspaces when `package.json` files change. Defaults to `true`; disable with `--watch=false`. |
 
 ## Themes
 
@@ -43,7 +43,7 @@ Named for the realms of Norse cosmology, to match the all-seeing high seat the t
 
 | Theme | Alias | Mood |
 | --- | --- | --- |
-| `bifrost` | — | Default - Rainbow bridge — indigo + teal |
+| `bifrost` | — | Default - electric purples, sky blues, and starlight whites. |
 | `niflheim` | `ice` | Ice — glacial blues, frost-white highlights. |
 | `muspelheim` | `fire` | Fire — molten oranges, ember golds. |
 | `yggdrasil` | `earth` | Earth — mosses, leaf-greens, bark greys. |
@@ -51,11 +51,9 @@ Named for the realms of Norse cosmology, to match the all-seeing high seat the t
 Each realm also answers to its elemental alias, so `--theme=ice` is the same as
 `--theme=niflheim`.
 
-Status colours (running / warning / error) stay legible in every theme, so a glyph never misreads.
-
 ## Configuration
 
-Persist any of the options above so they don't have to be retyped on every run.
+Persist any of the options above.
 Create a `hlidskjalf.config.ts` at the repo root:
 
 ```ts
@@ -69,8 +67,7 @@ export default defineConfig({
 })
 ```
 
-`defineConfig` is optional — a plain `export default { ... }` works too, and
-`hlidskjalf.config.js` / `hlidskjalf.config.mjs` are also recognized. The `.ts`
+`defineConfig` is optional — a plain `export default { ... }` works too. `hlidskjalf.config.js` / `hlidskjalf.config.mjs` are also recognized. The `.ts`
 form needs no build step: it's loaded directly via Node's type stripping
 (Node ≥ 22.18).
 
@@ -93,7 +90,7 @@ defaults**, so a flag always wins over a stored value.
 While running, hlidskjalf watches your `packages`, `apps`, and `services`
 directories. When a workspace's `package.json` is added, removed, or changed it
 re-runs discovery: new workspaces start automatically and removed ones are
-stopped and dropped from the dashboard. Pass `--no-watch` (or set
+stopped and dropped from the dashboard. Pass `--watch=false` (or set
 `watch: false`) to turn this off.
 
 ## Controls

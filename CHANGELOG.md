@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2]
+
+### Changed
+
+- **Boolean flags take a value** — disable file watching with `--watch=false` and
+  metrics with `--metrics=false` (both also accept `=true`, and a bare `--watch` /
+  `--metrics` still reads as `true`). Replaces the `--no-watch` / `--no-metrics`
+  forms. The config forms (`watch: false`, `metrics: true`) are unchanged.
+
 ## [0.4.1]
 
 ### Added

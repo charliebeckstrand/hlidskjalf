@@ -62,7 +62,7 @@ const SHARED: SharedColors = {
  * slots pulled from {@link SHARED}.
  */
 export const themes = {
-	// Rainbow bridge — indigo + teal.
+	// Default — electric purples, sky blues, and starlight whites.
 	bifrost: {
 		accent: '#7C8EF2',
 		accentBright: '#BEC7F9',
