@@ -13,7 +13,7 @@ import {
 } from './constants.js'
 import { note } from './entry.js'
 import { createLineBuffer } from './lines.js'
-import { clearErrorTimer, scheduleErrorRecovery } from './recovery.js'
+import { cancelErrorRecovery, scheduleErrorRecovery } from './recovery.js'
 import { markChanged } from './snapshot.js'
 import { setStatus } from './status.js'
 import type { StoreContext } from './types.js'
@@ -150,7 +150,7 @@ function handleLine(ctx: StoreContext, name: string, raw: string): void {
 		} else {
 			entry.lastGoodStatus = status
 
-			clearErrorTimer(ctx, name)
+			cancelErrorRecovery(ctx, name)
 
 			entry.restartRetries = 0
 

@@ -5,7 +5,7 @@ import { setStatus } from './status.js'
 import type { StoreContext } from './types.js'
 
 export function scheduleErrorRecovery(ctx: StoreContext, name: string): void {
-	clearErrorTimer(ctx, name)
+	cancelErrorRecovery(ctx, name)
 
 	withEntry(ctx, name, (entry) => {
 		entry.errorTimer = createUnrefTimer(ERROR_RECOVERY_MS, () => {
@@ -18,7 +18,7 @@ export function scheduleErrorRecovery(ctx: StoreContext, name: string): void {
 	})
 }
 
-export function clearErrorTimer(ctx: StoreContext, name: string): void {
+export function cancelErrorRecovery(ctx: StoreContext, name: string): void {
 	const entry = ctx.entries.get(name)
 
 	if (entry?.errorTimer) {
