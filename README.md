@@ -32,7 +32,7 @@ pnpm dev
 | --- | --- |
 | `filter` | Include specific workspaces (`--filter=web`). Append `...` for transitive dependencies (`--filter=web...`). |
 | `order` | Sort by `alphabetical` or `run` order (`--order=run`). Defaults to `alphabetical`. |
-| `title` | Custom header title (`--title="My App"`). Defaults to `Hlidskjalf`. |
+| `title` | Custom title (`--title="My App"`). Defaults to `Hlidskjalf`. |
 | `theme` | Colour theme (`--theme=niflheim` or `--theme=ice`). Defaults to `bifrost`. |
 | `metrics` | Show CPU and memory usage per workspace. Defaults to `false`. |
 | `watch` | Re-discover workspaces when `package.json` files change. Defaults to `true`; disable with `--watch=false`. |
