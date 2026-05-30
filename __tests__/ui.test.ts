@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Status } from '../src/types.js'
 import {
-	after,
 	colors,
 	cpuColor,
 	enterAltScreen,
@@ -265,19 +264,5 @@ describe('timers', () => {
 		vi.advanceTimersByTime(3000)
 
 		expect(fn).toHaveBeenCalledTimes(3)
-	})
-
-	it('after() runs once and can be cancelled before firing', () => {
-		vi.useFakeTimers()
-
-		const fn = vi.fn()
-
-		const cancel = after(1000, fn)
-
-		cancel()
-
-		vi.advanceTimersByTime(2000)
-
-		expect(fn).not.toHaveBeenCalled()
 	})
 })

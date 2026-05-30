@@ -3,6 +3,7 @@ import { appendLog } from '../logs.js'
 import { safeEnv } from '../metrics/index.js'
 import { parseLine, sanitizeForDisplay, stripAnsi } from '../parser.js'
 import type { Workspace } from '../types.js'
+import { truncate } from '../util.js'
 import {
 	MAX_BUFFER_SIZE,
 	MAX_LINE_LENGTH,
@@ -107,7 +108,7 @@ function handleLine(ctx: StoreContext, name: string, raw: string): void {
 	// surface a failure that didn't happen. A restart clears the flag when the child respawns.
 	if (entry.intentionalExit) return
 
-	const line = raw.length > MAX_LINE_LENGTH ? raw.slice(0, MAX_LINE_LENGTH) : raw
+	const line = truncate(raw, MAX_LINE_LENGTH)
 
 	const { process: proc } = entry
 

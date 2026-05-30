@@ -12,6 +12,7 @@ import {
 } from '../../layout.js'
 import type { WorkspaceProcess } from '../../types.js'
 import { colors, HINTS } from '../../ui/index.js'
+import { clampIndex } from '../../util.js'
 import { Header } from '../chrome.js'
 import { Cell } from '../primitives.js'
 import { Log } from './log.js'
@@ -47,7 +48,7 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 
 	const logHeight = logPanelHeight(rows, processes.length)
 
-	const safeIndex = Math.min(selectedIndex, Math.max(0, processes.length - 1))
+	const safeIndex = clampIndex(selectedIndex, processes.length)
 
 	const selected = processes[safeIndex]
 

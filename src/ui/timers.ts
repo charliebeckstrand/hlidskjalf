@@ -9,12 +9,3 @@ export function every(ms: number, fn: () => void): () => void {
 
 	return () => clearInterval(timer)
 }
-
-/** Schedule an unref'd timeout and return a canceller. */
-export function after(ms: number, fn: () => void): () => void {
-	const timer = setTimeout(fn, ms)
-
-	timer.unref()
-
-	return () => clearTimeout(timer)
-}

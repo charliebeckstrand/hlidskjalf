@@ -1,5 +1,6 @@
 import { stripVTControlCharacters } from 'node:util'
 import type { Status } from './types.js'
+import { truncate } from './util.js'
 
 interface ParsedLine {
 	status?: Status
@@ -84,7 +85,7 @@ const ANY_NON_HTTP_MATCHER = new RegExp(
 )
 
 export function parseLine(line: string): ParsedLine {
-	const truncated = line.length > MAX_PARSE_LENGTH ? line.slice(0, MAX_PARSE_LENGTH) : line
+	const truncated = truncate(line, MAX_PARSE_LENGTH)
 
 	if (DTS.test(truncated)) return {}
 
