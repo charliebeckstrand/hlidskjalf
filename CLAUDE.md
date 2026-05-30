@@ -3,7 +3,7 @@
 ## Principles
 
 - Hold yourself to a staff engineer standard
-- Critique your work before presenting it. Name the weakest part and the gaps
+- Critique your work before presenting it. Name holes and gaps
 - Understand before modifying. Follow the surrounding code's conventions
 - Extend before inventing. Add a new abstraction only at a genuinely distinct boundary
 - Solve only the stated problem. Surface adjacent issues for review
