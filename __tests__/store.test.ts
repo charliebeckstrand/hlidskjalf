@@ -591,6 +591,32 @@ describe('manual stop and restart', () => {
 		expect(get('web')?.logs.some((l) => l.includes('giving up'))).toBe(false)
 	})
 
+	it('drops teardown noise emitted after a stop', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		const child = childFor('web')
+
+		child?.out('Watching for changes\n')
+
+		const before = get('web')?.logs.length ?? 0
+
+		store.stopProcess('web')
+
+		// pnpm's complaint as it forwards our SIGTERM — must not land in the log as a failure.
+		child?.out('ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  Command failed with signal "SIGTERM"\n')
+
+		await flush()
+
+		const logs = get('web')?.logs ?? []
+
+		expect(logs.some((l) => l.includes('ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL'))).toBe(false)
+
+		// Only the internal "stopping process..." note was appended, not the child's noise.
+		expect(logs.length).toBe(before + 1)
+	})
+
 	it('restarts a stopped process when stop is toggled', async () => {
 		store = makeStore()
 
