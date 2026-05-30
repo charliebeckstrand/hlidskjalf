@@ -2,7 +2,7 @@ import { type ChildProcess, spawn } from 'node:child_process'
 import { appendLog, parseLine, sanitizeForDisplay, stripAnsi } from '../logs/index.js'
 import { safeEnv } from '../metrics/index.js'
 import type { Workspace } from '../types.js'
-import { createUnrefTimer, truncate } from '../util.js'
+import { truncate } from '../utilities.js'
 import {
 	MAX_BUFFER_SIZE,
 	MAX_LINE_LENGTH,
@@ -16,6 +16,7 @@ import { cancelErrorRecovery, scheduleErrorRecovery } from './recovery.js'
 import { markChanged } from './snapshot.js'
 import { setStatus } from './status.js'
 import type { StoreContext } from './types.js'
+import { createUnrefTimer } from './utilities.js'
 
 export function spawnWorkspace(ctx: StoreContext, workspace: Workspace): void {
 	const child = spawn('pnpm', ['--filter', workspace.name, 'run', 'dev'], {

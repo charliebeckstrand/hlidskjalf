@@ -6,7 +6,7 @@
  * its snapshot array, not by copying this buffer per line.
  */
 
-import { clamp } from '../util.js'
+import { clamp } from '../utilities.js'
 
 /** Maximum log lines retained per process for display scrollback. */
 export const MAX_LOGS = 500

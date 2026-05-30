@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { clamp, clampIndex, createUnrefTimer, truncate } from '../src/util.js'
+import { describe, expect, it } from 'vitest'
+import { clamp, clampIndex, isPlainObject, truncate } from '../src/utilities.js'
 
 describe('clamp', () => {
 	it('returns the value when already inside the range', () => {
@@ -45,34 +45,22 @@ describe('truncate', () => {
 	})
 })
 
-describe('createUnrefTimer', () => {
-	afterEach(() => vi.useRealTimers())
+describe('isPlainObject', () => {
+	it('accepts plain objects', () => {
+		expect(isPlainObject({})).toBe(true)
 
-	it('fires once after the delay', () => {
-		vi.useFakeTimers()
-
-		const fn = vi.fn()
-
-		createUnrefTimer(1000, fn)
-
-		vi.advanceTimersByTime(999)
-
-		expect(fn).not.toHaveBeenCalled()
-
-		vi.advanceTimersByTime(1)
-
-		expect(fn).toHaveBeenCalledTimes(1)
+		expect(isPlainObject({ a: 1 })).toBe(true)
 	})
 
-	it('returns a handle the caller can clear before it fires', () => {
-		vi.useFakeTimers()
+	it('rejects null, arrays, and primitives', () => {
+		expect(isPlainObject(null)).toBe(false)
 
-		const fn = vi.fn()
+		expect(isPlainObject([1, 2])).toBe(false)
 
-		clearTimeout(createUnrefTimer(1000, fn))
+		expect(isPlainObject('s')).toBe(false)
 
-		vi.advanceTimersByTime(2000)
+		expect(isPlainObject(42)).toBe(false)
 
-		expect(fn).not.toHaveBeenCalled()
+		expect(isPlainObject(undefined)).toBe(false)
 	})
 })

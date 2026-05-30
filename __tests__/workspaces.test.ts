@@ -6,32 +6,11 @@ import type { Workspace } from '../src/types.js'
 import {
 	discoverWorkspaces,
 	filterWorkspaces,
-	isPlainObject,
 	isValidPackageName,
 	normalizeFilters,
 	sortByDeps,
 	sortByName,
 } from '../src/workspaces.js'
-
-describe('isPlainObject', () => {
-	it('accepts plain objects', () => {
-		expect(isPlainObject({})).toBe(true)
-
-		expect(isPlainObject({ a: 1 })).toBe(true)
-	})
-
-	it('rejects null, arrays, and primitives', () => {
-		expect(isPlainObject(null)).toBe(false)
-
-		expect(isPlainObject([1, 2])).toBe(false)
-
-		expect(isPlainObject('s')).toBe(false)
-
-		expect(isPlainObject(42)).toBe(false)
-
-		expect(isPlainObject(undefined)).toBe(false)
-	})
-})
 
 describe('isValidPackageName', () => {
 	it.each([

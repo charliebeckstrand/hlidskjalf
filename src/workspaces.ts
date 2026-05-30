@@ -2,16 +2,12 @@ import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs'
 import { join, resolve, sep } from 'node:path'
 import { sanitizeForDisplay } from './logs/index.js'
 import type { Workspace, WorkspaceKind } from './types.js'
+import { isPlainObject } from './utilities.js'
 
 interface PkgJson {
 	name?: string
 	scripts?: Record<string, string>
 	dependencies?: Record<string, string>
-}
-
-/** Narrow an unknown value to a non-null, non-array object. */
-export function isPlainObject(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 /** Valid npm package name pattern (scoped or unscoped). */

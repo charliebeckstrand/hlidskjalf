@@ -12,7 +12,7 @@ import {
 } from '../../layout.js'
 import type { WorkspaceProcess } from '../../types.js'
 import { colors, HINTS } from '../../ui/index.js'
-import { clampIndex } from '../../util.js'
+import { clampIndex } from '../../utilities.js'
 import { Header } from '../chrome.js'
 import { Cell } from '../primitives.js'
 import { Log } from './log.js'

@@ -9,7 +9,8 @@ import { pathToFileURL } from 'node:url'
 import { sanitizeForDisplay } from './logs/index.js'
 import type { SortOrder } from './types.js'
 import { parseTheme, type ThemeName } from './ui/index.js'
-import { isPlainObject, normalizeFilters } from './workspaces.js'
+import { isPlainObject } from './utilities.js'
+import { normalizeFilters } from './workspaces.js'
 
 /**
  * User-facing configuration. Every field mirrors a CLI flag and is optional; anything
