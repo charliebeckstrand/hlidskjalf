@@ -107,7 +107,12 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 			{processes.map((proc, i) => (
 				<Process
 					key={proc.workspace.name}
-					process={proc}
+					name={proc.workspace.name}
+					kind={proc.workspace.kind}
+					status={proc.status}
+					url={proc.url}
+					cpu={proc.metrics?.cpu}
+					mem={proc.metrics?.mem}
 					selected={i === safeIndex}
 					nameWidth={nameWidth}
 					showMetrics={metrics}

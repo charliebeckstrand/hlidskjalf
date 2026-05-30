@@ -1,5 +1,6 @@
 import { Box, Text } from 'ink'
 import Spinner from 'ink-spinner'
+import { memo } from 'react'
 import { useTerminalSize } from '../hooks/use-terminal-size.js'
 import { colors, HINTS } from '../ui/index.js'
 import { Cell, Panel } from './primitives.js'
@@ -11,8 +12,12 @@ interface HeaderProps {
 	hints?: string
 }
 
-/** Top bar shared by every screen: status dot, title, and (space permitting) key hints. */
-export function Header({ title, ready = false, columns, hints }: HeaderProps) {
+/**
+ * Top bar shared by every screen: status dot, title, and (space permitting) key hints.
+ * Memoized on its all-primitive props so a dashboard re-render driven by log output — which
+ * leaves title/ready/columns untouched — doesn't re-render the bordered header subtree.
+ */
+export const Header = memo(function Header({ title, ready = false, columns, hints }: HeaderProps) {
 	const showHints = hints && columns >= 10 + hints.length + 4
 
 	return (
@@ -44,7 +49,7 @@ export function Header({ title, ready = false, columns, hints }: HeaderProps) {
 			</Box>
 		</Box>
 	)
-}
+})
 
 /** Initial discovery screen, shown until the store registers its workspaces. */
 export function Loading({ title }: { title: string }) {
