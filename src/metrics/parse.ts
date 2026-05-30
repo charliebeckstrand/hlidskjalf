@@ -165,7 +165,11 @@ export function parseProcStat(content: string, pageSize = 4096): ProcStat | null
 
 	const stime = Number.parseInt(fields[12] ?? '', 10)
 
-	const rss = Number.parseInt(fields[21] ?? '', 10) * pageSize
+	// A malformed RSS field floors to 0 (matching parsePsOutput) so it can't poison a
+	// workspace's summed memory with NaN.
+	const rssPages = Number.parseInt(fields[21] ?? '', 10)
+
+	const rss = (Number.isNaN(rssPages) ? 0 : rssPages) * pageSize
 
 	if (Number.isNaN(ppid)) return null
 
