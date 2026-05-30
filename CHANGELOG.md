@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **An unrecognized CLI argument no longer crashes the launch** — a repo's `dev`
+  script controls argv, and an extra flag or positional it appended made
+  `parseArgs` throw a stack trace before the dashboard could start. Parsing is now
+  non-strict: unknown arguments are ignored and the known flags still apply.
 - **Startup no longer wedges when a package is paused or removed mid-launch** — the
   gate that holds apps until their package dependencies start waited on a fixed set
   of settled statuses. Pausing a package (which also cancels its startup timer, so it

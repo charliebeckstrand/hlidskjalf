@@ -49,8 +49,14 @@ const args = argv.filter((arg) => {
 	return true
 })
 
+// A repo's `dev` script controls argv (`hlidskjalf ...`) and may append flags or positionals
+// hlidskjalf doesn't define. Stay non-strict so an unrecognized argument is ignored rather
+// than crashing the launch with a parseArgs stack trace; the known flags below still parse,
+// and unknown ones land in `values` unread.
 const { values } = parseArgs({
 	args,
+	strict: false,
+	allowPositionals: true,
 	options: {
 		filter: { type: 'string', multiple: true },
 		order: { type: 'string' },
@@ -61,24 +67,35 @@ const { values } = parseArgs({
 
 const root = process.cwd()
 
+// strict:false types every parsed value as `string | boolean`; our declared options only ever
+// yield strings at runtime, so narrow back to keep the rest of the wiring well-typed.
+const flagString = (value: unknown): string | undefined =>
+	typeof value === 'string' ? value : undefined
+
 // Precedence: CLI flag > config file / package.json key > built-in default.
 const config = await loadConfig(root)
 
-const cliFilter = values.filter ? normalizeFilters(values.filter) : undefined
+const rawFilter = Array.isArray(values.filter)
+	? values.filter.filter((v): v is string => typeof v === 'string')
+	: undefined
+
+const cliFilter = rawFilter ? normalizeFilters(rawFilter) : undefined
 
 // A CLI filter that normalized to nothing (every pattern invalid) shouldn't silently
 // launch every workspace — fall back to a configured filter as if no `--filter` passed.
 const filter = cliFilter?.length ? cliFilter : config.filter
 
-const rawOrder = values.order ?? config.order
+const rawOrder = flagString(values.order) ?? config.order
 
 const order: SortOrder = rawOrder === 'run' ? 'run' : 'alphabetical'
 
 // A repo's `dev` script controls argv (`hlidskjalf --title=...`), so a `--title` flag is
 // as untrusted as the config-file title — scrub terminal escapes before it reaches the
 // header, matching the sanitize applied to config.title in loadConfig.
+const titleFlag = flagString(values.title)
+
 const title =
-	values.title !== undefined ? sanitizeForDisplay(values.title) : (config.title ?? 'Hlidskjalf')
+	titleFlag !== undefined ? sanitizeForDisplay(titleFlag) : (config.title ?? 'Hlidskjalf')
 
 const metrics = explicit.metrics ?? config.metrics ?? false
 
@@ -86,15 +103,15 @@ const watch = explicit.watch ?? config.watch ?? true
 
 // A `--theme` flag that isn't a known palette shouldn't crash the dashboard — warn and
 // fall through to the configured theme, then the built-in default.
-const flagTheme = parseTheme(values.theme)
+const themeFlag = flagString(values.theme)
 
-if (values.theme !== undefined && flagTheme === undefined) {
+const flagTheme = parseTheme(themeFlag)
+
+if (themeFlag !== undefined && flagTheme === undefined) {
 	const accepted = [...Object.keys(themes), ...Object.keys(THEME_ALIASES)].join(', ')
 
-	// values.theme can carry terminal escapes when argv comes from an untrusted dev script.
-	console.error(
-		`Ignoring --theme "${sanitizeForDisplay(values.theme)}": expected one of ${accepted}.`,
-	)
+	// themeFlag can carry terminal escapes when argv comes from an untrusted dev script.
+	console.error(`Ignoring --theme "${sanitizeForDisplay(themeFlag)}": expected one of ${accepted}.`)
 }
 
 const theme = flagTheme ?? config.theme ?? DEFAULT_THEME
