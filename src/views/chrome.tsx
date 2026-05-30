@@ -28,7 +28,7 @@ export const Header = memo(function Header({
 
 	// Glyph by fullness, colour by health: a half-circle for any partial state, hollow when
 	// nothing runs; amber only when something is paused, otherwise green.
-	const dotGlyph = activity === 'up' ? '●' : activity === 'down' ? '○' : '◑'
+	const dotGlyph = activity === 'up' ? '●' : activity === 'down' ? '○' : '◗'
 
 	const dotColor =
 		activity === 'paused' ? colors.warning : activity === 'down' ? colors.dim : colors.success
