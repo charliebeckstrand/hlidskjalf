@@ -950,6 +950,44 @@ describe('dynamic workspaces', () => {
 		expect(get('web')).toBeUndefined()
 	})
 
+	it('isolates a re-added workspace from a prior child closing late', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		const first = childFor('web')
+
+		first?.out('Watching for changes\n')
+
+		expect(get('web')?.status).toBe('watching')
+
+		// Remove, then immediately re-add under the same name while the first child's
+		// SIGTERM-triggered close is still in flight.
+		store.removeWorkspace('web')
+
+		store.addWorkspace(APP)
+
+		const second = childFor('web')
+
+		expect(second).toBeDefined()
+
+		expect(second).not.toBe(first)
+
+		expect(get('web')?.status).toBe('building')
+
+		// The first child finally closes. Its stale handler keys off the workspace name,
+		// which now maps to the new child — it must not flip the replacement into a crash.
+		await flush()
+
+		await flush()
+
+		expect(get('web')?.status).toBe('building')
+
+		expect(spawnCount('web')).toBe(2)
+
+		expect(get('web')?.logs.some((l) => l.includes('exited unexpectedly'))).toBe(false)
+	})
+
 	it('ignores removing an unknown workspace', async () => {
 		store = makeStore()
 

@@ -62,6 +62,11 @@ export function spawnWorkspace(ctx: StoreContext, workspace: Workspace): void {
 	const lineBuffer = createLineBuffer(MAX_BUFFER_SIZE)
 
 	const onData = (data: Buffer) => {
+		// Ignore a stale child's output. If the workspace was removed and re-added under the
+		// same name, the live entry now holds a different child; this one's teardown noise
+		// must not land in the new instance's log or drive its status.
+		if (ctx.entries.get(workspace.name)?.child !== child) return
+
 		for (const line of lineBuffer.push(data.toString())) handleLine(ctx, workspace.name, line)
 	}
 
@@ -71,12 +76,20 @@ export function spawnWorkspace(ctx: StoreContext, workspace: Workspace): void {
 	child.on('close', (code, signal) => {
 		const rest = lineBuffer.flush()
 
+		const entry = ctx.entries.get(workspace.name)
+
+		// A stale child from a prior instance — the workspace was removed and re-added under
+		// the same name while this child's SIGTERM was still draining — must not mutate the
+		// live entry that replaced it, or its delayed exit flips a healthy new instance into
+		// a false crash and schedules a spurious restart.
+		if (entry?.child !== child) return
+
 		if (rest !== null) handleLine(ctx, workspace.name, rest)
 
 		if (ctx.stopping) return
 
 		// A deliberate stop/restart handles its own teardown; don't treat it as a crash.
-		if (ctx.entries.get(workspace.name)?.intentionalExit) return
+		if (entry.intentionalExit) return
 
 		handleUnexpectedExit(ctx, workspace, code, signal)
 	})
@@ -84,7 +97,10 @@ export function spawnWorkspace(ctx: StoreContext, workspace: Workspace): void {
 	child.on('error', () => {
 		const liveEntry = ctx.entries.get(workspace.name)
 
-		if (liveEntry?.startupTimer) {
+		// Ignore an error surfacing from a stale child the live entry has already replaced.
+		if (liveEntry?.child !== child) return
+
+		if (liveEntry.startupTimer) {
 			clearTimeout(liveEntry.startupTimer)
 
 			liveEntry.startupTimer = null
