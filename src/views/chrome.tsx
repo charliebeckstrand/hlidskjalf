@@ -4,7 +4,7 @@ import { memo } from 'react'
 import { useTerminalSize } from '../hooks/use-terminal-size.js'
 import type { Activity } from '../layout.js'
 import { colors, HINTS } from '../ui/index.js'
-import { Cell, Panel } from './primitives.js'
+import { Cell, Panel } from './primitives/index.js'
 
 interface HeaderProps {
 	title: string
