@@ -123,10 +123,9 @@ export function Dashboard({ processes, selectedIndex, title, metrics = false }: 
 			{/* Log panel — hidden on a terminal too short to give it a usable height. */}
 			{selected && logHeight >= MIN_LOG_PANEL_HEIGHT && (
 				<Log
-					process={selected}
+					lines={selected.logs.slice(scroll.start, scroll.end)}
 					height={logHeight}
-					start={scroll.start}
-					end={scroll.end}
+					hiddenCount={selected.logs.length - scroll.end}
 					atBottom={scroll.atBottom}
 				/>
 			)}
