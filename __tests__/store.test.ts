@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { MAX_LOGS } from '../src/logs.js'
+import { MAX_LOGS } from '../src/logs/index.js'
 import { createStore, type Store } from '../src/store/index.js'
 import type { Options, Workspace, WorkspaceProcess } from '../src/types.js'
 
@@ -98,7 +98,7 @@ vi.mock('node:child_process', () => ({
 vi.mock('../src/workspaces.js', async (importOriginal) => {
 	const actual = await importOriginal<typeof import('../src/workspaces.js')>()
 
-	return { ...actual, discover: () => hoisted.discovered.current }
+	return { ...actual, discoverWorkspaces: () => hoisted.discovered.current }
 })
 
 // Capture the re-discovery callback so watch-mode tests can fire it without real fs events.
@@ -139,7 +139,7 @@ function makeStore(opts: Partial<Options> = {}): Store {
 		root: '/root',
 		order: 'alphabetical',
 		title: 'Test',
-		metrics: false,
+		showMetrics: false,
 		watch: false,
 		theme: 'bifrost',
 		...opts,
@@ -1309,7 +1309,7 @@ describe('metrics', () => {
 	it('derives a bounded interval CPU from cumulative cputime deltas (no startup spike)', async () => {
 		vi.useFakeTimers()
 
-		store = makeStore({ metrics: true })
+		store = makeStore({ showMetrics: true })
 
 		await store.start()
 
@@ -1341,7 +1341,7 @@ describe('metrics', () => {
 	it('clears stale metrics once a process is stopped', async () => {
 		vi.useFakeTimers()
 
-		store = makeStore({ metrics: true })
+		store = makeStore({ showMetrics: true })
 
 		await store.start()
 

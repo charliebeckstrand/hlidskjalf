@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { Workspace } from '../src/types.js'
 import {
-	discover,
+	discoverWorkspaces,
 	filterWorkspaces,
 	isPlainObject,
 	isValidPackageName,
@@ -160,7 +160,7 @@ describe('filterWorkspaces', () => {
 	})
 })
 
-describe('discover', () => {
+describe('discoverWorkspaces', () => {
 	let tmpDir: string
 
 	beforeEach(() => {
@@ -186,7 +186,7 @@ describe('discover', () => {
 	] as const)('discovers a workspace under %s with a dev script', (dir, kind) => {
 		createWorkspace(dir, 'thing', { name: 'thing', scripts: { dev: 'x' } })
 
-		expect(discover(tmpDir)).toEqual([{ name: 'thing', kind, deps: [] }])
+		expect(discoverWorkspaces(tmpDir)).toEqual([{ name: 'thing', kind, deps: [] }])
 	})
 
 	it.each([
@@ -198,7 +198,7 @@ describe('discover', () => {
 	])('skips a workspace with %s', (_label, pkg) => {
 		createWorkspace('packages', 'x', pkg)
 
-		expect(discover(tmpDir)).toEqual([])
+		expect(discoverWorkspaces(tmpDir)).toEqual([])
 	})
 
 	it('extracts only workspace: dependencies, ignoring malformed values', () => {
@@ -208,7 +208,7 @@ describe('discover', () => {
 			dependencies: { utils: 'workspace:*', react: '^18.0.0', broken: 123, nested: { v: '1' } },
 		})
 
-		expect(discover(tmpDir)).toEqual([{ name: 'web', kind: 'app', deps: ['utils'] }])
+		expect(discoverWorkspaces(tmpDir)).toEqual([{ name: 'web', kind: 'app', deps: ['utils'] }])
 	})
 
 	it('skips a workspace whose package.json is unreadable JSON', () => {
@@ -218,7 +218,7 @@ describe('discover', () => {
 
 		fs.writeFileSync(join(wsDir, 'package.json'), '{ not: valid json')
 
-		expect(discover(tmpDir)).toEqual([])
+		expect(discoverWorkspaces(tmpDir)).toEqual([])
 	})
 
 	it('skips a workspace dir symlinked outside the root', () => {
@@ -234,21 +234,21 @@ describe('discover', () => {
 
 			fs.symlinkSync(outside, join(tmpDir, 'packages', 'evil'))
 
-			expect(discover(tmpDir)).toEqual([])
+			expect(discoverWorkspaces(tmpDir)).toEqual([])
 		} finally {
 			fs.rmSync(outside, { recursive: true, force: true })
 		}
 	})
 
 	it('handles missing directories and discovers across many', () => {
-		expect(discover(tmpDir)).toEqual([])
+		expect(discoverWorkspaces(tmpDir)).toEqual([])
 
 		createWorkspace('packages', 'utils', { name: 'utils', scripts: { dev: 'x' } })
 
 		createWorkspace('apps', 'web', { name: 'web', scripts: { dev: 'y' } })
 
 		expect(
-			discover(tmpDir)
+			discoverWorkspaces(tmpDir)
 				.map((w) => w.name)
 				.sort(),
 		).toEqual(['utils', 'web'])

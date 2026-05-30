@@ -1,6 +1,6 @@
 import { Bench } from 'tinybench'
 
-import { appendLog, MAX_LOGS, visibleLogRange } from '../src/logs.js'
+import { appendLog, MAX_LOGS, visibleLogRange } from '../src/logs/index.js'
 import { LOG_LINES } from './fixtures.js'
 
 /**
@@ -18,7 +18,7 @@ function naiveAppend(logs: string[], line: string): void {
 	if (logs.length > MAX_LOGS) logs.splice(0, logs.length - MAX_LOGS)
 }
 
-export function logsSuite(): Bench {
+export function logsBufferSuite(): Bench {
 	const bench = new Bench({ name: 'logs — per-line buffer append', time: 500 })
 
 	const line = LOG_LINES.plain

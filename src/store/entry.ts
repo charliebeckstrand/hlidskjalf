@@ -1,9 +1,9 @@
-import { appendLog } from '../logs.js'
+import { appendLog } from '../logs/index.js'
 import type { Workspace } from '../types.js'
 import { escalateKill, isRunning, killTree } from './children.js'
-import type { ProcessEntry, StoreContext } from './types.js'
+import type { StoreContext, WorkspaceEntry } from './types.js'
 
-export function newEntry(workspace: Workspace): ProcessEntry {
+export function createEntry(workspace: Workspace): WorkspaceEntry {
 	return {
 		process: { workspace, status: 'pending', logs: [] },
 		child: null,
@@ -21,7 +21,7 @@ export function newEntry(workspace: Workspace): ProcessEntry {
 }
 
 /** Append an internal hlidskjalf status line to a process's (bounded) log buffer. */
-export function note(entry: ProcessEntry, message: string): void {
+export function note(entry: WorkspaceEntry, message: string): void {
 	appendLog(entry.process.logs, `[hlidskjalf] ${message}`)
 }
 
@@ -29,7 +29,7 @@ export function note(entry: ProcessEntry, message: string): void {
 export function withEntry(
 	ctx: StoreContext,
 	name: string,
-	fn: (entry: ProcessEntry) => void,
+	fn: (entry: WorkspaceEntry) => void,
 ): void {
 	const entry = ctx.entries.get(name)
 
@@ -38,7 +38,7 @@ export function withEntry(
 	fn(entry)
 }
 
-export function clearTimers(entry: ProcessEntry): void {
+export function clearTimers(entry: WorkspaceEntry): void {
 	if (entry.restartTimer) {
 		clearTimeout(entry.restartTimer)
 
@@ -67,7 +67,7 @@ export function clearTimers(entry: ProcessEntry): void {
  * a lingering child escalates to SIGKILL after the grace period regardless.
  */
 export function beginTeardown(
-	entry: ProcessEntry,
+	entry: WorkspaceEntry,
 	onClosed: () => void,
 	signal: NodeJS.Signals = 'SIGTERM',
 ): void {

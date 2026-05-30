@@ -1,7 +1,6 @@
 import { type ChildProcess, spawn } from 'node:child_process'
-import { appendLog } from '../logs.js'
+import { appendLog, parseLine, sanitizeForDisplay, stripAnsi } from '../logs/index.js'
 import { safeEnv } from '../metrics/index.js'
-import { parseLine, sanitizeForDisplay, stripAnsi } from '../parser.js'
 import type { Workspace } from '../types.js'
 import { createUnrefTimer, truncate } from '../util.js'
 import {
@@ -13,8 +12,8 @@ import {
 } from './constants.js'
 import { note } from './entry.js'
 import { createLineBuffer } from './lines.js'
-import { clearErrorTimer, scheduleErrorRecovery } from './recovery.js'
-import { changed } from './snapshot.js'
+import { cancelErrorRecovery, scheduleErrorRecovery } from './recovery.js'
+import { markChanged } from './snapshot.js'
 import { setStatus } from './status.js'
 import type { StoreContext } from './types.js'
 
@@ -133,7 +132,7 @@ function handleLine(ctx: StoreContext, name: string, raw: string): void {
 	// Output draining from a paused child's pipe must not flip its status out of
 	// `paused`. Keep logging, leave the status alone.
 	if (entry.pausedFrom !== null) {
-		changed(ctx)
+		markChanged(ctx)
 
 		return
 	}
@@ -150,7 +149,7 @@ function handleLine(ctx: StoreContext, name: string, raw: string): void {
 		} else {
 			entry.lastGoodStatus = status
 
-			clearErrorTimer(ctx, name)
+			cancelErrorRecovery(ctx, name)
 
 			entry.restartRetries = 0
 
@@ -169,7 +168,7 @@ function handleLine(ctx: StoreContext, name: string, raw: string): void {
 	// A parsed status shift brackets a burst of CPU; refresh metrics now, not next poll.
 	if (proc.status !== prevStatus) ctx.meter?.request()
 
-	changed(ctx)
+	markChanged(ctx)
 }
 
 function handleUnexpectedExit(

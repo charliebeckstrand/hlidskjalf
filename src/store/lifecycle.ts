@@ -5,12 +5,12 @@ import { watchWorkspaces } from '../watcher.js'
 import { sortByDeps, sortByName } from '../workspaces.js'
 import { escalateKill, isRunning, killTree } from './children.js'
 import { discoverFiltered } from './discovery.js'
-import { clearTimers, newEntry, note } from './entry.js'
-import { changed } from './snapshot.js'
+import { clearTimers, createEntry, note } from './entry.js'
+import { rediscover } from './reconcile.js'
+import { markChanged } from './snapshot.js'
 import { spawnWorkspace } from './spawn.js'
 import { setStatus } from './status.js'
 import type { StoreContext } from './types.js'
-import { rediscover } from './watch.js'
 
 export async function start(ctx: StoreContext): Promise<boolean> {
 	const workspaces = discoverFiltered(ctx)
@@ -25,10 +25,10 @@ export async function start(ctx: StoreContext): Promise<boolean> {
 	ctx.order = sorted.map((w) => w.name)
 
 	for (const workspace of workspaces) {
-		ctx.entries.set(workspace.name, newEntry(workspace))
+		ctx.entries.set(workspace.name, createEntry(workspace))
 	}
 
-	changed(ctx)
+	markChanged(ctx)
 
 	if (ctx.watchEnabled) {
 		ctx.watcher = watchWorkspaces(ctx.root, () => rediscover(ctx))
@@ -79,7 +79,7 @@ async function spawnAll(ctx: StoreContext, workspaces: Workspace[]): Promise<voi
 			if (entry) {
 				note(entry, `warning: dependency ${failedDeps.join(', ')} failed — starting anyway`)
 
-				changed(ctx)
+				markChanged(ctx)
 			}
 		}
 		spawnWorkspace(ctx, workspace)
@@ -102,7 +102,7 @@ async function spawnAll(ctx: StoreContext, workspaces: Workspace[]): Promise<voi
 
 				return true
 			},
-			onChange: () => changed(ctx),
+			onChange: () => markChanged(ctx),
 		})
 	}
 }

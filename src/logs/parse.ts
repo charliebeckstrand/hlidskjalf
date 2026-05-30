@@ -1,6 +1,6 @@
 import { stripVTControlCharacters } from 'node:util'
-import type { Status } from './types.js'
-import { truncate } from './util.js'
+import type { Status } from '../types.js'
+import { truncate } from '../util.js'
 
 interface ParsedLine {
 	status?: Status

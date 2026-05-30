@@ -8,9 +8,9 @@ import {
 	stopProcess,
 } from './control.js'
 import { shutdown, start } from './lifecycle.js'
+import { addWorkspace, removeWorkspace } from './reconcile.js'
 import { getSnapshot, subscribe } from './snapshot.js'
 import type { Store, StoreContext } from './types.js'
-import { addWorkspace, removeWorkspace } from './watch.js'
 
 export type { Store } from './types.js'
 
@@ -30,7 +30,7 @@ function createContext(opts: Options): StoreContext {
 		root: opts.root,
 		sortOrder: opts.order,
 		filter: opts.filter,
-		metricsEnabled: opts.metrics,
+		metricsEnabled: opts.showMetrics,
 		watchEnabled: opts.watch,
 	}
 }

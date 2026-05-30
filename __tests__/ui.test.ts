@@ -50,7 +50,7 @@ describe('colors & statusDisplay', () => {
 
 			expect(typeof entry.label).toBe('string')
 
-			expect(typeof entry.icon).toBe('string')
+			expect(typeof entry.glyph).toBe('string')
 		}
 	})
 

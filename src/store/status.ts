@@ -1,6 +1,6 @@
 import type { Status } from '../types.js'
 import { note, withEntry } from './entry.js'
-import { changed } from './snapshot.js'
+import { markChanged } from './snapshot.js'
 import type { StoreContext } from './types.js'
 
 export function setStatus(ctx: StoreContext, name: string, status: Status): void {
@@ -20,7 +20,7 @@ export function setStatus(ctx: StoreContext, name: string, status: Status): void
 		// A status change coincides with a shift in CPU use; pull a fresh sample.
 		if (statusChanged) ctx.meter?.request()
 
-		changed(ctx)
+		markChanged(ctx)
 	})
 }
 

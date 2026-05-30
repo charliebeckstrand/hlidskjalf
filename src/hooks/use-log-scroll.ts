@@ -1,6 +1,6 @@
 import { useInput } from 'ink'
 import { useState } from 'react'
-import { visibleLogRange } from '../logs.js'
+import { visibleLogRange } from '../logs/index.js'
 
 // Home/End aren't surfaced as named keys by Ink's `useInput` (both collapse to an
 // empty `key.*`), but the raw decoded bytes still arrive as the `input` argument.

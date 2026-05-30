@@ -1,9 +1,9 @@
 import type { Workspace } from '../types.js'
-import { discover, filterWorkspaces, sortByDeps, sortByName } from '../workspaces.js'
+import { discoverWorkspaces, filterWorkspaces, sortByDeps, sortByName } from '../workspaces.js'
 import type { StoreContext } from './types.js'
 
 export function discoverFiltered(ctx: StoreContext): Workspace[] {
-	const found = discover(ctx.root)
+	const found = discoverWorkspaces(ctx.root)
 
 	return ctx.filter ? filterWorkspaces(found, ctx.filter) : found
 }

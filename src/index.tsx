@@ -2,7 +2,7 @@ import { parseArgs } from 'node:util'
 import { render } from 'ink'
 import { App } from './app.js'
 import { loadConfig } from './config.js'
-import { sanitizeForDisplay } from './parser.js'
+import { sanitizeForDisplay } from './logs/index.js'
 import type { Options, SortOrder } from './types.js'
 import {
 	DEFAULT_THEME,
@@ -97,7 +97,7 @@ const titleFlag = flagString(values.title)
 const title =
 	titleFlag !== undefined ? sanitizeForDisplay(titleFlag) : (config.title ?? 'Hlidskjalf')
 
-const metrics = explicit.metrics ?? config.metrics ?? false
+const showMetrics = explicit.metrics ?? config.metrics ?? false
 
 const watch = explicit.watch ?? config.watch ?? true
 
@@ -123,7 +123,7 @@ const options: Options = {
 	order,
 	filter: filter?.length ? filter : undefined,
 	title,
-	metrics,
+	showMetrics,
 	watch,
 	theme,
 }

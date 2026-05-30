@@ -49,7 +49,7 @@ export function urlContentWidth(processes: WorkspaceProcess[]): number {
  * lockstep and the maths below derive from one source. Name and URL are variable;
  * `columnWidths` splits the remaining space between them.
  */
-export const COLUMN_WIDTHS = {
+export const FIXED_COLUMN_WIDTHS = {
 	/** Selection indicator (`▸`) plus its trailing space. */
 	indicator: 2,
 	kind: 6,
@@ -63,10 +63,13 @@ const ROW_PADDING_X = 1
 
 /** Fixed horizontal space a row spends on everything except name and URL. */
 const ROW_CHROME_WIDTH =
-	ROW_PADDING_X * 2 + COLUMN_WIDTHS.indicator + COLUMN_WIDTHS.kind + COLUMN_WIDTHS.status
+	ROW_PADDING_X * 2 +
+	FIXED_COLUMN_WIDTHS.indicator +
+	FIXED_COLUMN_WIDTHS.kind +
+	FIXED_COLUMN_WIDTHS.status
 
 /** Combined width of the optional CPU and MEM metric columns. */
-const METRICS_WIDTH = COLUMN_WIDTHS.cpu + COLUMN_WIDTHS.mem
+const METRICS_WIDTH = FIXED_COLUMN_WIDTHS.cpu + FIXED_COLUMN_WIDTHS.mem
 
 export interface ColumnWidths {
 	/** Width of the workspace-name column. */
@@ -86,9 +89,9 @@ export function columnWidths(
 	columns: number,
 	naturalNameWidth: number,
 	urlContent: number,
-	metrics: boolean,
+	showMetrics: boolean,
 ): ColumnWidths {
-	const available = columns - ROW_CHROME_WIDTH - (metrics ? METRICS_WIDTH : 0)
+	const available = columns - ROW_CHROME_WIDTH - (showMetrics ? METRICS_WIDTH : 0)
 
 	if (available <= 1) return { name: Math.max(1, available), url: 0 }
 

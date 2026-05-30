@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs'
 import { join, resolve, sep } from 'node:path'
-import { sanitizeForDisplay } from './parser.js'
+import { sanitizeForDisplay } from './logs/index.js'
 import type { Workspace, WorkspaceKind } from './types.js'
 
 interface PkgJson {
@@ -62,7 +62,7 @@ function stringRecord(value: unknown): Record<string, string> | undefined {
 	return result
 }
 
-function readJson(path: string): PkgJson | null {
+function readPkgJson(path: string): PkgJson | null {
 	try {
 		const raw: unknown = JSON.parse(readFileSync(path, 'utf-8'))
 
@@ -86,7 +86,7 @@ function workspaceDeps(pkg: PkgJson): string[] {
 
 const kindOrder = { package: 0, app: 1, service: 1 } satisfies Record<WorkspaceKind, number>
 
-export function discover(root: string): Workspace[] {
+export function discoverWorkspaces(root: string): Workspace[] {
 	const results: Workspace[] = []
 
 	const dirs: [string, WorkspaceKind][] = [
@@ -115,7 +115,7 @@ export function discover(root: string): Workspace[] {
 				continue
 			}
 
-			const pkg = readJson(join(entryPath, 'package.json'))
+			const pkg = readPkgJson(join(entryPath, 'package.json'))
 
 			if (!pkg?.name) continue
 

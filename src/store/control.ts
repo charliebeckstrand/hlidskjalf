@@ -1,6 +1,6 @@
 import { isRunning, killTree } from './children.js'
 import { beginTeardown, clearTimers, note, withEntry } from './entry.js'
-import { changed } from './snapshot.js'
+import { markChanged } from './snapshot.js'
 import { spawnWorkspace } from './spawn.js'
 import { setStatus } from './status.js'
 import type { StoreContext } from './types.js'
@@ -27,7 +27,7 @@ export function stopProcess(ctx: StoreContext, name: string): void {
 		if (wasLive) {
 			note(entry, 'stopping (SIGTERM)...')
 
-			changed(ctx)
+			markChanged(ctx)
 		}
 	})
 }
@@ -60,7 +60,7 @@ export function restartProcess(ctx: StoreContext, name: string): void {
 		if (wasLive) {
 			note(entry, 'stopping for restart (SIGTERM)...')
 
-			changed(ctx)
+			markChanged(ctx)
 		}
 	})
 }
@@ -132,16 +132,16 @@ export function killProcess(ctx: StoreContext, name: string): void {
 		if (wasLive) {
 			note(entry, 'killing (SIGKILL)...')
 
-			changed(ctx)
+			markChanged(ctx)
 		}
 	})
 }
 
 export function clearLogs(ctx: StoreContext, name: string): void {
 	withEntry(ctx, name, (entry) => {
-		// Mutate in place; the snapshot rebuild on `changed()` re-renders the empty panel.
+		// Mutate in place; the snapshot rebuild on `markChanged()` re-renders the empty panel.
 		entry.process.logs.length = 0
 
-		changed(ctx)
+		markChanged(ctx)
 	})
 }
