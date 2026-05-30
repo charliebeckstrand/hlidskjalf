@@ -3,7 +3,7 @@
  * benchmarked without rendering Ink. Recomputed whenever the process list changes.
  */
 
-import type { Process } from './types.js'
+import type { WorkspaceProcess } from './types.js'
 
 /**
  * Smallest the name column may shrink to when the URL column takes priority, so a
@@ -16,7 +16,7 @@ const MIN_NAME_WIDTH = 14
  * loop rather than `Math.max(min, ...names)` so it neither allocates an intermediate
  * array per render nor risks a RangeError from spreading a huge list.
  */
-export function nameColumnWidth(processes: Process[], min = MIN_NAME_WIDTH): number {
+export function nameColumnWidth(processes: WorkspaceProcess[], min = MIN_NAME_WIDTH): number {
 	let width = min
 
 	for (const proc of processes) {
@@ -32,7 +32,7 @@ export function nameColumnWidth(processes: Process[], min = MIN_NAME_WIDTH): num
  * Width the URL column wants to show every URL in full: the longest URL's length, or
  * 0 when no process has one. URLs are ASCII, so character count maps 1:1 to columns.
  */
-export function urlContentWidth(processes: Process[]): number {
+export function urlContentWidth(processes: WorkspaceProcess[]): number {
 	let width = 0
 
 	for (const proc of processes) {

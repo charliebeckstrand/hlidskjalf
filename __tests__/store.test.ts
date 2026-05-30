@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MAX_LOGS } from '../src/logs.js'
 import { createStore, type Store } from '../src/store/index.js'
-import type { Options, Process, Workspace } from '../src/types.js'
+import type { Options, Workspace, WorkspaceProcess } from '../src/types.js'
 
 // Controllable stand-in for a spawned child: drives stdout/stderr and exit/signal events
 // deterministically.
@@ -119,7 +119,7 @@ const flush = () => new Promise<void>((resolve) => setImmediate(resolve))
 
 let store: Store
 
-function get(name: string): Process | undefined {
+function get(name: string): WorkspaceProcess | undefined {
 	return store.getSnapshot().find((p) => p.workspace.name === name)
 }
 

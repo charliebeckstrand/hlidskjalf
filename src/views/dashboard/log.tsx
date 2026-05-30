@@ -1,5 +1,5 @@
 import { Box, Text } from 'ink'
-import type { Process } from '../../types.js'
+import type { WorkspaceProcess } from '../../types.js'
 import { colors } from '../../ui/index.js'
 import { Panel } from '../primitives.js'
 
@@ -10,7 +10,7 @@ export function Log({
 	end,
 	atBottom,
 }: {
-	process: Process
+	process: WorkspaceProcess
 	height: number
 	start: number
 	end: number

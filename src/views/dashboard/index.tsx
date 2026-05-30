@@ -10,7 +10,7 @@ import {
 	nameColumnWidth,
 	urlContentWidth,
 } from '../../layout.js'
-import type { Process as ProcessInfo } from '../../types.js'
+import type { WorkspaceProcess } from '../../types.js'
 import { colors, HINTS } from '../../ui/index.js'
 import { Header } from '../chrome.js'
 import { Cell } from '../primitives.js'
@@ -18,7 +18,7 @@ import { Log } from './log.js'
 import { Process } from './process.js'
 
 interface Props {
-	processes: ProcessInfo[]
+	processes: WorkspaceProcess[]
 	selectedIndex: number
 	title: string
 	metrics?: boolean

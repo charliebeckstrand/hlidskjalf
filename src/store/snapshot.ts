@@ -1,4 +1,4 @@
-import type { Process } from '../types.js'
+import type { WorkspaceProcess } from '../types.js'
 import type { StoreContext } from './types.js'
 
 export function subscribe(ctx: StoreContext, listener: () => void): () => void {
@@ -7,7 +7,7 @@ export function subscribe(ctx: StoreContext, listener: () => void): () => void {
 	return () => ctx.listeners.delete(listener)
 }
 
-export function getSnapshot(ctx: StoreContext): Process[] {
+export function getSnapshot(ctx: StoreContext): WorkspaceProcess[] {
 	if (ctx.dirty) {
 		ctx.snapshot = ctx.order.flatMap((name) => {
 			const proc = ctx.entries.get(name)?.process
