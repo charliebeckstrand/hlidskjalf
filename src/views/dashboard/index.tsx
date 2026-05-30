@@ -1,5 +1,4 @@
 import { Box, Text } from 'ink'
-import { useMemo } from 'react'
 import { useLogScroll } from '../../hooks/use-log-scroll.js'
 import { useTerminalSize } from '../../hooks/use-terminal-size.js'
 import {
@@ -27,18 +26,15 @@ interface Props {
 export function Dashboard({ processes, selectedIndex, title, metrics = false }: Props) {
 	const { columns, rows } = useTerminalSize()
 
-	const allReady = useMemo(
-		() =>
-			processes.length > 0 &&
-			processes.every((p) => p.status === 'ready' || p.status === 'watching'),
-		[processes],
-	)
+	const allReady =
+		processes.length > 0 && processes.every((p) => p.status === 'ready' || p.status === 'watching')
 
 	// Natural width fits the longest name; the URL's full width is reserved first, then the
-	// name takes what's left (truncating before it can squeeze the URL).
-	const naturalNameWidth = useMemo(() => nameColumnWidth(processes), [processes])
+	// name takes what's left (truncating before it can squeeze the URL). These are cheap O(n)
+	// passes recomputed each render — not worth memoizing for the dashboard's process counts.
+	const naturalNameWidth = nameColumnWidth(processes)
 
-	const naturalUrlWidth = useMemo(() => urlContentWidth(processes), [processes])
+	const naturalUrlWidth = urlContentWidth(processes)
 
 	const { name: nameWidth, url: urlWidth } = columnWidths(
 		columns,
