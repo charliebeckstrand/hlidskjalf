@@ -42,7 +42,7 @@ Keep to 150–200 words, no preamble.
 | **Assumption**     | Is the key assumption true? What has to hold? What evidence cuts each way? |
 | **Failure-mode**   | Where does this break under real conditions? |
 | **Cost**           | True cost in time, attention, reversibility, opportunity, second-order obligations |
-| **Counterfactual** | The nearest alternative path. Is the proposal actually better? |
+| **Counterfactual** | The nearest alternative path, and the condition under which it fails. Is the proposal actually better? |
 | **Second-order**   | If it works, what becomes true? |
 
 ## 4. Peer review (blind, parallel)
@@ -72,7 +72,12 @@ Pick exactly one:
 - **Fork:** two viable paths hinge on a stable user attribute the council can't observe (risk tolerance, team, existing workflow). Name both paths, the deciding attribute, and how the user can tell which applies. Use sparingly: if a single lookup would decide it, use Insufficient information instead.
 - **Insufficient information:** can't be evaluated as stated; name what's missing.
 
-Output the sections below, omitting any that don't apply. Headline, Cliff Notes, and Verdict: readable in under a minute.
+- **Fork:** two viable paths hinge on a stable user attribute the council can't observe (risk tolerance, team, existing workflow). Name both paths, the deciding attribute, and how the user can tell which applies. Use sparingly: if a single lookup would decide it, use Insufficient information instead.
+- **Insufficient information:** can't be evaluated as stated; name what's missing.
+
+Boundaries: **Revise** keeps the proposal's core and adjusts it; **Reject** discards the core and names what replaces it; **Insufficient information** can't evaluate the proposal as stated; **Fork** can evaluate it but the answer hinges on a user attribute the council can't see.
+
+Output the sections below, omitting any that don't apply.
 
 - **Headline:** one sentence (≤25 words) that lands on its own.
 - **Cliff Notes:** 3–5 labeled bullets (≤15 words each): Verdict, Why, Watch for, Do first, and an optional If-condition reframe.
@@ -104,7 +109,7 @@ Run `date +%Y%m%d-%H%M%S` once; use that stamp for both filenames in cwd.
 - **Verdict:** the heaviest-styled block: a tag colored by type (Proceed green, Revise amber, Reject red, Fork blue, Insufficient gray), the verdict paragraph, then a highlighted "one thing to do first" beneath. Fork instead shows two side-by-side path panels with the deciding factor between them.
 - **Council shape:** compact view of how the five landed: ≥4 converged → one tag panel naming the convergence; Proceed/Reject → favorability bars on a single neutral gradient; Revise → table of reading + lever per evaluator; Fork → table of lean + why; Insufficient → omit. One sentence beneath describing the shape.
 - **Then, as lists:** any of converged / disagreed / blind spots / risks that applied.
-- **Falsifiable predictions:** list.
+- **Falsifiable predictions**
 - **Evaluator responses:** five collapsed `<details>` (summary = lens tag + one-line gist).
 - **Peer reviews:** one collapsed `<details>` holding all of them.
 - **Footer:** muted.
