@@ -1,7 +1,7 @@
 -----
 
 ## name: orator
-description: Tighten prose to its shortest honest form. Use when revising text or drafting short artifacts (comments, docstrings, commit messages, PR descriptions, error strings, READMEs, log lines), or when asked to make anything terser, tighter, shorter, or more concise. Consult before committing a comment or doc, even unprompted — most first drafts carry fat worth cutting. Skip prose that must carry warmth, persuasion, or teaching.
+description: Tighten prose to its shortest honest form. Use when revising text or drafting pithy artifacts (comments, docstrings, commit messages, PR descriptions, error strings, READMEs, log lines), or when asked to make anything terser, tighter, shorter, or more concise. Consult before committing a comment or doc, even unprompted — most first drafts carry fat worth cutting. Skip prose that must carry warmth, persuasion, or teaching.
 
 # Orator
 
