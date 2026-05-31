@@ -64,7 +64,7 @@ In plain language, surface: what they're deciding; why now; what they're leaning
 
 ### 2. Ask what a careful advisor would ask
 
-Raise a point only when load-bearing for this decision; the goal is that the user has weighed the right things, not a verdict.
+Raise a point only when load-bearing for the decision; the goal is that the user has weighed the right things, not a verdict.
 
 - **Is the stated problem the actual problem?** If they named a symptom, surface other causes.
 - **What's the cost of being wrong?** Reversibility is usually underpriced.
