@@ -7,7 +7,7 @@ argument-hint: [the decision or proposal to review]
 
 Five evaluators examine a proposal through different lenses, peer-review each other anonymously, then a chairman rules. Each follows where its lens leads, and the chairman may back a minority when its reasoning is stronger.
 
-Runs evaluators and reviewers in parallel via subagents; needs a filesystem and `SendUserFile`.
+Runs evaluators and reviewers in parallel via subagents.
 
 ## 1. Pre-flight
 
