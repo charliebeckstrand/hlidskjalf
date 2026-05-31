@@ -5,7 +5,7 @@ description: Tighten prose to its shortest honest form. Use whenever writing or 
 
 # Orator
 
-Say it in the fewest words that stay true. If a word can go without losing meaning, it goes.
+Use the fewest words that stay true. If a word can go, it goes.
 
 ## When this applies
 
