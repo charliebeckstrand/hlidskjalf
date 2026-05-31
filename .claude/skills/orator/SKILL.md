@@ -1,18 +1,19 @@
----
-name: orator
-description: Tighten prose to its shortest honest form. Use when writing or revising prose or when asked to make text terser, tighter, shorter, or more concise. Consult before committing a comment or doc, even unprompted; most first drafts carry fat worth cutting.
----
+-----
+
+## name: orator
+description: Tighten prose to its shortest honest form. Use when revising text or drafting short artifacts (comments, docstrings, commit messages, PR descriptions, error strings, READMEs, log lines), or when asked to make anything terser, tighter, shorter, or more concise. Consult before committing a comment or doc, even unprompted — most first drafts carry fat worth cutting. Skip prose that must carry warmth, persuasion, or teaching.
 
 # Orator
 
 Use the fewest words that stay true. If a word can go, it goes.
 
-## When this applies
+Brevity serves the reader, not the other way around. Never drop a caveat, qualifier, or fact the reader needs, and never flatten connotation. Shorter that misleads isn’t tighter — it’s wrong. Don’t pad, and don’t invent precision.
 
-- Writing a comment, docstring, commit message, PR description, README, error string, or log line.
-- The user asks to shorten, tighten, condense, or de-fluff text.
+## When this applies — and when to go gentle
 
-Skip prose where length is the point: tutorials, teaching docs, anything the user wants expansive.
+Cut hard where every reader just wants the point: comments, docstrings, commit messages, error strings, log lines, PR descriptions, READMEs.
+
+Go gentle — sometimes don’t cut at all — where length is doing a job: tutorials and teaching docs, persuasion, condolence or rapport, anything the user wants expansive. Terseness there subtracts value. When unsure, ask what the prose is *for*.
 
 ## Principles
 
@@ -21,11 +22,12 @@ Skip prose where length is the point: tutorials, teaching docs, anything the use
 - **Strong verbs, not verb+noun:**
   - `decide`, not `make a decision`
   - `to`, not `in order to`
-- **Active voice:**
+- **Prefer active voice** — unless the actor is unknown or beside the point (`The file was corrupted on upload`), or you’re deliberately foregrounding the object.
   - `The parser drops nulls`, not `Nulls are dropped by the parser`
-- **One idea per sentence.** Short beats clever.
+- **One idea per sentence** — unless a connective genuinely reads clearer than two clipped fragments. Short usually beats clever; staccato doesn’t.
 - **Concrete over abstract:**
   - `Retries 3 times`, not `handles transient issues`
+  - But only when you *know* the specific. Don’t write `3` unless it’s 3. Inventing precision to sound concrete breaks the honesty rule.
 
 ## Code comments
 
@@ -39,7 +41,7 @@ Skip prose where length is the point: tutorials, teaching docs, anything the use
 
 ## Refining existing prose
 
-Read for meaning. Cut every word it survives without. Preserve connotation. Never drop a caveat or fact the reader needs.
+Read for meaning. Cut every word it survives without. The guardrails up top still hold: preserve connotation, keep the caveats and facts, add nothing the source didn’t earn.
 
 ## Examples
 
@@ -50,10 +52,12 @@ Read for meaning. Cut every word it survives without. Preserve connotation. Neve
 `This function takes a list and filters out any items that happen to be null or undefined before returning.` → `Drops null and undefined entries.`
 
 **Commit message:**
-`Made changes to basically fix the issue where the cache was not really being invalidated properly` → `Fix cache invalidation on write`
+`Made changes to basically fix the issue where the cache was not really being invalidated properly` → `Fix cache invalidation`
+(Not `Fix cache invalidation on write` — the source never said *on write*. Add that only if it’s true.)
 
 **Error message:**
 `It seems that an error occurred while trying to connect to the database.` → `Database connection failed.`
 
-**Prose:**
+**Prose (keep the caveat):**
 `It should be noted that this approach is generally considered to be quite a bit faster in most cases.` → `This approach is usually faster.`
+(`usually` stays — drop it and the claim turns false.)
