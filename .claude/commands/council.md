@@ -33,7 +33,9 @@ If the user was vague, draft the proposal yourself and confirm before convening.
 
 ## 3. Convene (parallel)
 
-Spawn all five at once. Give each the full **Proposal Under Review** and one lens. Tell each: evaluate through your lens and engage the constraints as written. If your lens adds little here, say so instead of inventing concerns. 150–300 words, no preamble.
+Spawn all five at once. Give each the full **Proposal Under Review** and one lens. Tell each: evaluate through your lens and engage the constraints as written. If your lens adds little here, say so instead of inventing concerns. 
+
+150–300 words, no preamble.
 
 | Lens               | Question                                                                                           |
 | ------------------ | ------------------------------------------------------------------------------------------------- |
@@ -45,7 +47,18 @@ Spawn all five at once. Give each the full **Proposal Under Review** and one len
 
 ## 4. Peer review (blind, parallel)
 
-Label the five responses A–E and record the letter→lens map (reuse it verbatim in the transcript). Spawn five reviewers; give each the proposal and all five *anonymized* responses — they must not know which lens wrote what. Each answers, by letter: most useful response and why; biggest blind spot or weakest reasoning; any evaluator that ignored the stated constraints; what all five missed. Under 250 words.
+Label the five responses A–E and record the letter→lens map (reuse it verbatim in the transcript).
+
+Spawn five reviewers; give each the proposal and all five _anonymized_ responses. They must not know which lens wrote what. 
+
+Each answers, by letter:
+
+- most useful response, and why
+- biggest blind spot or weakest reasoning
+- any evaluator that ignored the stated constraints
+- what all five missed
+
+Under 250 words.
 
 ## 5. Chairman verdict
 
