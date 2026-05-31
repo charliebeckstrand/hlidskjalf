@@ -29,7 +29,7 @@ Then state a **Proposal Under Review**:
 - **Current prior**: what the user leans toward, in their words
 - **Constraints**: budget, timeline, reversibility, what's been tried
 
-If the user came in vague, draft this yourself and confirm in one message before convening. Ask for the driver or constraints only if context can't supply them.
+If the user was vague, draft the proposal yourself and confirm before convening. Ask for the driver or constraints only if context can't supply them.
 
 ## 3. Convene (parallel)
 
