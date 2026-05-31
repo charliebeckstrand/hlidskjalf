@@ -26,7 +26,7 @@ Brevity serves the reader, but not at their expense. Never drop a caveat, qualif
 
 - **Comment *why*, not *what*.** Earn the comment by giving intent, a constraint, a gotcha, or a tradeoff.
 - **Delete comments that restate code.**
-- **Keep comments that spare the next reader pain:**
+- **Keep comments that spare future readers:**
   - workarounds
   - edge cases
   - external contracts
