@@ -5,7 +5,7 @@ argument-hint: [the decision or proposal to review]
 
 # Council
 
-Five evaluators examine one proposal through different lenses, peer-review each other blind, then a chairman renders a verdict. No assigned stances — each evaluator follows where its lens leads, and the chairman may side with a minority when its reasoning is stronger.
+Five evaluators examine a proposal through different lenses, peer-review each other anonymously, then a chairman rules. Each follows where its lens leads, and the chairman may back a minority when its reasoning is stronger.
 
 Runs evaluators and reviewers in parallel via subagents; needs a filesystem and `SendUserFile`.
 
