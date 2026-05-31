@@ -18,14 +18,16 @@ You were invoked deliberately, so convene by default.
 
 ## 2. Frame the proposal
 
-Seed from `$ARGUMENTS` and the recent conversation. Read for context (cap 5 reads): `CLAUDE.md`, files the user named, the latest `council-transcript-*.md` in cwd if relevant. Then state a **Proposal Under Review**:
+Seed from `$ARGUMENTS` and the recent conversation. Read for context (cap 5 reads): `CLAUDE.md`, files the user named, the latest `council-transcript-*.md`. 
 
-- **Proposal** — 1–3 concrete sentences (a decision, not a topic).
-- **Driver** — the specific friction or goal; why now, why this.
-- **Key assumption** — the load-bearing claim; if it's false, the proposal fails.
-- **Success criterion** — what's observably true if it works.
-- **Current prior** — what the user leans toward, in their words.
-- **Constraints** — budget, timeline, reversibility, what's been tried, team.
+Then state a **Proposal Under Review**:
+
+- **Proposal**: A decision, not a topic. 1–3 concrete sentences
+- **Driver**: the friction or goal; why now, why this
+- **Key assumption**: the load-bearing claim; if false, the proposal fails
+- **Success criterion**: what's observably true if it works
+- **Current prior**: what the user leans toward, in their words
+- **Constraints**: budget, timeline, reversibility, what's been tried
 
 If the user came in vague, draft this yourself and confirm in one message before convening. Ask for the driver or constraints only if context can't supply them.
 
