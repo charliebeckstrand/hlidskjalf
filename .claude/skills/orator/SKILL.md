@@ -20,7 +20,8 @@ Brevity serves the reader, but not at their expense. Never drop a caveat, qualif
   - `The parser drops nulls`, not `Nulls are dropped by the parser`
 - **One idea per sentence** — unless a connective genuinely reads clearer than two clipped fragments. Short _usually_ beats clever; staccato doesn’t.
 - **Concrete over abstract:**
-  - `Retries 3 times`, not `handles transient issues`. But only when you *know* the specific. Don’t write `3` unless it’s 3. Inventing precision to sound concrete breaks the honesty rule.
+  - `Retries 3 times`, not `handles transient issues`. But only when you *know* the specific.
+  - Inventing precision breaks the honesty rule. Don't drop vague-but-real content. Sharpen it or move it.
 
 ## Code comments
 
