@@ -7,9 +7,9 @@ description: Tighten prose to its shortest honest form. Use when revising text o
 
 Use the fewest words that stay true. If a word can go, it goes.
 
-Brevity serves the reader, but not at their expense. Never drop a caveat, qualifier, or fact they need, and never flatten connotation.
-
 ## Principles
+
+Brevity serves the reader, but not at their expense. Never drop a caveat, qualifier, or fact they need, and never flatten connotation.
 
 - **Cut hedges and intensifiers:** `just`, `simply`, `really`, `very`, `quite`, `basically`, `essentially`, `actually`.
 - **Cut throat-clearing:** `It should be noted that`, `This function is responsible for`. Start with the content.
