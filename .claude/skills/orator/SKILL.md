@@ -7,7 +7,7 @@ description: Tighten prose to its shortest honest form. Use when revising text o
 
 Use the fewest words that stay true. If a word can go, it goes.
 
-Brevity serves the reader. Never drop a caveat, qualifier, or fact the reader needs, and never flatten connotation. Shorter that misleads isn’t tighter — it’s wrong. Don’t pad, and don’t invent precision.
+Brevity serves the reader, but not at their expense. Never drop a caveat, qualifier, or fact they need, and never flatten connotation.
 
 ## Principles
 
