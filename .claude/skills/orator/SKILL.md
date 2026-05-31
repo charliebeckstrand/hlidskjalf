@@ -18,14 +18,13 @@ Brevity serves the reader, not the other way around. Never drop a caveat, qualif
   - `to`, not `in order to`
 - **Prefer active voice** — unless the actor is unknown or unrelated (`The file was corrupted on upload`), or you’re deliberately foregrounding the object.
   - `The parser drops nulls`, not `Nulls are dropped by the parser`
-- **One idea per sentence** — unless a connective genuinely reads clearer than two clipped fragments. Short usually beats clever; staccato doesn’t.
+- **One idea per sentence** — unless a connective genuinely reads clearer than two clipped fragments. Short _usually_ beats clever; staccato doesn’t.
 - **Concrete over abstract:**
-  - `Retries 3 times`, not `handles transient issues`
-  - But only when you *know* the specific. Don’t write `3` unless it’s 3. Inventing precision to sound concrete breaks the honesty rule.
+  - `Retries 3 times`, not `handles transient issues`. But only when you *know* the specific. Don’t write `3` unless it’s 3. Inventing precision to sound concrete breaks the honesty rule.
 
 ## Code comments
 
-- **Comment *why*, not *what*.** Code states what it does. Earn the comment by giving intent, a constraint, a gotcha, or a tradeoff.
+- **Comment *why*, not *what*.** Earn the comment by giving intent, a constraint, a gotcha, or a tradeoff.
 - **Delete comments that restate code.**
 - **Keep comments that spare the next reader pain:**
   - workarounds
@@ -35,7 +34,7 @@ Brevity serves the reader, not the other way around. Never drop a caveat, qualif
 
 ## Refining existing prose
 
-Read for meaning. Cut every word it survives without. The guardrails up top still hold: preserve connotation, keep the caveats and facts, add nothing the source didn’t earn.
+Read for meaning. Cut every word it survives without. Preserve connotation, keep the caveats and facts, add nothing the source didn’t earn.
 
 ## Examples
 
