@@ -5,7 +5,7 @@ argument-hint: [the decision or proposal to review]
 
 # Council
 
-Five evaluators examine a proposal through different lenses, peer-review each other anonymously, then a chairman rules. Each follows where its lens leads, and the chairman may back a minority when its reasoning is stronger.
+Five evaluators examine a proposal through different lenses, then peer-review each other anonymously before a chairman rules. Each follows where its lens leads; the chairman may back a minority when its reasoning is stronger.
 
 Runs evaluators and reviewers in parallel via subagents.
 
@@ -18,11 +18,11 @@ You were invoked deliberately, so convene by default.
 
 ## 2. Frame the proposal
 
-First seed from `$ARGUMENTS` and the recent conversation. Read for context (cap 5 reads). 
+First seed from `$ARGUMENTS` and the recent conversation. Read for context (cap 5 reads).
 
 Then state a **Proposal Under Review**:
 
-- **Proposal**: A decision, not a topic. 1–3 concrete sentences
+- **Proposal**: a decision, not a topic; 1–3 concrete sentences
 - **Driver**: the friction or goal; why now, why this
 - **Key assumption**: the load-bearing claim; if false, the proposal fails
 - **Success criterion**: what's observably true if it works
@@ -33,17 +33,17 @@ If the user was vague, draft the proposal yourself and confirm before convening.
 
 ## 3. Convene (parallel)
 
-Spawn all five at once. Give each the full **Proposal Under Review** and one lens. Tell each: evaluate through your lens and engage the constraints as written. If your lens adds nothing, say so instead of inventing concerns. 
+Spawn all five at once. Give each the full **Proposal Under Review** and one lens. Tell each: evaluate through your lens and engage the constraints as written. If your lens adds nothing, say so instead of inventing concerns.
 
 Keep to 150–200 words, no preamble.
 
-| Lens               | Question                                                                                           |
-| ------------------ | ------------------------------------------------------------------------------------------------- |
-| **Assumption**     | Is the key assumption true? What has to hold? What evidence cuts each way?                  |
-| **Failure-mode**   | Where does this break under real conditions?            |
+| Lens               | Question |
+| ------------------ | -------- |
+| **Assumption**     | Is the key assumption true? What has to hold? What evidence cuts each way? |
+| **Failure-mode**   | Where does this break under real conditions? |
 | **Cost**           | True cost in time, attention, reversibility, opportunity, second-order obligations |
-| **Counterfactual** | The nearest alternative path. Is the proposal actually better?                             |
-| **Second-order**   | If it works, what becomes true?                          |
+| **Counterfactual** | The nearest alternative path. Is the proposal actually better? |
+| **Second-order**   | If it works, what becomes true? |
 
 ## 4. Peer review (blind, parallel)
 
@@ -62,7 +62,7 @@ Keep under 250 words.
 
 ## 5. Chairman verdict
 
-Give one agent the proposal, all five de-anonymized responses, and all five reviews. It renders a verdict — not an average. Side with a minority when its reasoning is stronger; state convergence where it's real; manufacture neither agreement nor disagreement. 
+Give one agent the proposal, all five de-anonymized responses, and all five reviews. It renders a verdict — not an average. Side with a minority when its reasoning is stronger; state convergence where it's real; manufacture neither agreement nor disagreement.
 
 Pick exactly one:
 
@@ -86,7 +86,7 @@ Output the sections below, omitting any that don't apply. Headline, Cliff Notes,
 
 Run `date +%Y%m%d-%H%M%S` once; use that stamp for both filenames in cwd.
 
-**council-transcript-[stamp].md** — plain markdown, in order: 
+**council-transcript-[stamp].md** — plain markdown, in order:
 
 1. the question verbatim
 2. the full **Proposal Under Review**
@@ -104,9 +104,9 @@ Run `date +%Y%m%d-%H%M%S` once; use that stamp for both filenames in cwd.
 - **Verdict:** the heaviest-styled block: a tag colored by type (Proceed green, Revise amber, Reject red, Fork blue, Insufficient gray), the verdict paragraph, then a highlighted "one thing to do first" beneath. Fork instead shows two side-by-side path panels with the deciding factor between them.
 - **Council shape:** compact view of how the five landed: ≥4 converged → one tag panel naming the convergence; Proceed/Reject → favorability bars on a single neutral gradient; Revise → table of reading + lever per evaluator; Fork → table of lean + why; Insufficient → omit. One sentence beneath describing the shape.
 - **Then, as lists:** any of converged / disagreed / blind spots / risks that applied.
-- **Falsifiable predictions:**
+- **Falsifiable predictions:** list.
 - **Evaluator responses:** five collapsed `<details>` (summary = lens tag + one-line gist).
-- **Peer reviews:** one collapsed `<details>`
+- **Peer reviews:** one collapsed `<details>` holding all of them.
 - **Footer:** muted.
 
 **Styling:** dark palette by default with a `prefers-color-scheme: light` block; centered column, max-width ~880px; system font stack; subtle panel backgrounds for `<code>` and `<details>`; suppress default `<details>` markers in favor of a +/− indicator. No emoji, no images.
@@ -119,3 +119,4 @@ Run `date +%Y%m%d-%H%M%S` once; use that stamp for both filenames in cwd.
 - **The chairman decides:** the majority doesn't automatically win.
 - **Report the real shape of the deliberation,** not a fixed template: omit sections that didn't fire.
 - **If the question can't be reduced to a concrete proposal,** don't convene: ask for what's missing.
+  
