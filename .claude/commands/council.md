@@ -18,7 +18,7 @@ You were invoked deliberately, so convene by default.
 
 ## 2. Frame the proposal
 
-Seed from `$ARGUMENTS` and the recent conversation. Read for context (cap 5 reads): `CLAUDE.md`, files the user named, the latest `council-transcript-*.md`. 
+First seed from `$ARGUMENTS` and the recent conversation. Read for context (cap 5 reads). 
 
 Then state a **Proposal Under Review**:
 
@@ -33,9 +33,9 @@ If the user was vague, draft the proposal yourself and confirm before convening.
 
 ## 3. Convene (parallel)
 
-Spawn all five at once. Give each the full **Proposal Under Review** and one lens. Tell each: evaluate through your lens and engage the constraints as written. If your lens adds little here, say so instead of inventing concerns. 
+Spawn all five at once. Give each the full **Proposal Under Review** and one lens. Tell each: evaluate through your lens and engage the constraints as written. If your lens adds nothing, say so instead of inventing concerns. 
 
-150–300 words, no preamble.
+Keep to 150–200 words, no preamble.
 
 | Lens               | Question                                                                                           |
 | ------------------ | ------------------------------------------------------------------------------------------------- |
@@ -49,20 +49,20 @@ Spawn all five at once. Give each the full **Proposal Under Review** and one len
 
 Label the five responses A–E and record the letter→lens map (reuse it verbatim in the transcript).
 
-Spawn five reviewers; give each the proposal and all five _anonymized_ responses. They must not know which lens wrote what. 
+Spawn five reviewers; give each the proposal and all five _anonymized_ responses. **They must not know which lens wrote what.**
 
-Each answers, by letter:
+Each reviewer answers, by letter:
 
 - most useful response, and why
 - biggest blind spot or weakest reasoning
 - any evaluator that ignored the stated constraints
 - what all five missed
 
-Under 250 words.
+Keep under 250 words.
 
 ## 5. Chairman verdict
 
-Give one agent the proposal, all five de-anonymized responses, and all five reviews. It renders a verdict — it does not average opinions. Side with a minority when its reasoning is stronger; state convergence where it's real; manufacture neither agreement nor disagreement. Pick exactly one:
+Give one agent the proposal, all five de-anonymized responses, and all five reviews. It renders a verdict — not an average. Side with a minority when its reasoning is stronger; state convergence where it's real; manufacture neither agreement nor disagreement. Pick exactly one:
 
 - **Proceed** — sound; name risks worth monitoring.
 - **Revise** — right shape, needs specific named changes.
