@@ -34,7 +34,7 @@ Brevity serves the reader, but not at their expense. Never drop a caveat, qualif
 
 ## Refining existing prose
 
-Read for meaning. Cut every word it survives without. Preserve connotation, keep the caveats and facts, add nothing the source didn’t earn.
+Read for meaning. Cut every word it survives without.
 
 ## Examples
 
