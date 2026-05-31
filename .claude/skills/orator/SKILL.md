@@ -1,13 +1,13 @@
 -----
 
 ## name: orator
-description: Tighten prose to its shortest honest form. Use when revising text or drafting pithy artifacts (comments, docstrings, commit messages, PR descriptions, error strings, READMEs, log lines), or when asked to make anything terser, tighter, shorter, or more concise. Consult before committing a comment or doc, even unprompted — most first drafts carry fat worth cutting. Skip prose that must carry warmth, persuasion, or teaching.
+description: Tighten prose to its shortest honest form. Use when revising text or drafting succinct artifacts (comments, docstrings, commit messages, PR descriptions, error strings, READMEs, log lines), or when asked to make anything terser, tighter, shorter, or more concise. Consult before committing a comment or doc, even unprompted — most first drafts carry fat worth cutting. Skip prose that must carry warmth, persuasion, or teaching.
 
 # Orator
 
 Use the fewest words that stay true. If a word can go, it goes.
 
-Brevity serves the reader, not the other way around. Never drop a caveat, qualifier, or fact the reader needs, and never flatten connotation. Shorter that misleads isn’t tighter — it’s wrong. Don’t pad, and don’t invent precision.
+Brevity serves the reader. Never drop a caveat, qualifier, or fact the reader needs, and never flatten connotation. Shorter that misleads isn’t tighter — it’s wrong. Don’t pad, and don’t invent precision.
 
 ## Principles
 
