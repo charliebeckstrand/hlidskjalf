@@ -37,7 +37,7 @@ Four turns. Spawn each after the prior completes, and give it everything before 
 
 ## 4. Synthesis
 
-Spawn a separate synthesizer — not A, not B; independence is the point — with all four turns. It writes what both parties would sign if forced to agree on a document:
+Spawn a separate synthesizer — not A, not B; independence is key — with all four turns. It writes what both parties would sign if forced to agree on a document:
 
 - **Headline**: one sentence resolving the debate (≤25 words).
 - **Recommendation**: one paragraph (≤100 words): the path. If they converged, state it; if not, pick the stronger and say why. No hedging.
