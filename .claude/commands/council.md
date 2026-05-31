@@ -33,15 +33,15 @@ If the user was vague, draft the proposal yourself and confirm before convening.
 
 ## 3. Convene (parallel)
 
-Spawn all five at once. Give each the full Proposal Under Review and one lens below. Tell each: you are not pro or con — evaluate through your lens, engage the constraints as written rather than a strawman, and if your lens adds little here, say so briefly instead of inventing concerns. 150–300 words, no preamble.
+Spawn all five at once. Give each the full **Proposal Under Review** and one lens. Tell each: evaluate through your lens and engage the constraints as written. If your lens adds little here, say so instead of inventing concerns. 150–300 words, no preamble.
 
 | Lens               | Question                                                                                           |
 | ------------------ | ------------------------------------------------------------------------------------------------- |
-| **Assumption**     | Is the key assumption true? What would have to hold? What evidence cuts each way?                  |
-| **Failure-mode**   | Where does this break under real conditions — most likely failure, worst failure?                 |
-| **Cost**           | True cost in time, attention, reversibility, opportunity, second-order obligations — priced right? |
-| **Counterfactual** | The nearest alternative path. Is the proposal actually better than it?                             |
-| **Second-order**   | If it works, what becomes true downstream — unlocked, foreclosed, forced?                          |
+| **Assumption**     | Is the key assumption true? What has to hold? What evidence cuts each way?                  |
+| **Failure-mode**   | Where does this break under real conditions?            |
+| **Cost**           | True cost in time, attention, reversibility, opportunity, second-order obligations |
+| **Counterfactual** | The nearest alternative path. Is the proposal actually better?                             |
+| **Second-order**   | If it works, what becomes true?                          |
 
 ## 4. Peer review (blind, parallel)
 
