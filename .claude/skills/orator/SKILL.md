@@ -37,7 +37,6 @@ Skip prose where length is the point: tutorials, teaching docs, anything the use
   - units
   - external contracts
   - “looks wrong but isn’t”
-- **Prefer one line.**
 
 ## Refining existing prose
 
