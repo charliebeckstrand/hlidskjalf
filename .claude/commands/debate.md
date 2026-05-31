@@ -62,7 +62,7 @@ Deliver via `SendUserFile`.
 ## Principles
 
 - **Sequential, not parallel:** each turn must see the prior. The interrogator engages specific claims, not parallel analysis.
-- **The synthesizer is a third agent**
 - **Neither party is positionally pro or con:** both may endorse the same path.
+- **The synthesizer is a third agent**
 - **The interrogator proposes no alternative**
 - **When the parties converge** with no residual disagreement, keep the synthesis short — don't pad.
