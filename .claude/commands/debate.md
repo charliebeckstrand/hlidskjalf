@@ -50,12 +50,19 @@ If the debate reveals the question is genuinely high-stakes, the synthesizer esc
 
 ## 5. Output
 
-Run `date +%Y%m%d-%H%M%S` once for the stamp. Save **`debate-[stamp].md`** to cwd — plain markdown, in order: the question verbatim; the Question Frame; the four turns under their labels; the synthesis. Deliver via `SendUserFile` (status `normal`, caption naming the topic).
+Run `date +%Y%m%d-%H%M%S` once for the stamp. Save **`debate-[stamp].md`** to cwd — plain markdown, in order: 
+
+1. the question verbatim
+2. the **Question Frame**
+3. the four turns under their labels
+4. the synthesis
+  
+Deliver via `SendUserFile`.
 
 ## Principles
 
-- **Sequential, not parallel:** each turn must see the prior; the interrogator engages specific claims, not parallel analysis.
-- **The synthesizer is a third agent:** independence matters.
+- **Sequential, not parallel:** each turn must see the prior. The interrogator engages specific claims, not parallel analysis.
+- **The synthesizer is a third agent**.
 - **Neither party is positionally pro or con:** both may endorse the same path.
-- **The interrogator proposes no alternative** in their own round.
+- **The interrogator proposes no alternative**.
 - **When the parties converge** with no residual disagreement, keep the synthesis short — don't pad.
