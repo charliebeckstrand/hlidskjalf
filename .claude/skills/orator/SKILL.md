@@ -9,12 +9,6 @@ Use the fewest words that stay true. If a word can go, it goes.
 
 Brevity serves the reader, not the other way around. Never drop a caveat, qualifier, or fact the reader needs, and never flatten connotation. Shorter that misleads isn’t tighter — it’s wrong. Don’t pad, and don’t invent precision.
 
-## When this applies — and when to go gentle
-
-Cut hard where every reader just wants the point: comments, docstrings, commit messages, error strings, log lines, PR descriptions, READMEs.
-
-Go gentle — sometimes don’t cut at all — where length is doing a job: tutorials and teaching docs, persuasion, condolence or rapport, anything the user wants expansive. Terseness there subtracts value. When unsure, ask what the prose is *for*.
-
 ## Principles
 
 - **Cut hedges and intensifiers:** `just`, `simply`, `really`, `very`, `quite`, `basically`, `essentially`, `actually`.
@@ -22,7 +16,7 @@ Go gentle — sometimes don’t cut at all — where length is doing a job: tuto
 - **Strong verbs, not verb+noun:**
   - `decide`, not `make a decision`
   - `to`, not `in order to`
-- **Prefer active voice** — unless the actor is unknown or beside the point (`The file was corrupted on upload`), or you’re deliberately foregrounding the object.
+- **Prefer active voice** — unless the actor is unknown or unrelated (`The file was corrupted on upload`), or you’re deliberately foregrounding the object.
   - `The parser drops nulls`, not `Nulls are dropped by the parser`
 - **One idea per sentence** — unless a connective genuinely reads clearer than two clipped fragments. Short usually beats clever; staccato doesn’t.
 - **Concrete over abstract:**
