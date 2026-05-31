@@ -16,25 +16,32 @@ Skip prose where length is the point: tutorials, teaching docs, anything the use
 
 ## Principles
 
-- **Cut hedges and intensifiers:** `just`, `simply`, `really`, `very`, `quite`, `basically`, `essentially`, `actually`. They weaken.
+- **Cut hedges and intensifiers:** `just`, `simply`, `really`, `very`, `quite`, `basically`, `essentially`, `actually`.
 - **Cut throat-clearing:** `It should be noted that`, `This function is responsible for`. Start with the content.
-- **Strong verbs, not verb+noun:** `decide`, not `make a decision`. `to`, not `in order to`.
-- **Active voice:** `The parser drops nulls`, not `Nulls are dropped by the parser`.
+- **Strong verbs, not verb+noun:**
+  - `decide`, not `make a decision`
+  - `to`, not `in order to`
+- **Active voice:**
+  - `The parser drops nulls`, not `Nulls are dropped by the parser`
 - **One idea per sentence.** Short beats clever.
-- **Concrete over abstract:** `Retries 3 times`, not `handles transient issues`.
+- **Concrete over abstract:**
+  - `Retries 3 times`, not `handles transient issues`
 
 ## Code comments
 
-- **Comment *why*, not *what*.** Code states what it does; earn the comment by giving intent, a constraint, a gotcha, or a tradeoff.
-- **Delete comments that restate code.** `// increment i` over `i++` is noise.
-- **Keep comments that spare the next reader pain:** workarounds, edge cases, units, external contracts, “looks wrong but isn’t.”
-- **Prefer one line.** A comment needing a paragraph signals code to refactor or a doc to write.
+- **Comment *why*, not *what*.** Code states what it does. Earn the comment by giving intent, a constraint, a gotcha, or a tradeoff.
+- **Delete comments that restate code.**
+- **Keep comments that spare the next reader pain:**
+  - workarounds
+  - edge cases
+  - units
+  - external contracts
+  - “looks wrong but isn’t”
+- **Prefer one line.**
 
 ## Refining existing prose
 
-Read for meaning. Cut every word the meaning survives without. Swap weak verb phrases for strong verbs. Give each sentence one idea. Then read it back — terse is not choppy; fix any stumble.
-
-Preserve meaning exactly. Terseness never drops a caveat that matters or a fact the reader needs.
+Read for meaning. Cut every word the meaning survives without. Swap weak phrases for strong verbs. Preserve meaning. Never drop a caveat or fact the reader needs.
 
 ## Examples
 
