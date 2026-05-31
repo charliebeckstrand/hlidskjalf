@@ -1,6 +1,6 @@
 ---
 name: orator
-description: Tighten prose to its shortest honest form. Use whenever writing or revising prose in this codebase such as code comments, docstrings, commit messages, PR descriptions, READMEs, error messages, or log lines. Also use whenever the user asks to make text terser, tighter, shorter, punchier, or to cut fluff. Consult it before committing a comment or doc, even unprompted, since most first drafts carry fat worth cutting.
+description: Tighten prose to its shortest honest form. Use when writing or revising prose — comments, docstrings, commit messages, PR descriptions, READMEs, error messages, log lines — or when asked to cut fluff or make text terser, tighter, shorter, or punchier. Consult before committing a comment or doc, even unprompted; most first drafts carry fat worth cutting.
 ---
 
 # Orator
