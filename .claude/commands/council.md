@@ -120,7 +120,7 @@ Run `date +%Y%m%d-%H%M%S` once; use that stamp for both filenames in cwd.
 
 ## Principles
 
-- **Anonymize before peer review:** the anonymity is what makes it honest.
+- **Anonymize before peer review**: reviewers must judge the writing, not its source.
 - **The chairman decides:** the majority doesn't automatically win.
 - **Report the real shape of the deliberation,** not a fixed template: omit sections that didn't fire.
 - **If the question can't be reduced to a concrete proposal,** don't convene: ask for what's missing.
