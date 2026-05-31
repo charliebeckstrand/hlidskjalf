@@ -34,7 +34,6 @@ Skip prose where length is the point: tutorials, teaching docs, anything the use
 - **Keep comments that spare the next reader pain:**
   - workarounds
   - edge cases
-  - units
   - external contracts
   - “looks wrong but isn’t”
 
