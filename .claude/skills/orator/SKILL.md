@@ -39,7 +39,7 @@ Skip prose where length is the point: tutorials, teaching docs, anything the use
 
 ## Refining existing prose
 
-Read for meaning. Cut every word the meaning survives without. Swap weak phrases for strong verbs. Preserve meaning. Never drop a caveat or fact the reader needs.
+Read for meaning. Cut every word it survives without. Preserve connotation. Never drop a caveat or fact the reader needs.
 
 ## Examples
 
