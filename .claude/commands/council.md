@@ -11,7 +11,7 @@ Runs evaluators and reviewers in parallel via subagents.
 
 ## 1. Pre-flight
 
-You were invoked deliberately, so convene by default. Handle two exceptions in one line first:
+You were invoked deliberately, so convene by default.
 
 - **`$ARGUMENTS` is too vague to state as a proposal** → ask one clarifying question, then convene.
 - **The call is genuinely trivial or freely reversible** → say so and offer to just answer instead, but proceed with the full council if the user still wants it.
