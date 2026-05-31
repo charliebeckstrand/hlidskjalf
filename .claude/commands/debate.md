@@ -32,7 +32,7 @@ Four turns. Spawn each after the prior completes, and give it everything before 
 | ---- | ---------------- | ----- |
 | 1    | A · proposer     | Strongest concrete case for the *best* path, not the safest. Name the action, the reasoning, the assumed conditions. One path, no hedging, no option lists. Defend the user's prior if it's right; propose better if it isn't. |
 | 2    | B · interrogator | Interrogate A's specific claims, not a strawman — weakest claim, unsupported assumption, missing consideration, unpriced cost. Reference A's words. If sound, say so and name the one residual concern. Propose no alternative this round. |
-| 3    | B · proposer     | Having seen A's case and your own interrogation, propose the best path: endorse A as-is, endorse with specific revisions, or propose a different path. One path, no hedging. |
+| 3    | B · proposer     | Having seen A's case and your own interrogation, propose the best path: endorse A as-is, endorse with specific revisions, or propose a different path. |
 | 4    | A · interrogator | Interrogate B's proposal. If B endorsed yours, are the residual concerns real and decisive? If B diverged, is the new path actually better or just different? Engage B's words, not a strawman; don't relitigate your own case; propose no alternative. |
 
 ## 4. Synthesis
