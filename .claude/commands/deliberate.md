@@ -14,7 +14,7 @@ Interrogate a verdict or a decision. Lawyer's posture: rigorous, evidence-based,
 
 Seed from `$ARGUMENTS` and recent context.
 
-- References a recent verdict, or points at a `council-transcript-*.md` / `debate-*.md`, choose **post-council**.
+- References a recent verdict or points at a `council-transcript-*.md` / `debate-*.md`, choose **post-council**.
 - A decision with no prior session, choose **standalone**.
 - Ambiguous, ask once: "Audit a prior session, or vet a decision from scratch?"
 
