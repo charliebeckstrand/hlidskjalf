@@ -9,7 +9,7 @@ Use the fewest words that stay true. Read for sense, then cut every word the exp
 
 ## Principles
 
-Brevity serves the reader, but not at their expense. Keep every caveat, qualifier, and fact they need; never flatten connotation; never trade clarity for length. Stop at the shortest form a reader parses at a glance — not the shortest string.
+Brevity serves the reader, but not at their expense. Keep every caveat, qualifier, and fact they need; never flatten connotation. Stop at the shortest form a reader parses at a glance — not the shortest string.
 
 - **Say what the reader can't already see.** Restating the code, the diff, or the obvious earns nothing. Spend words on intent, constraints, gotchas, tradeoffs; delete what merely echoes.
 - **Cut hedges and intensifiers:** `just`, `simply`, `really`, `very`, `quite`, `basically`, `essentially`, `actually`.
