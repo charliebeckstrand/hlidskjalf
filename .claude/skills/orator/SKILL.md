@@ -15,7 +15,7 @@ Brevity serves the reader, but not at their expense. Keep every caveat, qualifie
 - **Cut hedges and intensifiers:** `just`, `simply`, `really`, `very`, `quite`, `basically`, `essentially`, `actually`.
 - **Cut throat-clearing:** `It should be noted that`, `This function is responsible for`. Start with the content.
 - **Strong verbs, not verb+noun:** `decide`, not `make a decision`; `to`, not `in order to`.
-- **Prefer active voice** — unless the actor is unknown or unrelated (`The file was corrupted on upload`), or you're deliberately foregrounding the object. `The parser drops nulls`, not `Nulls are dropped by the parser`.
+- **Prefer active voice** — unless the actor is unknown or unrelated, or you're deliberately foregrounding the object. `The parser drops nulls`, not `Nulls are dropped by the parser`.
 - **One idea per sentence** — unless a connective reads clearer than two clipped fragments.
 - **Keep the grammar that carries meaning.** Articles, connectives, and inflections that aid parsing earn their keep — dropping them costs more than it saves.
 - **Concrete over abstract:** `Retries 3 times`, not `handles transient issues` — but only when you *know* the specific. Inventing precision breaks the honesty rule; don't drop vague-but-real content, sharpen it or move it.
