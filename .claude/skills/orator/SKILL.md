@@ -1,11 +1,11 @@
 ---
 name: orator
-description: Tighten prose to its shortest honest form. Use when revising text or drafting succinct artifacts (comments, docstrings, commit messages, PR descriptions, error strings, READMEs, log lines), or when asked to make something tighter, shorter, or more concise. Skip anything that must carry warmth, persuasion, or teaching.
+description: Use when revising text or drafting succinct artifacts (comments, docstrings, commit messages, PR descriptions, error strings, READMEs, log lines), or when asked to make something tighter, shorter, or more concise. Skip anything that must carry warmth, persuasion, or teaching.
 ---
 
 # Orator
 
-Use the fewest words that stay true. Read for meaning, then cut every word the text survives without — if a word can go, it goes.
+Use the fewest words that stay true. Read for sense, then cut every word the expression survives without — if a word can go, it goes.
 
 ## Principles
 
