@@ -25,8 +25,8 @@
 3.1 Before implementing multi-file or architectural work, surface the approach for assent.
 
 3.2 When weighing a decision, name the fitting instrument; don’t run it unprompted, and drop it if passed over:
-(a) **`/debate`** — binary X-or-Y;
-(b) **`/council`** — high-stakes, several competing tradeoffs.
+- **`/debate`** — binary X-or-Y;
+- **`/council`** — high-stakes, several competing tradeoffs.
 
 3.3 For research spanning sources or subsystems, delegate to subagents — one task each. Require findings, not steps.
 
