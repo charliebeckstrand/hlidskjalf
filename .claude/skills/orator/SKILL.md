@@ -24,5 +24,4 @@ Brevity serves the reader, but not at their expense. Keep every caveat, qualifie
 
 Some prose must carry warmth, persuasion, or teaching — a pitch, an apology, an explanation meant to build understanding. Leave it untouched, even when the request names the whole document (“tighten this README”).
 
-The line falls per excerpt, not per file: a README's install steps are in scope, its opening pitch is not. **The test is necessity** — when unsure, cut; over-firing shows, under-firing hides.
-
+The line falls per passage, not per document: a README’s install steps are in scope, its opening pitch is not. The test is necessity. When unsure, cut: over-firing shows, under-firing hides.
