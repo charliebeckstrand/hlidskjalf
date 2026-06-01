@@ -13,7 +13,7 @@ A name is read far more than written; a wrong name is worse than a vague one: it
 
 - **Name the role, not the type.** The declaration shows the type; let the name carry meaning. `users`, not `userArray`; `deadline`, not `dateValue`.
 - **The name must not lie.** `getUser` that writes, `validate` that mutates, `users` that holds one — each promises what the body breaks. When no honest name fits in a word or two, the code does too much. Split it, don’t dress it.
-- **Length tracks scope.** `i` is fine for a three-line counter; a symbol exported repeatedly earns full words.
+- **Length tracks scope.** `i` is fine for a three-line counter; a widely-scoped symbol earns full words.
 - **One word per concept, one concept per word.** Three names for the same operation leaves the reader guessing. Pick an idiomatic name and use it everywhere.
 - **Booleans assert, in the affirmative.** `isExpired`, `hasAccess`, `shouldRetry` — phrasing a conditional can state, not `expired` or `flag`. `isEnabled`, never `isNotDisabled`.
 - **Cut noise.** `Manager`, `Handler`, `data`, `info`, `Object` fill space and name nothing. If dropping the word loses no meaning, drop it: `Scheduler` over `SchedulerManager`.
