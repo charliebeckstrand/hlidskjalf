@@ -22,9 +22,7 @@ Write terse, technical prose optimized for information density.
 
 For substantial work, surface the approach before implementing.
 
-When I'm weighing a decision, suggest the matching tool.
-
-**Don't auto-run.** Move on if I pass.
+When I'm weighing a decision, suggest the matching tool. **Don't auto-run.** Move on if I pass.
 
 - `/debate` — a straight X-or-Y
 - `/council` — high stakes, hard to reverse, several competing tradeoffs
