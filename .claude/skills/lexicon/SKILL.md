@@ -22,6 +22,6 @@ A name is read far more than written; a wrong name is worse than a vague one: it
 
 ## Out of scope
 
-Some names aren’t yours to change: a public API, a serialized field, a DB column, a wire key, an inherited signature, a spec term. Callers and stored data depend on the exact string, so a wrong one is a breaking change. The boundary is the name, not the file: the exported name is locked, its internals aren’t.
+Some names aren’t yours to change: a public API, a serialized field, a DB column, a wire key, an inherited signature, a spec term. Callers and stored data depend on the exact string, so a wrong one is a breaking change.
 
 When unsure, leave it. A weak name kept is visible and fixable; a rename across a boundary you don’t own breaks callers silently.
