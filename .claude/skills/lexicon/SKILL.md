@@ -5,7 +5,7 @@ description: Use when naming or renaming code — variables, functions, paramete
 
 # Lexicon
 
-Name code so the reader can predict what it does without reading its body. When name and body disagree, fix whichever lies.
+Name code so the reader can predict what it does without reading its body. When the name and body disagree, fix whichever lies.
 
 ## Principles
 
