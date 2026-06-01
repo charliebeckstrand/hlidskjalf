@@ -9,8 +9,6 @@ Name code so the reader can predict what it does without reading its body. When 
 
 ## Principles
 
-A name is read far more than written; a wrong name is worse than a vague one: it makes the reader wrong too. Make it long enough to stand alone — no longer.
-
 - **Name the role, not the type.** The declaration shows the type; let the name carry meaning. `users`, not `userArray`; `deadline`, not `dateValue`.
 - **The name must not lie.** `getUser` that writes, `validate` that mutates, `users` that holds one — each promises what the body breaks. When no honest name fits in a word or two, the code does too much. Split it, don’t dress it.
 - **Length tracks scope.** `i` is fine for a three-line counter; a widely-scoped symbol earns full words.
