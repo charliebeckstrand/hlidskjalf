@@ -1,6 +1,6 @@
 ---
 name: orator
-description: Use when revising text or drafting succinct artifacts (comments, docstrings, commit messages, PR descriptions, error strings, READMEs, log lines), or when asked to make something tighter, shorter, or more concise. Skip anything that must carry warmth, persuasion, or teaching.
+description: Use when revising text or drafting succinct artifacts (comments, docstrings, commit messages, PR descriptions, error strings, READMEs, log lines), or when asked to make something tighter, shorter, or more concise.
 ---
 
 # Orator
@@ -19,3 +19,10 @@ Brevity serves the reader, but not at their expense. Keep every caveat, qualifie
 - **Prefer active voice** — unless the actor is unknown or unrelated, or you're deliberately foregrounding the object. `The parser drops nulls`, not `Nulls are dropped by the parser`.
 - **One idea per sentence** — unless a conjunction reads clearer than two clipped fragments.
 - **Keep the grammar that carries meaning.** Articles, connectives, and inflections that aid parsing earn their keep — dropping them costs more than it saves.
+
+## Out of scope
+
+Some prose must carry warmth, persuasion, or teaching — a pitch, an apology, an explanation meant to build understanding. Leave it untouched, even when the request names the whole document (“tighten this README”).
+
+The line falls per excerpt, not per file: a README's install steps are in scope, its opening pitch is not. **The test is necessity** — when unsure, cut; over-firing shows, under-firing hides.
+
