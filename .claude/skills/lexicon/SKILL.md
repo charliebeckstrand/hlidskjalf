@@ -1,6 +1,6 @@
 ---
 name: lexicon
-description: Use when naming or renaming code — variables, functions, parameters, types, files — or when asked if a name is accurate or misleading.
+description: Use when naming code variables, functions, parameters, types, files — or when asked if a name is accurate or misleading.
 ---
 
 # Lexicon
