@@ -1,6 +1,6 @@
 ---
 name: cadence
-description: Match code to the conventions a codebase already follows — its structure, idioms, and naming. Use when adding a file, module, or feature to an existing codebase, or when asked if code fits the surrounding style.
+description: Match code to the conventions a codebase already follows. Use when adding a file, module, or feature to an existing codebase, or when asked if code fits the surrounding style.
 ---
 
 ## Principles
