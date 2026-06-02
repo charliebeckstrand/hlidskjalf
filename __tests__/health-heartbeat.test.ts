@@ -169,6 +169,42 @@ describe('createHeartbeat', () => {
 		expect(setStatus).not.toHaveBeenCalled()
 	})
 
+	it('does not refresh activity for a ready process reachable but stopped mid-probe', async () => {
+		vi.useFakeTimers()
+
+		vi.setSystemTime(1_000_000)
+
+		let release: () => void = () => {}
+
+		const pending = new Promise<void>((res) => {
+			release = res
+		})
+
+		// A reachable probe held in flight until released, so the status can change between the
+		// probe call and its resolution.
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(() => pending.then(() => ({ body: { cancel: async () => {} } }))),
+		)
+
+		const e = entry('ready', { url: 'http://localhost:3000', lastOutputAt: 1 })
+
+		run(new Map([['web', e]]))
+
+		await vi.advanceTimersByTimeAsync(10_000)
+
+		// The process is stopped while the probe is still awaiting the network.
+		e.process.status = 'stopped'
+
+		release()
+
+		await vi.advanceTimersByTimeAsync(0)
+
+		// A reachable probe normally refreshes lastOutputAt; the status guard prevents touching
+		// a process that's no longer running.
+		expect(e.lastOutputAt).toBe(1)
+	})
+
 	it('does not mark a ready process idle when it changed status mid-probe', async () => {
 		vi.useFakeTimers()
 

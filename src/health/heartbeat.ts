@@ -66,11 +66,15 @@ export function createHeartbeat(deps: HeartbeatDeps): Heartbeat {
 			if (entry.lastOutputAt && now - entry.lastOutputAt > IDLE_THRESHOLD_MS) {
 				if (url) {
 					probe(url).then((alive) => {
-						if (alive) {
-							entry.lastOutputAt = Date.now()
-						} else if (entry.process.status === 'watching' || entry.process.status === 'ready') {
-							deps.setStatus(name, 'idle')
-						}
+						// The probe is async; the process may have been stopped/restarted while it
+						// was in flight. Act only if it's still the running process we probed —
+						// neither refreshing its activity nor idling it once it's no longer live.
+						const live = entry.process.status === 'watching' || entry.process.status === 'ready'
+
+						if (!live) return
+
+						if (alive) entry.lastOutputAt = Date.now()
+						else deps.setStatus(name, 'idle')
 					})
 				} else {
 					deps.setStatus(name, 'idle')
