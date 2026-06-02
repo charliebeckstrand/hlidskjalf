@@ -10,7 +10,7 @@ const HOME_SEQUENCES = new Set([`${ESC}[H`, `${ESC}[1~`, `${ESC}[7~`, `${ESC}OH`
 const END_SEQUENCES = new Set([`${ESC}[F`, `${ESC}[4~`, `${ESC}[8~`, `${ESC}OF`])
 
 export interface LogScroll {
-	/** Inclusive start index into the selected process's log buffer. */
+	/** Inclusive start index into the log buffer. */
 	start: number
 	/** Exclusive end index into the buffer. */
 	end: number
