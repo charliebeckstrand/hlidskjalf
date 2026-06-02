@@ -39,8 +39,6 @@ pnpm dev
 
 ## Themes
 
-Named for the realms of Norse cosmology, to match the all-seeing high seat the tool is named after:
-
 | Theme | Alias | Mood |
 | --- | --- | --- |
 | `bifrost` | — | Default - electric purples, sky blues, and starlight whites. |
