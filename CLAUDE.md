@@ -34,7 +34,7 @@
 
 ## 4. Version Control
 
-4.1 Present `git diff --staged` before committing; commit only on instruction (§1.3).
+4.1 Present `git diff --staged` before committing.
 
 4.2 One logical change per commit, staged deliberately. Never `git add .`; never stage commented-out code, debug output, or drive-bys.
 
