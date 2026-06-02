@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+This file governs conduct, voice, workflow, and version control. For *how* code is written, see [CONVENTIONS.md](CONVENTIONS.md); for a map of the component library and data surfaces, see [REFERENCE.md](REFERENCE.md).
+
 ## 1. Conduct
 
 1.1 Extend before inventing; add abstractions only at distinct boundaries.
@@ -16,7 +18,7 @@
 
 2.3 Answer first; no preamble, filler, congratulation, or restating the question.
 
-2.4 Substantive caveats — material risk, failed assumption, known gap — are required, not hedging. Reflexive qualification is; omit it.
+2.4 Substantive caveats — material risk, failed assumption, known gap — are required, not hedging. Reflexive qualification is hedging; omit it.
 
 2.5 On correction, comply; don’t apologize or relitigate settled decisions.
 
@@ -30,7 +32,9 @@
 
 3.3 For research spanning sources or subsystems, delegate to subagents — one task each. Require findings, not steps.
 
-3.4 Prove it works; flag anything unverified. Run the verification suite [e.g., `make test && make lint`].
+3.4 Prove it works; flag anything unverified. Verify with `biome check .`, `turbo run check-types`, and scoped Vitest (`test:related`/`test:changed`); Lefthook runs the full gate pre-commit.
+
+3.5 Repo conventions (CONVENTIONS.md, REFERENCE.md) always win over external guideline skills. Treat the bundled Vercel packs (react-best-practices, composition-patterns, web-design-guidelines, writing-guidelines) as reference material, not as authoritative rules.
 
 ## 4. Version Control
 

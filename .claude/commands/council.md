@@ -1,127 +1,31 @@
 ---
-description: Convene a five-lens review board to pressure-test a decision and render a verdict
+description: Convene a small council to pressure-test a decision and render a verdict
 argument-hint: [the decision or proposal to review]
 ---
 
-# Council
+Several evaluators examine a proposal through different lenses; a chairman weighs them and rules — not by majority, but on the strongest reasoning. Evaluators run in parallel via subagents.
 
-Five evaluators examine a proposal through different lenses, then peer-review each other anonymously before a chairman rules. Each follows where its lens leads; the chairman may back a minority when its reasoning is stronger.
+## 1. Frame
 
-Runs evaluators and reviewers in parallel via subagents.
+Seed from `$ARGUMENTS` and the recent conversation (read for context, cap 5 reads). State a short **Proposal**: the decision in 1–2 concrete sentences, why now, and the one assumption that sinks it if false.
 
-## 1. Pre-flight
+If `$ARGUMENTS` is too vague to state as a proposal, ask one clarifying question first. If the call is trivial or reversible, say so and offer to just answer instead.
 
-You were invoked deliberately, so convene by default.
+## 2. Convene (parallel)
 
-- **`$ARGUMENTS` is too vague to state as a proposal** → ask a clarifying question, then convene.
-- **The call is trivial or reversible** → say so and offer to answer instead, but proceed with the full council if the user still wants it.
+Spawn four evaluators at once, each with the full proposal and one lens. Each gives a verdict-relevant take in ≤150 words; if its lens adds nothing, it says so rather than inventing concerns.
 
-## 2. Frame the proposal
+- **Assumption** — is the load-bearing assumption true? what has to hold?
+- **Failure-mode** — where does this break under real conditions?
+- **Cost** — true cost in time, attention, reversibility, opportunity.
+- **Counterfactual** — the nearest alternative; is the proposal actually better?
 
-First seed from `$ARGUMENTS` and the recent conversation. Read for context (cap 5 reads).
+## 3. Verdict
 
-Then state a **Proposal Under Review**:
+Give one agent the proposal and all four takes. It renders a verdict, not an average, and may side with a lone strong argument. Deliver inline, no files:
 
-- **Proposal**: a decision, not a topic; 1–3 concrete sentences
-- **Driver**: the friction or goal; why now, why this
-- **Key assumption**: the load-bearing claim; if false, the proposal fails
-- **Success criterion**: what's observably true if it works
-- **Current prior**: what the user leans toward, in their words
-- **Constraints**: budget, timeline, reversibility, what's been tried
+- **Call** — Proceed / Revise / Reject / Fork / Insufficient info, in one sentence.
+- **Why** — one short paragraph (≤100 words); name the real disagreement if one mattered.
+- **Do first** — the single next step.
 
-If the user was vague, draft the proposal yourself and confirm before convening. Ask for the driver or constraints only if context can't supply them.
-
-## 3. Convene (parallel)
-
-Spawn all five at once. Give each the full **Proposal Under Review** and one lens. Tell each: evaluate through your lens and engage the constraints as written. If your lens adds nothing, say so instead of inventing concerns.
-
-Keep to 150–200 words, no preamble.
-
-| Lens               | Question |
-| ------------------ | -------- |
-| **Assumption**     | Is the key assumption true? What has to hold? What evidence cuts each way? |
-| **Failure-mode**   | Where does this break under real conditions? |
-| **Cost**           | True cost in time, attention, reversibility, opportunity, second-order obligations |
-| **Counterfactual** | The nearest alternative path, and the condition under which it fails. Is the proposal actually better? |
-| **Second-order**   | If it works, what becomes true? |
-
-## 4. Peer review (blind, parallel)
-
-Label the five responses A–E and record the letter→lens map (reuse it verbatim in the transcript).
-
-Spawn five reviewers; give each the proposal and all five _anonymized_ responses. **They must not know which lens wrote what.**
-
-Each reviewer answers, by letter:
-
-- most useful response, and why
-- biggest blind spot or weakest reasoning
-- any evaluator that ignored the stated constraints
-- what all five missed
-
-Keep under 250 words.
-
-## 5. Chairman verdict
-
-Give one agent the proposal, all five de-anonymized responses, and all five reviews. It renders a verdict — not an average. Side with a minority when its reasoning is stronger; state convergence where it's real; manufacture neither agreement nor disagreement.
-
-Pick exactly one:
-
-- **Proceed:** sound; name risks worth monitoring.
-- **Revise:** right shape; name the specific changes.
-- **Reject:** shouldn't proceed; name what replaces it.
-- **Fork:** two viable paths hinge on a stable user attribute the council can't observe (risk tolerance, team, existing workflow). Name both paths, the deciding attribute, and how the user can tell which applies. Use sparingly: if a single lookup would decide it, use Insufficient information instead.
-- **Insufficient information:** can't be evaluated as stated; name what's missing.
-
-- **Fork:** two viable paths hinge on a stable user attribute the council can't observe (risk tolerance, team, existing workflow). Name both paths, the deciding attribute, and how the user can tell which applies. Use sparingly: if a single lookup would decide it, use Insufficient information instead.
-- **Insufficient information:** can't be evaluated as stated; name what's missing.
-
-Boundaries: **Revise** keeps the proposal's core and adjusts it; **Reject** discards the core and names what replaces it; **Insufficient information** can't evaluate the proposal as stated; **Fork** can evaluate it but the answer hinges on a user attribute the council can't see.
-
-Output the sections below, omitting any that don't apply.
-
-- **Headline:** one sentence (≤25 words) that lands on its own.
-- **Cliff Notes:** 3–5 labeled bullets (≤15 words each): Verdict, Why, Watch for, Do first, and an optional If-condition reframe.
-- **Verdict:** the call plus one paragraph (≤120 words; ≤180 for Fork). If a reframe would flip it, say so in one sentence.
-- **Where the council converged / disagreed:** only where real; for disagreements, give both sides and which is stronger.
-- **Blind spots peer review caught:** only if review surfaced something the evaluators didn't.
-- **Risks to monitor:** Proceed/Revise only.
-- **Falsifiable predictions:** 1–2, as "If you do X, by Y you'll observe Z."
-
-## 6. Deliver
-
-Run `date +%Y%m%d-%H%M%S` once; use that stamp for both filenames in cwd.
-
-**council-transcript-[stamp].md** — plain markdown, in order:
-
-1. the question verbatim
-2. the full **Proposal Under Review**
-3. the letter→lens table
-4. each evaluator's full response under its lens name
-5. each peer review
-6. the chairman's full output
-
-**council-report-[stamp].html** — one self-contained file (inline `<style>`, no scripts, no external assets), in this order:
-
-- **Header:** topic and date, git branch in `<code>` if relevant.
-- **Headline:** large display text, flush with the page.
-- **Cliff Notes:** compact bordered panel, skimmable in ~10 seconds.
-- **Proposal Under Review:** bordered panel.
-- **Verdict:** the heaviest-styled block: a tag colored by type (Proceed green, Revise amber, Reject red, Fork blue, Insufficient gray), the verdict paragraph, then a highlighted "one thing to do first" beneath. Fork instead shows two side-by-side path panels with the deciding factor between them.
-- **Council shape:** compact view of how the five landed: ≥4 converged → one tag panel naming the convergence; Proceed/Reject → favorability bars on a single neutral gradient; Revise → table of reading + lever per evaluator; Fork → table of lean + why; Insufficient → omit. One sentence beneath describing the shape.
-- **Then, as lists:** any of converged / disagreed / blind spots / risks that applied.
-- **Falsifiable predictions**
-- **Evaluator responses:** five collapsed `<details>` (summary = lens tag + one-line gist).
-- **Peer reviews:** one collapsed `<details>` holding all of them.
-- **Footer:** muted.
-
-**Styling:** dark palette by default with a `prefers-color-scheme: light` block; centered column, max-width ~880px; system font stack; subtle panel backgrounds for `<code>` and `<details>`; suppress default `<details>` markers in favor of a +/− indicator. No emoji, no images.
-
-**Deliver** the HTML via `SendUserFile`.
-
-## Principles
-
-- **Anonymize before peer review**: reviewers must judge the writing, not its source.
-- **The chairman decides:** the majority doesn't automatically win.
-- **Report the real shape of the deliberation,** not a fixed template: omit sections that didn't fire.
-- **If the question can't be reduced to a concrete proposal,** don't convene: ask for what's missing.
-  
+Boundaries: **Revise** keeps the core and adjusts it; **Reject** discards it and names the replacement; **Fork** when two paths hinge on something only the user knows (name both and the deciding factor); **Insufficient info** when it can't be judged as stated (name what's missing).
