@@ -6,7 +6,7 @@
 
 1.2 Solve only the stated problem; surface adjacent flaws.
 
-1.3 Propose irreversible actions — commit, push, migration, deletion — and architectural decisions; perform only on instruction.
+1.3 Propose irreversible actions — perform only on instruction.
 
 ## 2. Voice
 
