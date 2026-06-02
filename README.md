@@ -46,9 +46,6 @@ pnpm dev
 | `muspelheim` | `fire` | Fire — molten oranges, ember golds. |
 | `yggdrasil` | `earth` | Earth — mosses, leaf-greens, bark greys. |
 
-Each realm also answers to its elemental alias, so `--theme=ice` is the same as
-`--theme=niflheim`.
-
 ## Configuration
 
 Persist any of the options above.
