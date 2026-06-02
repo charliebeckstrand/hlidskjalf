@@ -1,3 +1,13 @@
+/**
+ * The process supervisor: spawns one child per workspace, tracks each one's status and
+ * logs, and publishes an immutable snapshot React subscribes to. {@link ./lifecycle.ts}
+ * owns startup and teardown; {@link ./control.ts} the per-process actions (stop, restart,
+ * pause, resume, kill, clear logs); {@link ./reconcile.ts} adds and removes workspaces as
+ * the watcher rediscovers them; {@link ./snapshot.ts} rebuilds and notifies on the
+ * snapshot. `createStore` threads a single mutable {@link ./types.ts | StoreContext}
+ * through the thin method surface those modules act on.
+ */
+
 import type { Options } from '../types.js'
 import {
 	clearLogs,

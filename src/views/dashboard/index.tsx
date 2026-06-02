@@ -1,6 +1,5 @@
 import { Box, Text } from 'ink'
-import { useLogScroll } from '../../hooks/use-log-scroll.js'
-import { useTerminalSize } from '../../hooks/use-terminal-size.js'
+import { useLogScroll, useTerminalSize } from '../../hooks/index.js'
 import {
 	columnWidths,
 	FIXED_COLUMN_WIDTHS,

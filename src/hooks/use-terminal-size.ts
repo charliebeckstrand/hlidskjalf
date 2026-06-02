@@ -33,31 +33,38 @@ function readSize(stdout: NodeJS.WriteStream | undefined): TerminalSize {
  */
 export function useTerminalSize(): TerminalSize {
 	const { stdout } = useStdout()
+
 	const [size, setSize] = useState(() => readSize(stdout))
 
 	useEffect(() => {
 		if (!stdout) return
+
 		let timer: ReturnType<typeof setTimeout> | undefined
 
 		const apply = () => {
 			setSize((prev) => {
 				const next = readSize(stdout)
+
 				// Skip the state update (and re-render) when nothing actually changed.
 				return next.columns === prev.columns && next.rows === prev.rows ? prev : next
 			})
 		}
+
 		const onResize = () => {
 			if (timer) clearTimeout(timer)
+
 			timer = setTimeout(apply, RESIZE_SETTLE_MS)
 		}
 
 		stdout.on('resize', onResize)
+
 		// The size may have changed between initial state and this subscription; reconcile
 		// once, immediately, so the first paint isn't stuck at a stale size.
 		apply()
 
 		return () => {
 			if (timer) clearTimeout(timer)
+
 			stdout.off('resize', onResize)
 		}
 	}, [stdout])

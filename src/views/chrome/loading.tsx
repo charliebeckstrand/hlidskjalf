@@ -1,6 +1,6 @@
 import { Box, Text } from 'ink'
 import Spinner from 'ink-spinner'
-import { useTerminalSize } from '../../hooks/use-terminal-size.js'
+import { useTerminalSize } from '../../hooks/index.js'
 import { colors } from '../../ui/index.js'
 import { Header } from './header.js'
 

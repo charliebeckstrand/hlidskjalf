@@ -1,5 +1,5 @@
 import { Box, Text } from 'ink'
-import { useTerminalSize } from '../../hooks/use-terminal-size.js'
+import { useTerminalSize } from '../../hooks/index.js'
 import { colors, HINTS } from '../../ui/index.js'
 import { Cell, Panel } from '../primitives/index.js'
 import { Header } from './header.js'
