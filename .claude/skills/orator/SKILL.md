@@ -11,7 +11,7 @@ Read for sense, then cut every word the meaning survives without.
 
 Never flatten connotation. Stop at the shortest form parsed at a glance — not the shortest string.
 
-- **Assert what the reader can’t already see.** Restating the code, the diff, or the obvious earns nothing — spend words on intent, constraints, gotchas, tradeoffs; cut what echoes.
+- **State what the reader can’t already see.** Restating the code, the diff, or the obvious earns nothing — spend words on intent, constraints, gotchas, tradeoffs; cut what echoes.
 - **Cut filler** — hedges and intensifiers (`just`, `simply`, `really`, `very`, `quite`, `basically`, `essentially`, `actually`) and throat-clearing (`It should be noted that`, `This function is responsible for`). Start with content.
 - **Active voice** — unless the actor is unknown or unrelated, or you’re foregrounding the object: `The parser drops nulls`, not `Nulls are dropped by the parser`.
 - **One idea per sentence** — unless a conjunction reads clearer than two clipped fragments.
