@@ -1,6 +1,6 @@
 ---
 name: orator
-description: Cut text to the fewest words that stay true without losing meaning. Use when revising or drafting succinct artifacts (comments, docstrings, commit messages, PR descriptions, error strings, READMEs), or when asked to make prose tighter, shorter, leaner, or more concise.
+description: Reduce text to the fewest words that keep its meaning. Use when drafting or revising succinct artifacts — comments, docstrings, commit messages, PR descriptions, error strings, READMEs — or when asked to make prose leaner.
 ---
 
 ## Principles
@@ -14,6 +14,4 @@ description: Cut text to the fewest words that stay true without losing meaning.
 
 ## Out of scope
 
-Some prose carries warmth, persuasion, or teaching — a pitch, an apology, an explanation that builds understanding. Leave it untouched, even when the request names the whole document (“tighten this README”).
-
-The line falls per passage, not per document: a README’s install steps are in scope, its opening pitch is not. The test is necessity.
+Some prose carries warmth, persuasion, or teaching — a pitch, an apology, an explanation that builds understanding. Leave it untouched, even when the request names the whole document. A README’s install steps are in scope, its opening pitch is not.
