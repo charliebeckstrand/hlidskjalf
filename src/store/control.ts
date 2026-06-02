@@ -139,7 +139,7 @@ export function killProcess(ctx: StoreContext, name: string): void {
 
 export function clearLogs(ctx: StoreContext, name: string): void {
 	withEntry(ctx, name, (entry) => {
-		// Mutate in place; the snapshot rebuild on `markChanged()` re-renders the empty panel.
+		// Mutate in place; `markChanged()` rebuilds the snapshot and re-renders.
 		entry.process.logs.length = 0
 
 		markChanged(ctx)

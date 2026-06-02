@@ -4,7 +4,7 @@ import { colors, HINTS } from '../../ui/index.js'
 import { Cell, Panel } from '../primitives/index.js'
 import { Header } from './header.js'
 
-/** Every keybinding the app responds to, paired with its description. */
+/** Keybindings, each paired with its description. */
 const BINDINGS: ReadonlyArray<readonly [keys: string, action: string]> = [
 	['↑/↓ · j/k', 'Navigate processes'],
 	['s', 'Stop / start process'],

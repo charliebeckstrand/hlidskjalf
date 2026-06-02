@@ -10,7 +10,6 @@ export async function probe(url: string): Promise<boolean> {
 	try {
 		const res = await fetch(url, { signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) })
 
-		// Any response means the server is alive; drain the body so the socket frees.
 		await res.body?.cancel()
 
 		return true

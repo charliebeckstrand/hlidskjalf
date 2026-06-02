@@ -1,4 +1,4 @@
-/** Timer helpers used only by the store layer. No store domain knowledge, so trivially testable. */
+/** Store-layer timer helpers. No domain knowledge, so trivially testable. */
 
 /**
  * Schedule a timeout and unref it so a pending tick never keeps the process alive past

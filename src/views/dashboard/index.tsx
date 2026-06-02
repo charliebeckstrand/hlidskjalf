@@ -28,8 +28,6 @@ interface Props {
 export function Dashboard({ processes, selectedIndex, title, showMetrics = false }: Props) {
 	const { columns, rows } = useTerminalSize()
 
-	// Header dot: green (full when all up, half when partly up), amber only when something is
-	// paused, grey when nothing is running.
 	const activity = overallActivity(processes)
 
 	// Natural width fits the longest name; the URL's full width is reserved first, then the

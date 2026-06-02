@@ -25,7 +25,7 @@ export const Header = memo(function Header({
 
 	// Fill marks fully-up vs not; colour marks health. Only ● and ○ are used — the terminal
 	// pulls the half-circle glyphs from an oversized fallback font that breaks the baseline.
-	// Amber only when something is paused, otherwise green; grey when nothing runs.
+	// Amber when paused, green otherwise, grey when nothing runs.
 	const dotGlyph = activity === 'up' ? '●' : '○'
 
 	const dotColor =
