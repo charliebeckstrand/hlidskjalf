@@ -12,8 +12,8 @@ Read for sense, then cut every word the meaning survives without.
 Never flatten connotation. Stop at the shortest form parsed at a glance — not the shortest string.
 
 - **State what the reader can’t already see.** Spend words on intent, constraints, gotchas, tradeoffs; cut what echoes.
-- **Cut filler** — hedges and intensifiers (`just`, `simply`, `really`, `very`, `quite`, `basically`, `essentially`, `actually`) and throat-clearing (`It should be noted that`, `This function is responsible for`). Start with content.
-- **Active voice** — unless the actor is unknown or unrelated, or you’re foregrounding the object: `The parser drops nulls`, not `Nulls are dropped by the parser`.
+- **Cut hedges, intensifiers, and throat-clearing** — Start with content.
+- **Active voice** — unless the actor is unknown or unrelated, or you’re foregrounding the object.
 - **One idea per sentence** — unless a conjunction reads clearer than two clipped fragments.
 - **Keep grammar that carries meaning.** Articles, connectives, and inflections that aid parsing earn their keep; dropping them costs more than it saves.
 
