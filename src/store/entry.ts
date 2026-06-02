@@ -2,6 +2,7 @@ import { appendLog } from '../logs/index.js'
 import type { Workspace } from '../types.js'
 import { escalateKill, isRunning, killTree } from './children.js'
 import type { StoreContext, WorkspaceEntry } from './types.js'
+import { clearTimer } from './utilities.js'
 
 export function createEntry(workspace: Workspace): WorkspaceEntry {
 	return {
@@ -39,23 +40,11 @@ export function withEntry(
 }
 
 export function clearTimers(entry: WorkspaceEntry): void {
-	if (entry.restartTimer) {
-		clearTimeout(entry.restartTimer)
+	entry.restartTimer = clearTimer(entry.restartTimer)
 
-		entry.restartTimer = null
-	}
+	entry.errorTimer = clearTimer(entry.errorTimer)
 
-	if (entry.errorTimer) {
-		clearTimeout(entry.errorTimer)
-
-		entry.errorTimer = null
-	}
-
-	if (entry.startupTimer) {
-		clearTimeout(entry.startupTimer)
-
-		entry.startupTimer = null
-	}
+	entry.startupTimer = clearTimer(entry.startupTimer)
 }
 
 /**

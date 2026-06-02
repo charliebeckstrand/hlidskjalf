@@ -6,6 +6,13 @@
 
 import { clamp } from '../utilities.js'
 
+/** Parse a base-10 integer, flooring a malformed value to `fallback` (default 0). */
+function parseIntOr(raw: string, fallback = 0): number {
+	const value = Number.parseInt(raw, 10)
+
+	return Number.isNaN(value) ? fallback : value
+}
+
 /** Collect a root pid and all its (transitive) descendants from a parent→children map. */
 export function collectDescendants(rootPid: number, children: Map<number, number[]>): number[] {
 	const result: number[] = []
@@ -107,11 +114,9 @@ export function parsePsOutput(output: string): {
 
 		const cputimeTicks = parseCpuTime(parts[2] ?? '')
 
-		const rssKb = Number.parseInt(parts[3] ?? '', 10)
-
 		if (Number.isNaN(pid) || Number.isNaN(ppid)) continue
 
-		stats.set(pid, { cputimeTicks, rss: (Number.isNaN(rssKb) ? 0 : rssKb) * 1024 })
+		stats.set(pid, { cputimeTicks, rss: parseIntOr(parts[3] ?? '') * 1024 })
 
 		let kids = children.get(ppid)
 
@@ -173,20 +178,13 @@ export function parseProcStat(content: string, pageSize = 4096): ProcStat | null
 	const ppid = Number.parseInt(fields[1] ?? '', 10)
 
 	// A short stat line (a zombie racing collection, a truncated read) leaves the CPU/RSS
-	// fields absent. Floor each to 0 so a NaN can't reach the meter, where summed ticks feed
-	// sumTickDeltas and summed RSS feeds a workspace total — matching parsePsOutput, whose
-	// parseCpuTime already yields 0 on malformed input.
-	const utimeRaw = Number.parseInt(fields[11] ?? '', 10)
+	// fields absent. parseIntOr floors each to 0 so a NaN can't reach the meter, where summed
+	// ticks feed sumTickDeltas and summed RSS feeds a workspace total.
+	const utime = parseIntOr(fields[11] ?? '')
 
-	const utime = Number.isNaN(utimeRaw) ? 0 : utimeRaw
+	const stime = parseIntOr(fields[12] ?? '')
 
-	const stimeRaw = Number.parseInt(fields[12] ?? '', 10)
-
-	const stime = Number.isNaN(stimeRaw) ? 0 : stimeRaw
-
-	const rssPages = Number.parseInt(fields[21] ?? '', 10)
-
-	const rss = (Number.isNaN(rssPages) ? 0 : rssPages) * pageSize
+	const rss = parseIntOr(fields[21] ?? '') * pageSize
 
 	if (Number.isNaN(ppid)) return null
 
