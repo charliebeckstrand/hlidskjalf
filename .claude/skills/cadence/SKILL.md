@@ -1,6 +1,6 @@
 ---
 name: cadence
-description: Match code to the conventions a codebase already follows — its structure, idioms, and naming conventions. Use when adding a file, module, or feature to an existing codebase, or whenever asked whether code fits, is consistent with, or matches the surrounding pattern, structure, or style.
+description: Match code to the conventions a codebase already follows — its structure, idioms, and naming. Use when adding a file, module, or feature to an existing codebase, or when asked if code fits the surrounding style.
 ---
 
 ## Principles
@@ -12,4 +12,4 @@ description: Match code to the conventions a codebase already follows — its st
 
 ## Out of scope
 
-Not every deviation is drift. An existing break may solve a problem the pattern can’t — don’t normalize a deliberate exception into line, and don’t repeat a pattern that’s wrong just to stay uniform.
+Not every deviation is drift. The break may solve a problem the pattern can’t. Don’t flatten a deliberate exception, and don’t repeat a broken pattern just to stay uniform.
