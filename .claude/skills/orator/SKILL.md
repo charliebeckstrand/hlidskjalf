@@ -1,7 +1,7 @@
------
-
-## name: orator
+---
+name: orator
 description: Cut text to the fewest words that stay true without losing meaning. Use when revising or drafting succinct artifacts (comments, docstrings, commit messages, PR descriptions, error strings, READMEs), or whenever asked to make something tighter, shorter, leaner, or more concise.
+---
 
 # Orator
 
