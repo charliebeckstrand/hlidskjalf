@@ -146,4 +146,18 @@ describe('loadConfig', () => {
 
 		expect(await loadConfig(tmpDir)).toEqual({})
 	})
+
+	it('ignores a config file that throws a non-Error value', async () => {
+		write('hlidskjalf.config.ts', 'throw "boom"')
+
+		expect(await loadConfig(tmpDir)).toEqual({})
+	})
+
+	it('falls back to named exports when there is no default export', async () => {
+		// With no `export default`, the loader validates the module namespace itself, so a
+		// config authored with named exports is still honored.
+		write('hlidskjalf.config.ts', 'export const order = "run"')
+
+		expect(await loadConfig(tmpDir)).toEqual({ order: 'run' })
+	})
 })

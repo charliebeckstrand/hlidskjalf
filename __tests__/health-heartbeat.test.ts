@@ -60,6 +60,21 @@ describe('createHeartbeat', () => {
 		expect(e.lastOutputAt).toBeGreaterThan(0)
 	})
 
+	it('restores a reachable idle process with no recorded good status to ready', async () => {
+		vi.useFakeTimers()
+
+		vi.stubGlobal('fetch', reachable())
+
+		// No lastGoodStatus was ever captured, so the restore falls back to `ready`.
+		const e = entry('idle', { url: 'http://localhost:3000', lastGoodStatus: null })
+
+		const setStatus = run(new Map([['web', e]]))
+
+		await vi.advanceTimersByTimeAsync(10_000)
+
+		expect(setStatus).toHaveBeenCalledWith('web', 'ready')
+	})
+
 	it('leaves an unreachable idle process idle', async () => {
 		vi.useFakeTimers()
 

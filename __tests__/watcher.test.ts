@@ -88,6 +88,26 @@ describe('watchWorkspaces', () => {
 		await expect(pending).resolves.toBeUndefined()
 	})
 
+	it('drops a child watcher when its workspace dir is removed', async () => {
+		createWorkspace('web')
+
+		const t = tracker()
+
+		watcher = watchWorkspaces(tmpDir, t.onChange)
+
+		// Removing the dir fires the parent watcher, which re-syncs children and must close and
+		// forget the watcher on the now-gone dir.
+		fs.rmSync(join(tmpDir, 'packages', 'web'), { recursive: true, force: true })
+
+		await expect(t.next()).resolves.toBeUndefined()
+
+		// Re-create the same dir and write its package.json. A stale watcher left on the old
+		// inode would not see this; a correctly re-synced one fires again.
+		createWorkspace('web')
+
+		await expect(t.next()).resolves.toBeUndefined()
+	})
+
 	it('does not watch a workspace dir symlinked outside the root', async () => {
 		const outside = fs.mkdtempSync(join(fs.realpathSync(os.tmpdir()), 'hlidskjalf-outside-'))
 
