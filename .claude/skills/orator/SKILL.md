@@ -16,4 +16,4 @@ description: Cut text to the fewest words that stay true without losing meaning.
 
 Some prose carries warmth, persuasion, or teaching — a pitch, an apology, an explanation that builds understanding. Leave it untouched, even when the request names the whole document (“tighten this README”).
 
-The line falls per passage, not per document: a README’s install steps are in scope, its opening pitch is not. The test is necessity. When unsure, cut: over-firing shows, under-firing hides.
+The line falls per passage, not per document: a README’s install steps are in scope, its opening pitch is not. The test is necessity.
