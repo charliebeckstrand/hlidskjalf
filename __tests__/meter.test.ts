@@ -28,6 +28,17 @@ vi.mock('node:fs', () => ({
 	},
 }))
 
+// Pin the page size so the /proc RSS→bytes conversion is host-independent: the real
+// `getconf PAGE_SIZE` reports 4096 on x86 Linux but 16384 on Apple Silicon, which would
+// inflate the asserted memory 4x. The /proc path never shells out to anything else.
+vi.mock('node:child_process', () => ({
+	execFileSync: (file: string) => {
+		if (file === 'getconf') return '4096\n'
+
+		throw new Error(`unexpected execFileSync: ${file}`)
+	},
+}))
+
 // A /proc/<pid>/stat line: field 1 (after comm) is ppid, 11 utime, 12 stime, 21 rss pages.
 function statLine(o: { ppid: number; utime: number; stime: number; rssPages: number }): string {
 	const fields = new Array(50).fill('0')
