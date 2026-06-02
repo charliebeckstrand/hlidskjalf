@@ -5,9 +5,9 @@ description: Match code to the conventions a codebase already follows. Use when 
 
 ## Principles
 
-- **Parallel units, parallel structure.** Sibling files, modules, and directories share the same pieces, order, and boundaries.
-- **One concern, one idiom.** A cross-cutting concern — error handling, async flow, validation, data access — resolves the same way everywhere; do the same.
-- **Reuse the existing form.** When a structure already serves a concept, extend it rather than spawn a parallel one.
+- **Parallel units, parallel structure.** Sibling files, modules, and directories share the same layout and boundaries.
+- **One concern, one idiom.** Pick one approach for each cross-cutting concern (error handling, async flow, validation, data access) and apply it consistently.
+- **Reuse the existing form.** When a structure already serves a concept, extend it rather than spawning a parallel one.
 - **Names follow the codebase’s lexical habits.** Match its casing, affixes, and verb choices.
 
 ## Out of scope
