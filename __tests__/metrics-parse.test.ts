@@ -57,6 +57,10 @@ describe('parseCpuTime', () => {
 	it.each(['', '   ', 'garbage'])('returns 0 for %j', (raw) => {
 		expect(parseCpuTime(raw)).toBe(0)
 	})
+
+	it('returns 0 when the day field before the dash is not a number', () => {
+		expect(parseCpuTime('x-01:00:00')).toBe(0)
+	})
 })
 
 describe('parsePsOutput', () => {
@@ -91,6 +95,11 @@ describe('parsePsOutput', () => {
 		expect(parsePsOutput('PID PPID TIME RSS\ngarbage line\n42 1 0:01 64').stats.size).toBe(1)
 
 		expect(parsePsOutput('').stats.size).toBe(0)
+	})
+
+	it('drops a full-width row whose pid or ppid is not numeric', () => {
+		// Four columns, so it clears the arity guard, but a non-numeric pid must still be rejected.
+		expect(parsePsOutput('PID PPID TIME RSS\nxx yy 0:01 64\n42 1 0:01 64').stats.size).toBe(1)
 	})
 })
 
@@ -171,6 +180,11 @@ describe('parseProcStat', () => {
 		expect(parseProcStat('1234 no parens here')).toBeNull()
 
 		expect(parseProcStat('1234 (comm) S notanumber')).toBeNull()
+	})
+
+	it('returns null when no fields follow the comm', () => {
+		// A read that captured only the pid and comm leaves the ppid field absent entirely.
+		expect(parseProcStat('1234 (comm)')).toBeNull()
 	})
 
 	it('floors a malformed rss field to 0 rather than NaN', () => {

@@ -1364,3 +1364,178 @@ describe('metrics', () => {
 		expect(get('web')?.metrics).toBeUndefined()
 	})
 })
+
+describe('discovery filtering', () => {
+	it('narrows the spawned set to the configured filter', async () => {
+		hoisted.discovered.current = [APP, LIB]
+
+		store = makeStore({ filter: ['web'] })
+
+		expect(await store.start()).toBe(true)
+
+		expect(get('web')).toBeDefined()
+
+		expect(get('lib')).toBeUndefined()
+	})
+})
+
+describe('guards and races', () => {
+	it('ignores addWorkspace once shutdown has begun', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		await store.shutdown()
+
+		store.addWorkspace(LIB)
+
+		expect(get('lib')).toBeUndefined()
+
+		expect(childFor('lib')).toBeUndefined()
+	})
+
+	it('ignores a watch rediscovery that fires after shutdown', async () => {
+		hoisted.discovered.current = [APP]
+
+		store = makeStore({ watch: true })
+
+		await store.start()
+
+		await store.shutdown()
+
+		// A debounced fs event can still land after the watcher's close races shutdown.
+		hoisted.discovered.current = [LIB]
+
+		hoisted.watchOnChange.current?.()
+
+		await flush()
+
+		expect(get('lib')).toBeUndefined()
+	})
+
+	it('force-kills an already-stopped process as a quiet no-op', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		childFor('web')?.exit(0)
+
+		expect(get('web')?.status).toBe('stopped')
+
+		const logsBefore = get('web')?.logs.length ?? 0
+
+		store.killProcess('web')
+
+		await flush()
+
+		// No live child, so neither a "killing" nor a "killed" note is appended.
+		expect(get('web')?.status).toBe('stopped')
+
+		expect(get('web')?.logs.length).toBe(logsBefore)
+	})
+
+	it('resumes a paused process whose child has since exited without signalling a dead pid', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		const child = childFor('web')
+
+		child?.out('Watching for changes\n')
+
+		store.pauseProcess('web')
+
+		const pid = child?.pid ?? 0
+
+		// The suspended child dies anyway; its clean exit is handled as a stop.
+		child?.exit(0)
+
+		await flush()
+
+		vi.mocked(process.kill).mockClear()
+
+		store.resumeProcess('web')
+
+		// Nothing live remains to continue, so no SIGCONT is sent, but the held status is still
+		// restored.
+		expect(vi.mocked(process.kill)).not.toHaveBeenCalledWith(-pid, 'SIGCONT')
+
+		expect(get('web')?.status).toBe('watching')
+	})
+
+	it('does not respawn when a restart is still pending as shutdown begins', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		childFor('web')?.out('Watching for changes\n')
+
+		// The restart defers respawn to the child's close; shutdown flips `stopping` before that
+		// close lands, so the deferred respawn must bail rather than spawn into a torn-down store.
+		store.restartProcess('web')
+
+		await store.shutdown()
+
+		expect(spawnCount('web')).toBe(1)
+	})
+
+	it('idles a quiet process through the heartbeat the store wires up', async () => {
+		vi.useFakeTimers()
+
+		store = makeStore()
+
+		await store.start()
+
+		childFor('web')?.out('Watching for changes\n')
+
+		expect(get('web')?.status).toBe('watching')
+
+		// No URL was parsed, so once output goes quiet past the idle threshold the heartbeat
+		// marks it idle directly — exercising the store's setStatus wiring into the monitor.
+		await vi.advanceTimersByTimeAsync(310_000)
+
+		expect(get('web')?.status).toBe('idle')
+	})
+
+	it('does not resurrect a process whose recovery timer fires after it has stopped', async () => {
+		vi.useFakeTimers()
+
+		store = makeStore()
+
+		await store.start()
+
+		const child = childFor('web')
+
+		child?.out('[ERROR] transient\n')
+
+		expect(get('web')?.status).toBe('error')
+
+		// A clean exit stops the process but leaves the pending error-recovery timer armed.
+		child?.exit(0)
+
+		expect(get('web')?.status).toBe('stopped')
+
+		vi.advanceTimersByTime(5000)
+
+		// The timer fires against a no-longer-errored process and must leave it alone.
+		expect(get('web')?.status).toBe('stopped')
+	})
+
+	it('recovers an error with no prior good status to ready', async () => {
+		vi.useFakeTimers()
+
+		store = makeStore()
+
+		await store.start()
+
+		// The very first line is an error, so no good status was ever recorded; recovery has
+		// nothing to restore to and falls back to `ready`.
+		childFor('web')?.out('[ERROR] boom\n')
+
+		expect(get('web')?.status).toBe('error')
+
+		vi.advanceTimersByTime(5000)
+
+		expect(get('web')?.status).toBe('ready')
+	})
+})
