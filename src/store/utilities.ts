@@ -11,3 +11,13 @@ export function createUnrefTimer(ms: number, fn: () => void): ReturnType<typeof 
 
 	return timer
 }
+
+/**
+ * Clear a pending timeout if one is armed, returning null so a stored handle is reset in a
+ * single step: `entry.restartTimer = clearTimer(entry.restartTimer)`. Safe on a null handle.
+ */
+export function clearTimer(timer: ReturnType<typeof setTimeout> | null): null {
+	if (timer) clearTimeout(timer)
+
+	return null
+}

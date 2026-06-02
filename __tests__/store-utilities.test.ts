@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createUnrefTimer } from '../src/store/utilities.js'
+import { clearTimer, createUnrefTimer } from '../src/store/utilities.js'
 
 describe('createUnrefTimer', () => {
 	afterEach(() => vi.useRealTimers())
@@ -30,5 +30,27 @@ describe('createUnrefTimer', () => {
 		vi.advanceTimersByTime(2000)
 
 		expect(fn).not.toHaveBeenCalled()
+	})
+})
+
+describe('clearTimer', () => {
+	afterEach(() => vi.useRealTimers())
+
+	it('cancels a pending timer and returns null', () => {
+		vi.useFakeTimers()
+
+		const fn = vi.fn()
+
+		const handle = clearTimer(createUnrefTimer(1000, fn))
+
+		expect(handle).toBeNull()
+
+		vi.advanceTimersByTime(2000)
+
+		expect(fn).not.toHaveBeenCalled()
+	})
+
+	it('is a no-op on a null handle', () => {
+		expect(clearTimer(null)).toBeNull()
 	})
 })

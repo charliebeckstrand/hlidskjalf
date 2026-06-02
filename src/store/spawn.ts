@@ -16,7 +16,16 @@ import { cancelErrorRecovery, scheduleErrorRecovery } from './recovery.js'
 import { markChanged } from './snapshot.js'
 import { setStatus } from './status.js'
 import type { StoreContext } from './types.js'
-import { createUnrefTimer } from './utilities.js'
+import { clearTimer, createUnrefTimer } from './utilities.js'
+
+/**
+ * A child the live entry has already replaced — the workspace was removed and re-added under
+ * the same name while this child's teardown was still draining. Its late events must not touch
+ * the new instance that took its place.
+ */
+function isStaleChild(ctx: StoreContext, name: string, child: ChildProcess): boolean {
+	return ctx.entries.get(name)?.child !== child
+}
 
 export function spawnWorkspace(ctx: StoreContext, workspace: Workspace): void {
 	const child = spawn('pnpm', ['--filter', workspace.name, 'run', 'dev'], {
@@ -61,10 +70,9 @@ export function spawnWorkspace(ctx: StoreContext, workspace: Workspace): void {
 	const lineBuffer = createLineBuffer(MAX_BUFFER_SIZE)
 
 	const onData = (data: Buffer) => {
-		// Ignore a stale child's output. If the workspace was removed and re-added under the
-		// same name, the live entry now holds a different child; this one's teardown noise
-		// must not land in the new instance's log or drive its status.
-		if (ctx.entries.get(workspace.name)?.child !== child) return
+		// Ignore a stale child's output: its teardown noise must not land in the new
+		// instance's log or drive its status.
+		if (isStaleChild(ctx, workspace.name, child)) return
 
 		for (const line of lineBuffer.push(data.toString())) handleLine(ctx, workspace.name, line)
 	}
@@ -77,11 +85,9 @@ export function spawnWorkspace(ctx: StoreContext, workspace: Workspace): void {
 
 		const entry = ctx.entries.get(workspace.name)
 
-		// A stale child from a prior instance — the workspace was removed and re-added under
-		// the same name while this child's SIGTERM was still draining — must not mutate the
-		// live entry that replaced it, or its delayed exit flips a healthy new instance into
-		// a false crash and schedules a spurious restart.
-		if (entry?.child !== child) return
+		// A stale child's delayed exit must not mutate the live entry that replaced it, or it
+		// flips a healthy new instance into a false crash and schedules a spurious restart.
+		if (!entry || isStaleChild(ctx, workspace.name, child)) return
 
 		if (rest !== null) handleLine(ctx, workspace.name, rest)
 
@@ -94,16 +100,12 @@ export function spawnWorkspace(ctx: StoreContext, workspace: Workspace): void {
 	})
 
 	child.on('error', () => {
+		// Ignore an error surfacing from a stale child the live entry has already replaced.
+		if (isStaleChild(ctx, workspace.name, child)) return
+
 		const liveEntry = ctx.entries.get(workspace.name)
 
-		// Ignore an error surfacing from a stale child the live entry has already replaced.
-		if (liveEntry?.child !== child) return
-
-		if (liveEntry.startupTimer) {
-			clearTimeout(liveEntry.startupTimer)
-
-			liveEntry.startupTimer = null
-		}
+		if (liveEntry) liveEntry.startupTimer = clearTimer(liveEntry.startupTimer)
 
 		setStatus(ctx, workspace.name, 'error')
 	})
@@ -155,11 +157,7 @@ function handleLine(ctx: StoreContext, name: string, raw: string): void {
 			entry.restartRetries = 0
 
 			if (status === 'watching' || status === 'ready') {
-				if (entry.startupTimer) {
-					clearTimeout(entry.startupTimer)
-
-					entry.startupTimer = null
-				}
+				entry.startupTimer = clearTimer(entry.startupTimer)
 			}
 		}
 		proc.status = status

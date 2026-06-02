@@ -2,7 +2,7 @@ import { ERROR_RECOVERY_MS } from './constants.js'
 import { withEntry } from './entry.js'
 import { setStatus } from './status.js'
 import type { StoreContext } from './types.js'
-import { createUnrefTimer } from './utilities.js'
+import { clearTimer, createUnrefTimer } from './utilities.js'
 
 export function scheduleErrorRecovery(ctx: StoreContext, name: string): void {
 	cancelErrorRecovery(ctx, name)
@@ -21,9 +21,5 @@ export function scheduleErrorRecovery(ctx: StoreContext, name: string): void {
 export function cancelErrorRecovery(ctx: StoreContext, name: string): void {
 	const entry = ctx.entries.get(name)
 
-	if (entry?.errorTimer) {
-		clearTimeout(entry.errorTimer)
-
-		entry.errorTimer = null
-	}
+	if (entry) entry.errorTimer = clearTimer(entry.errorTimer)
 }
