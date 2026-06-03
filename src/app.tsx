@@ -100,16 +100,22 @@ export function App({ options }: Props) {
 				exit(err instanceof Error ? err : new Error('startup failed'))
 			})
 
-		process.on('SIGTERM', stop)
-
 		return () => {
 			active = false
 
-			process.off('SIGTERM', stop)
-
 			void store.shutdown()
 		}
-	}, [store, exit, stop])
+	}, [store, exit])
+
+	// SIGTERM wiring is kept out of the lifecycle effect above: a change to `stop`
+	// re-binds the handler here, but can never tear down and restart the store.
+	useEffect(() => {
+		process.on('SIGTERM', stop)
+
+		return () => {
+			process.off('SIGTERM', stop)
+		}
+	}, [stop])
 
 	// Clamp to the live list length: a removed workspace shrinks the list under a
 	// stationary cursor, so the actionable and highlighted indices can't diverge.
