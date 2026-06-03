@@ -41,7 +41,7 @@ pnpm dev
 
 | Theme | Alias | Mood |
 | --- | --- | --- |
-| `bifrost` | — | Default - electric purples, sky blues, and starlight whites. |
+| `bifrost` | — | Default — electric purples, sky blues, and starlight whites. |
 | `niflheim` | `ice` | Ice — glacial blues, frost-white highlights. |
 | `muspelheim` | `fire` | Fire — molten oranges, ember golds. |
 | `yggdrasil` | `earth` | Earth — mosses, leaf-greens, bark greys. |
