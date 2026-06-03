@@ -6,11 +6,11 @@ import { Header } from './header.js'
 
 /** Keybindings, each paired with its description. */
 const BINDINGS: ReadonlyArray<readonly [keys: string, action: string]> = [
-	['↑/↓ · j/k', 'Navigate processes'],
-	['s', 'Stop / start process'],
-	['p', 'Pause / resume process'],
-	['x', 'Kill process'],
-	['r', 'Restart process'],
+	['↑/↓ · j/k', 'Navigate workspaces'],
+	['s', 'Stop / start workspace'],
+	['p', 'Pause / resume workspace'],
+	['x', 'Kill workspace'],
+	['r', 'Restart workspace'],
 	['c', 'Clear logs'],
 	['PgUp/PgDn', 'Scroll logs'],
 	['Home/End', 'Jump to oldest / newest logs'],
