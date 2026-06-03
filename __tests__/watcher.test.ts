@@ -1,8 +1,17 @@
-import fs from 'node:fs'
+import fs, { watch } from 'node:fs'
 import os from 'node:os'
 import { join } from 'node:path'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { type Watcher, watchWorkspaces } from '../src/watcher.js'
+
+// Wrap fs.watch with a spy that delegates to the real implementation: the integration
+// tests below still observe real filesystem events, while the containment test can assert
+// which paths a watcher was actually placed on.
+vi.mock('node:fs', async (importActual) => {
+	const actual = await importActual<typeof import('node:fs')>()
+
+	return { ...actual, default: actual, watch: vi.fn(actual.watch) }
+})
 
 const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
@@ -12,6 +21,8 @@ describe('watchWorkspaces', () => {
 	let watcher: Watcher | null = null
 
 	beforeEach(() => {
+		vi.clearAllMocks()
+
 		tmpDir = fs.mkdtempSync(join(fs.realpathSync(os.tmpdir()), 'hlidskjalf-watch-'))
 
 		fs.mkdirSync(join(tmpDir, 'packages'))
@@ -108,7 +119,7 @@ describe('watchWorkspaces', () => {
 		await expect(t.next()).resolves.toBeUndefined()
 	})
 
-	it('does not watch a workspace dir symlinked outside the root', async () => {
+	it('does not watch a workspace dir symlinked outside the root', () => {
 		const outside = fs.mkdtempSync(join(fs.realpathSync(os.tmpdir()), 'hlidskjalf-outside-'))
 
 		try {
@@ -117,21 +128,17 @@ describe('watchWorkspaces', () => {
 				JSON.stringify({ name: 'evil', scripts: { dev: 'x' } }),
 			)
 
-			fs.symlinkSync(outside, join(tmpDir, 'packages', 'evil'))
+			const link = join(tmpDir, 'packages', 'evil')
 
-			const t = tracker()
+			fs.symlinkSync(outside, link)
 
-			watcher = watchWorkspaces(tmpDir, t.onChange)
+			watcher = watchWorkspaces(tmpDir, () => {})
 
-			// A write to the out-of-root target must not reach us: no watcher was placed on it.
-			fs.writeFileSync(
-				join(outside, 'package.json'),
-				JSON.stringify({ name: 'evil', scripts: { dev: 'y' } }),
-			)
-
-			await delay(700)
-
-			expect(t.count).toBe(0)
+			// The containment check must keep a watcher off the out-of-root target. Assert that
+			// directly rather than via an event count: macOS fs.watch delivers a benign parent-dir
+			// event for a write to a symlink target, so a count would be platform-dependent even
+			// though no watcher was ever placed on the link.
+			expect(watch).not.toHaveBeenCalledWith(link, expect.anything())
 		} finally {
 			fs.rmSync(outside, { recursive: true, force: true })
 		}
