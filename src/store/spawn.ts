@@ -247,7 +247,10 @@ function rebuildFsevents(ctx: StoreContext): Promise<void> {
 	return new Promise((resolve) => {
 		const child: ChildProcess = spawn('pnpm', ['rebuild', 'fsevents'], {
 			cwd: ctx.root,
-			stdio: 'pipe',
+			// Discard stdio rather than pipe it: nothing reads this child's output, and a piped
+			// node-gyp build that out-writes the OS pipe buffer (~64KB) would block on write and
+			// never exit, so `close` never fires and the SIGABRT recovery wedges at `error`.
+			stdio: 'ignore',
 			env: safeEnv(),
 		})
 
