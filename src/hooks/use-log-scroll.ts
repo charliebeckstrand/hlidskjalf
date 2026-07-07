@@ -1,10 +1,11 @@
-import { useInput } from 'ink'
-import { useState } from 'react'
+import { useInput, useStdin } from 'ink'
+import { useEffect, useRef, useState } from 'react'
 import { reconcileScroll, visibleLogRange } from '../logs/index.js'
 
-// Home/End aren't surfaced as named keys by Ink's `useInput` (both collapse to an
-// empty `key.*`), but the raw decoded bytes still arrive as the `input` argument.
-// Match them against the common xterm/vt escape sequences. ESC = \x1b.
+// Ink's `useInput` can't surface Home/End: it maps their escape sequences to named keys, then
+// blanks the `input` argument for any named key and exposes no `key.home`/`key.end` flag. So we
+// read the raw chunks off the same emitter `useInput` itself subscribes to and match the common
+// xterm/vt sequences directly. ESC = \x1b.
 const ESC = '\x1b'
 const HOME_SEQUENCES = new Set([`${ESC}[H`, `${ESC}[1~`, `${ESC}[7~`, `${ESC}OH`])
 const END_SEQUENCES = new Set([`${ESC}[F`, `${ESC}[4~`, `${ESC}[8~`, `${ESC}OF`])
@@ -67,19 +68,39 @@ export function useLogScroll(
 	// Ink re-subscribes this handler every render (its inputHandler is in the effect deps), so
 	// the closure always reads the latest committed bound — no ref needed to dodge a stale one.
 	useInput(
-		(input, key) => {
+		(_input, key) => {
 			if (key.pageUp) {
 				setScroll((s) => Math.min(Math.min(s, maxScroll) + height, maxScroll))
 			} else if (key.pageDown) {
 				setScroll((s) => Math.max(0, Math.min(s, maxScroll) - height))
-			} else if (HOME_SEQUENCES.has(input)) {
-				setScroll(maxScroll)
-			} else if (END_SEQUENCES.has(input)) {
-				setScroll(0)
 			}
 		},
 		{ isActive: enabled },
 	)
+
+	const { internal_eventEmitter: inputEmitter } = useStdin()
+
+	// Home/End arrive here (not through `useInput`, which blanks them). This subscription is
+	// keyed only on activation and the emitter, so a ref carries the latest bound rather than
+	// re-subscribing every render.
+	const maxScrollRef = useRef(maxScroll)
+
+	maxScrollRef.current = maxScroll
+
+	useEffect(() => {
+		if (!enabled || !inputEmitter) return
+
+		const onInput = (data: string) => {
+			if (HOME_SEQUENCES.has(data)) setScroll(maxScrollRef.current)
+			else if (END_SEQUENCES.has(data)) setScroll(0)
+		}
+
+		inputEmitter.on('input', onInput)
+
+		return () => {
+			inputEmitter.off('input', onInput)
+		}
+	}, [enabled, inputEmitter])
 
 	return { start, end, atBottom: Math.min(scroll, maxScroll) === 0 }
 }
