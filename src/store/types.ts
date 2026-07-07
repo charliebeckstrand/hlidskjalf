@@ -30,6 +30,8 @@ export interface Store {
 	/** Discover, register, and begin spawning. Resolves false if no workspaces matched. */
 	start(): Promise<boolean>
 	shutdown(): Promise<void>
+	/** Synchronously SIGKILL every child group — a last-resort backstop for a process exit. */
+	killAllSync(): void
 	stopProcess(name: string): void
 	restartProcess(name: string): void
 	/** Freeze a running process with SIGSTOP — its child stays alive but consumes no CPU. */

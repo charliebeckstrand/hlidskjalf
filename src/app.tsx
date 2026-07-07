@@ -69,7 +69,16 @@ export function App({ options }: Props) {
 	const stopping = useRef(false)
 
 	const stop = useCallback(() => {
-		if (stopping.current) return
+		if (stopping.current) {
+			// A second quit while the graceful shutdown is still draining — a child ignoring
+			// SIGTERM through the kill grace, say. Don't keep waiting: synchronously SIGKILL
+			// every child group and unmount now.
+			store.killAllSync()
+
+			exit()
+
+			return
+		}
 
 		stopping.current = true
 
@@ -107,15 +116,37 @@ export function App({ options }: Props) {
 		}
 	}, [store, exit])
 
-	// SIGTERM wiring is kept out of the lifecycle effect above: a change to `stop`
-	// re-binds the handler here, but can never tear down and restart the store.
+	// Termination-signal wiring is kept out of the lifecycle effect above: a change to `stop`
+	// re-binds the handlers here, but can never tear down and restart the store. SIGINT and
+	// SIGHUP join SIGTERM so a real Ctrl+C (delivered as a signal when stdin isn't a raw-mode
+	// TTY, e.g. piped input) and a closed terminal both shut the store down gracefully instead
+	// of letting Node's default handler exit and orphan every detached child group.
 	useEffect(() => {
 		process.on('SIGTERM', stop)
+		process.on('SIGINT', stop)
+		process.on('SIGHUP', stop)
 
 		return () => {
 			process.off('SIGTERM', stop)
+			process.off('SIGINT', stop)
+			process.off('SIGHUP', stop)
 		}
 	}, [stop])
+
+	// Last-resort backstop: if the process is torn down without the graceful shutdown finishing
+	// — an uncaught throw, or a fatal signal Node handles by exiting — synchronously SIGKILL
+	// every child group from the `exit` hook so a detached dev server isn't left holding its
+	// port. The graceful path (and the forced quit above) kill children before this fires; this
+	// only catches the routes that skip them.
+	useEffect(() => {
+		const backstop = () => store.killAllSync()
+
+		process.on('exit', backstop)
+
+		return () => {
+			process.off('exit', backstop)
+		}
+	}, [store])
 
 	// Clamp to the live list length: a removed workspace shrinks the list under a
 	// stationary cursor, so the actionable and highlighted indices can't diverge.

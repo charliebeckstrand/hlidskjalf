@@ -1287,6 +1287,57 @@ describe('shutdown', () => {
 
 		expect(childFor('web')).toBeUndefined()
 	})
+
+	it('killAllSync SIGKILLs every running child group synchronously', async () => {
+		// Two apps (no package gate) so both spawn before start() resolves.
+		hoisted.discovered.current = [
+			{ name: 'web', kind: 'app', deps: [] },
+			{ name: 'api', kind: 'app', deps: [] },
+		]
+
+		store = makeStore()
+
+		await store.start()
+
+		const web = childFor('web')
+
+		const api = childFor('api')
+
+		const webPid = web?.pid ?? 0
+
+		const apiPid = api?.pid ?? 0
+
+		// Synchronous backstop for a process-exit hook: no await, every group force-killed.
+		store.killAllSync()
+
+		expect(vi.mocked(process.kill)).toHaveBeenCalledWith(-webPid, 'SIGKILL')
+
+		expect(vi.mocked(process.kill)).toHaveBeenCalledWith(-apiPid, 'SIGKILL')
+
+		expect(web?.killed).toBe(true)
+
+		expect(api?.killed).toBe(true)
+	})
+
+	it('killAllSync skips an already-exited child so a reused pid is never signalled', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		const child = childFor('web')
+
+		const pid = child?.pid ?? 0
+
+		// The child has already exited (and been reaped); its pid may now belong to something
+		// else, so the backstop must not signal it.
+		child?.exit(0)
+
+		vi.mocked(process.kill).mockClear()
+
+		store.killAllSync()
+
+		expect(vi.mocked(process.kill)).not.toHaveBeenCalledWith(-pid, 'SIGKILL')
+	})
 })
 
 describe('edge cases and guards', () => {
