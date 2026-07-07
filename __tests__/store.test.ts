@@ -110,6 +110,14 @@ vi.mock('node:child_process', () => ({
 		return child
 	},
 	execFileSync: () => hoisted.psOutput.current,
+	// The meter now shells out to `ps` via async execFile; drive its callback synchronously
+	// with the controllable fixture so the sample lands within the tick the tests advance to.
+	execFile: (
+		_cmd: string,
+		_args: string[],
+		_opts: unknown,
+		cb: (error: Error | null, stdout: string) => void,
+	) => cb(null, hoisted.psOutput.current),
 }))
 
 // Keep real sort/filter logic; stub only discovery so tests control the workspace set.

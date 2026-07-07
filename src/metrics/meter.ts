@@ -4,7 +4,7 @@
  * memory without itself touching `/proc` or `ps`.
  */
 
-import { execFileSync } from 'node:child_process'
+import { execFile, execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import type { Metrics } from '../types.js'
@@ -84,6 +84,9 @@ export function createMeter(deps: MeterDeps): Meter {
 	let lastSampleAt = 0
 
 	let stopped = false
+
+	// True while a sample is draining, so an async `ps` poll can't overlap the next tick.
+	let sampling = false
 
 	/**
 	 * Diff a workspace's tree against its previous snapshot to derive CPU% and total
@@ -201,38 +204,55 @@ export function createMeter(deps: MeterDeps): Meter {
 		})
 	}
 
-	const collectPs = (roots: Map<number, string>): void => {
-		let output: string
+	// `ps` runs async (unlike the Linux `/proc` reader's fast in-memory syscalls): shelling out
+	// synchronously would block the event loop — freezing input, rendering, and child output —
+	// for as long as a wedged process table takes to answer, up to PS_TIMEOUT_MS every poll.
+	const collectPs = (roots: Map<number, string>): Promise<void> =>
+		new Promise((resolve) => {
+			execFile(
+				'ps',
+				['-eo', 'pid,ppid,time,rss'],
+				{ encoding: 'utf8', timeout: PS_TIMEOUT_MS },
+				(error, output) => {
+					// Bail on a failed sample or a meter stopped while ps was in flight.
+					if (error || stopped) {
+						resolve()
+
+						return
+					}
+
+					const { children, stats } = parsePsOutput(output)
+
+					collectFrom(roots, children, (pid) => {
+						const stat = stats.get(pid)
+
+						return stat ? { ticks: stat.cputimeTicks, rss: stat.rss } : undefined
+					})
+
+					resolve()
+				},
+			)
+		})
+
+	const collect = async (): Promise<void> => {
+		// Skip if a previous sample is still draining (a slow ps): overlapping polls would
+		// double-count and race the CPU-tick snapshots.
+		if (stopped || sampling) return
+
+		sampling = true
 
 		try {
-			output = execFileSync('ps', ['-eo', 'pid,ppid,time,rss'], {
-				encoding: 'utf8',
-				timeout: PS_TIMEOUT_MS,
-			})
-		} catch {
-			return
+			lastSampleAt = Date.now()
+
+			const roots = deps.roots()
+
+			if (roots.size === 0) return
+
+			if (process.platform === 'linux') collectProc(roots)
+			else await collectPs(roots)
+		} finally {
+			sampling = false
 		}
-
-		const { children, stats } = parsePsOutput(output)
-
-		collectFrom(roots, children, (pid) => {
-			const stat = stats.get(pid)
-
-			return stat ? { ticks: stat.cputimeTicks, rss: stat.rss } : undefined
-		})
-	}
-
-	const collect = (): void => {
-		if (stopped) return
-
-		lastSampleAt = Date.now()
-
-		const roots = deps.roots()
-
-		if (roots.size === 0) return
-
-		if (process.platform === 'linux') collectProc(roots)
-		else collectPs(roots)
 	}
 
 	const schedule = (delay: number): void => {
@@ -241,16 +261,17 @@ export function createMeter(deps: MeterDeps): Meter {
 		timer = setTimeout(() => {
 			timer = null
 
-			collect()
-
-			if (!stopped) schedule(METRICS_INTERVAL_MS)
+			// Re-arm only once the sample settles, so a slow ps can't stack overlapping polls.
+			void collect().finally(() => {
+				if (!stopped) schedule(METRICS_INTERVAL_MS)
+			})
 		}, delay)
 
 		timer.unref()
 	}
 
 	// Seed per-PID baselines (this first sample reports 0% CPU) and arm the poll.
-	collect()
+	void collect()
 
 	schedule(METRICS_INTERVAL_MS)
 
