@@ -25,6 +25,11 @@ const hoisted = vi.hoisted(() => {
 
 		lastSignal: string | null = null
 
+		// When true, a terminating signal marks the child exited (sets signalCode) but defers
+		// `close` — modelling a surviving grandchild that keeps the stdio pipes open past the
+		// direct child's exit. The test then emits `close` explicitly via closeNow().
+		deferClose = false
+
 		args: string[]
 
 		options: Record<string, unknown>
@@ -47,6 +52,14 @@ const hoisted = vi.hoisted(() => {
 
 			this.killed = true
 
+			// Direct child exited (the exit event sets signalCode) but a grandchild is still
+			// draining stdio, so hold `close` back until the test emits it via closeNow().
+			if (this.deferClose) {
+				this.signalCode = this.lastSignal
+
+				return true
+			}
+
 			// Model the OS delivering the signal, then the process closing.
 			queueMicrotask(() => {
 				if (this.exitCode === null && this.signalCode === null) {
@@ -57,6 +70,11 @@ const hoisted = vi.hoisted(() => {
 			})
 
 			return true
+		}
+
+		// Emit the deferred `close` once the (already-exited) child's stdio finishes draining.
+		closeNow(): void {
+			this.emit('close', this.exitCode, this.signalCode)
 		}
 
 		out(text: string): void {
@@ -763,6 +781,42 @@ describe('manual stop and restart', () => {
 
 		await flush()
 
+		expect(spawnCount('web')).toBe(2)
+
+		expect(get('web')?.status).toBe('building')
+	})
+
+	it('does not double-spawn or orphan a child when restart races the exit→close window', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		const child = childFor('web')
+
+		if (!child) throw new Error('no child')
+
+		child.out('Watching for changes\n')
+
+		// Model the real exit→close gap: the direct child exits on SIGTERM but a grandchild
+		// keeps the stdio pipes open, so `close` is deferred. isRunning() reads exitCode/
+		// signalCode (set at exit), so the second restart sees the child as already gone.
+		child.deferClose = true
+
+		store.restartProcess('web')
+
+		// First restart's SIGTERM has now marked child #1 exited (signalCode set) with `close`
+		// still pending. A second restart in this window must not spawn a replacement the
+		// pending close handler then clobbers and orphans.
+		store.restartProcess('web')
+
+		child.closeNow()
+
+		await flush()
+
+		await flush()
+
+		// Exactly one respawn — child #1 plus its single replacement. The pre-fix bug spawned
+		// three (a synchronous respawn, orphaned, plus the stale close handler's respawn).
 		expect(spawnCount('web')).toBe(2)
 
 		expect(get('web')?.status).toBe('building')
