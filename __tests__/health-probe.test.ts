@@ -22,6 +22,23 @@ describe('probe', () => {
 		expect(cancel).toHaveBeenCalledOnce()
 	})
 
+	it('resolves true even when draining the body rejects', async () => {
+		// The server answered, so it's alive; a hiccup cancelling the unread stream must not
+		// flip the result to "dead" and idle a live process.
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () => ({
+				body: {
+					cancel: async () => {
+						throw new Error('stream teardown failed')
+					},
+				},
+			})),
+		)
+
+		await expect(probe('http://localhost:3000')).resolves.toBe(true)
+	})
+
 	it('resolves true for a bodyless response', async () => {
 		vi.stubGlobal(
 			'fetch',

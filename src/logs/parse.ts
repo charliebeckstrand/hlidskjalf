@@ -129,11 +129,21 @@ const BARE_CONTROLS =
 	// biome-ignore lint/suspicious/noControlCharactersInRegex: needed to strip terminal control characters
 	/[\x00-\x08\x0b-\x1a\x1c-\x1f\x7f]/g
 
+// An escape sequence left dangling at end-of-string — the line was cut mid-sequence by the
+// MAX_LINE_LENGTH truncation or the newline-less overflow flush. NON_SGR_ESCAPES only matches
+// complete sequences, so the fragment (a lone ESC, an unterminated CSI/SGR, or an OSC with no
+// terminator) would otherwise survive and, written raw, start a sequence that swallows the
+// frame that follows. A complete trailing SGR (`\x1b[..m`) doesn't match and is preserved.
+const TRAILING_INCOMPLETE_ESCAPE =
+	// biome-ignore lint/suspicious/noControlCharactersInRegex: needed to strip a truncated escape sequence
+	/\x1b(?:\[[\d;?>=]*|\][^\x07\x1b]*|\()?$/
+
 /**
  * Strip all escape sequences EXCEPT SGR colour/style codes (\x1b[...m), plus any
  * bare control characters — a whitelist so only SGR and printable text pass through.
  * Everything else (cursor moves, screen clears, titles, hyperlinks, bracketed paste,
- * lone control bytes such as BEL) is removed.
+ * lone control bytes such as BEL) is removed, along with any escape sequence the line
+ * was truncated mid-way through.
  */
 export function sanitizeForDisplay(text: string): string {
 	const hasEscape = text.includes('\x1b')
@@ -145,7 +155,7 @@ export function sanitizeForDisplay(text: string): string {
 
 	let out = text
 
-	if (hasEscape) out = out.replace(NON_SGR_ESCAPES, '')
+	if (hasEscape) out = out.replace(NON_SGR_ESCAPES, '').replace(TRAILING_INCOMPLETE_ESCAPE, '')
 
 	if (hasControl) out = out.replace(BARE_CONTROLS, '')
 
