@@ -1,4 +1,5 @@
 import { type ChildProcess, spawn } from 'node:child_process'
+import { StringDecoder } from 'node:string_decoder'
 import { appendLog, parseLine, sanitizeForDisplay, stripAnsi } from '../logs/index.js'
 import { safeEnv } from '../metrics/index.js'
 import type { Workspace } from '../types.js'
@@ -69,16 +70,26 @@ export function spawnWorkspace(ctx: StoreContext, workspace: Workspace): void {
 
 	const lineBuffer = createLineBuffer(MAX_BUFFER_SIZE)
 
-	const onData = (data: Buffer) => {
+	// A `data` chunk boundary can fall inside a multi-byte UTF-8 character. Buffer.toString()
+	// per chunk would decode the split halves to U+FFFD — garbling the log and, worse,
+	// defeating status parsing (a torn `⚡`/`➜` no longer matches its ready/watching pattern,
+	// so the process can stall at `building` and time out). A StringDecoder holds the trailing
+	// partial bytes until the rest arrives. stdout and stderr each get their own: they're
+	// independent byte streams whose chunks can interleave mid-character.
+	const decode = (decoder: StringDecoder, data: Buffer) => {
 		// Ignore a stale child's output: its teardown noise must not land in the new
 		// instance's log or drive its status.
 		if (isStaleChild(ctx, workspace.name, child)) return
 
-		for (const line of lineBuffer.push(data.toString())) handleLine(ctx, workspace.name, line)
+		for (const line of lineBuffer.push(decoder.write(data))) handleLine(ctx, workspace.name, line)
 	}
 
-	child.stdout?.on('data', onData)
-	child.stderr?.on('data', onData)
+	const stdoutDecoder = new StringDecoder('utf8')
+
+	const stderrDecoder = new StringDecoder('utf8')
+
+	child.stdout?.on('data', (data: Buffer) => decode(stdoutDecoder, data))
+	child.stderr?.on('data', (data: Buffer) => decode(stderrDecoder, data))
 
 	// A stdio pipe can emit 'error' (EPIPE/EIO as the child's end tears down). With no listener
 	// Node re-throws it as an uncaught exception, killing hlidskjalf and orphaning every child

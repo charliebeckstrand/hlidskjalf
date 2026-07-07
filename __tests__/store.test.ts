@@ -602,6 +602,25 @@ describe('unexpected exit', () => {
 		expect(get('web')?.logs.some((l) => l.includes('giving up'))).toBe(true)
 	})
 
+	it('reassembles a multi-byte character split across stdout chunks', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		const child = childFor('web')
+
+		// tsup's "⚡ Build success" marks the process `watching`. ⚡ (U+26A1) is 3 UTF-8 bytes;
+		// split it across two chunks. A naive per-chunk toString would decode each half to
+		// U+FFFD, so the ready pattern wouldn't match and the process would stay `building`.
+		const bytes = Buffer.from('⚡ Build success\n', 'utf8')
+
+		child?.stdout.emit('data', bytes.subarray(0, 1))
+
+		child?.stdout.emit('data', bytes.subarray(1))
+
+		expect(get('web')?.status).toBe('watching')
+	})
+
 	it('rebuilds fsevents and respawns on a SIGABRT exit', async () => {
 		store = makeStore()
 
