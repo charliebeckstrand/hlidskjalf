@@ -65,6 +65,12 @@ export function useLogScroll(
 	// visibleLogRange owns the bound formula; reuse the value it returns rather than recomputing it.
 	const { start, end, maxScroll } = visibleLogRange(total, height, scroll)
 
+	const { internal_eventEmitter: inputEmitter, isRawModeSupported } = useStdin()
+
+	// Non-TTY stdin (piped/CI) can't enter raw mode; activating any key handler there would
+	// throw at mount, so the panel stays read-only.
+	const active = enabled && isRawModeSupported
+
 	// Ink re-subscribes this handler every render (its inputHandler is in the effect deps), so
 	// the closure always reads the latest committed bound — no ref needed to dodge a stale one.
 	useInput(
@@ -75,10 +81,8 @@ export function useLogScroll(
 				setScroll((s) => Math.max(0, Math.min(s, maxScroll) - height))
 			}
 		},
-		{ isActive: enabled },
+		{ isActive: active },
 	)
-
-	const { internal_eventEmitter: inputEmitter } = useStdin()
 
 	// Home/End arrive here (not through `useInput`, which blanks them). This subscription is
 	// keyed only on activation and the emitter, so a ref carries the latest bound rather than
@@ -88,7 +92,7 @@ export function useLogScroll(
 	maxScrollRef.current = maxScroll
 
 	useEffect(() => {
-		if (!enabled || !inputEmitter) return
+		if (!active || !inputEmitter) return
 
 		const onInput = (data: string) => {
 			if (HOME_SEQUENCES.has(data)) setScroll(maxScrollRef.current)
@@ -100,7 +104,7 @@ export function useLogScroll(
 		return () => {
 			inputEmitter.off('input', onInput)
 		}
-	}, [enabled, inputEmitter])
+	}, [active, inputEmitter])
 
 	return { start, end, atBottom: Math.min(scroll, maxScroll) === 0 }
 }

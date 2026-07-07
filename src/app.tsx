@@ -1,4 +1,4 @@
-import { useApp, useInput } from 'ink'
+import { useApp, useInput, useStdin } from 'ink'
 import {
 	useCallback,
 	useDeferredValue,
@@ -21,6 +21,11 @@ type Phase = 'loading' | 'running'
 
 export function App({ options }: Props) {
 	const { exit } = useApp()
+
+	// Piped or redirected stdin (CI, `hlidskjalf < /dev/null`, no PTY) can't enter raw mode;
+	// an unconditional useInput would throw at mount and crash the app. Gate every key handler
+	// on support so the dashboard still renders read-only instead.
+	const { isRawModeSupported } = useStdin()
 
 	const [store] = useState(() => createStore(options))
 
@@ -152,60 +157,63 @@ export function App({ options }: Props) {
 	// stationary cursor, so the actionable and highlighted indices can't diverge.
 	const cursor = clampIndex(cursorState, processes.length)
 
-	useInput((input, key) => {
-		if (input === 'q' || (key.ctrl && input === 'c')) {
-			stop()
+	useInput(
+		(input, key) => {
+			if (input === 'q' || (key.ctrl && input === 'c')) {
+				stop()
 
-			return
-		}
+				return
+			}
 
-		if (input === '?') {
-			setShowHelp((open) => !open)
+			if (input === '?') {
+				setShowHelp((open) => !open)
 
-			return
-		}
+				return
+			}
 
-		// While help is open it captures all other input; Esc closes it.
-		if (showHelp) {
-			if (key.escape) setShowHelp(false)
+			// While help is open it captures all other input; Esc closes it.
+			if (showHelp) {
+				if (key.escape) setShowHelp(false)
 
-			return
-		}
+				return
+			}
 
-		if (processes.length === 0) return
+			if (processes.length === 0) return
 
-		if (key.upArrow || input === 'k') {
-			setCursor((i) => Math.max(0, i - 1))
+			if (key.upArrow || input === 'k') {
+				setCursor((i) => Math.max(0, i - 1))
 
-			return
-		}
+				return
+			}
 
-		if (key.downArrow || input === 'j') {
-			setCursor((i) => Math.min(processes.length - 1, i + 1))
+			if (key.downArrow || input === 'j') {
+				setCursor((i) => Math.min(processes.length - 1, i + 1))
 
-			return
-		}
+				return
+			}
 
-		const selected = processes[cursor]
+			const selected = processes[cursor]
 
-		if (!selected) return
+			if (!selected) return
 
-		const { name } = selected.workspace
+			const { name } = selected.workspace
 
-		if (input === 's') {
-			if (selected.status === 'stopped') store.restartProcess(name)
-			else store.stopProcess(name)
-		} else if (input === 'p') {
-			if (selected.status === 'paused') store.resumeProcess(name)
-			else store.pauseProcess(name)
-		} else if (input === 'x') {
-			store.killProcess(name)
-		} else if (input === 'r') {
-			store.restartProcess(name)
-		} else if (input === 'c') {
-			store.clearLogs(name)
-		}
-	})
+			if (input === 's') {
+				if (selected.status === 'stopped') store.restartProcess(name)
+				else store.stopProcess(name)
+			} else if (input === 'p') {
+				if (selected.status === 'paused') store.resumeProcess(name)
+				else store.pauseProcess(name)
+			} else if (input === 'x') {
+				store.killProcess(name)
+			} else if (input === 'r') {
+				store.restartProcess(name)
+			} else if (input === 'c') {
+				store.clearLogs(name)
+			}
+		},
+		{ isActive: isRawModeSupported },
+	)
 
 	if (phase === 'loading') return <Loading title={options.title} />
 
