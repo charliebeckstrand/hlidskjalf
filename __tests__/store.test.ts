@@ -622,6 +622,63 @@ describe('unexpected exit', () => {
 
 		expect(spawnCount('web')).toBe(2)
 	})
+
+	it('does not flip a cleanly-exited process to timeout when the startup deadline passes', async () => {
+		vi.useFakeTimers()
+
+		store = makeStore()
+
+		await store.start()
+
+		// Exits code 0 before ever reaching ready/watching — settles to `stopped`.
+		childFor('web')?.exit(0)
+
+		expect(get('web')?.status).toBe('stopped')
+
+		// The 120s startup timer armed at spawn must have been cancelled when the child closed;
+		// otherwise it fires here and marks the long-gone process a phantom `timeout`.
+		await vi.advanceTimersByTimeAsync(120_000)
+
+		expect(get('web')?.status).toBe('stopped')
+	})
+
+	it('does not resurrect a given-up process when its error-recovery timer would fire', async () => {
+		vi.useFakeTimers()
+
+		store = makeStore()
+
+		await store.start()
+
+		// Crash through the retry budget so the next exit gives up (backoff 1s, 2s, 4s).
+		childFor('web')?.exit(1)
+
+		vi.advanceTimersByTime(1000)
+
+		childFor('web')?.exit(1)
+
+		vi.advanceTimersByTime(2000)
+
+		childFor('web')?.exit(1)
+
+		vi.advanceTimersByTime(4000)
+
+		expect(spawnCount('web')).toBe(4)
+
+		// The live child logs an error (arming the 5s recovery timer), then dies for good.
+		childFor('web')?.out('[ERROR] fatal\n')
+
+		childFor('web')?.exit(1)
+
+		expect(get('web')?.status).toBe('error')
+
+		expect(get('web')?.logs.some((l) => l.includes('giving up'))).toBe(true)
+
+		// The recovery timer must have been cancelled on close; otherwise it fires and flips
+		// the dead, given-up process back to a healthy status.
+		await vi.advanceTimersByTimeAsync(5000)
+
+		expect(get('web')?.status).toBe('error')
+	})
 })
 
 describe('manual stop and restart', () => {

@@ -96,6 +96,16 @@ export function spawnWorkspace(ctx: StoreContext, workspace: Workspace): void {
 		// A deliberate stop/restart handles its own teardown; don't treat it as a crash.
 		if (entry.intentionalExit) return
 
+		// The child is gone: cancel any startup or error-recovery timer still armed against
+		// it, so a stale deadline can't fire against the status we settle on now or against a
+		// later respawn. A clean exit settles to `stopped` below — a live startup timer would
+		// flip that to a phantom `timeout`; a give-up settles to `error` — a live error timer
+		// would resurrect the dead process to `ready`. Deliberate stops already cleared these
+		// via clearTimers; only the unexpected-exit path reaches here without having done so.
+		entry.startupTimer = clearTimer(entry.startupTimer)
+
+		entry.errorTimer = clearTimer(entry.errorTimer)
+
 		handleUnexpectedExit(ctx, workspace, code, signal)
 	})
 
