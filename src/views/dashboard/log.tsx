@@ -38,13 +38,13 @@ export const Log = memo(
 		const { rows, fills } = logRowKeys(lines, startIndex, height)
 
 		return (
-			<Panel height={height + 4} overflow="hidden" marginX={1} marginTop={1}>
+			<Panel height={height + 3} overflow="hidden" marginX={1} marginTop={1}>
 				<Box marginBottom={1}>
 					<Text color={colors.accentBright} bold>
 						Logs
 					</Text>
 					{!atBottom && (
-						<Text color={colors.warning} wrap="truncate">
+						<Text color={colors.warning}>
 							{'   '}⏸ scrolled · {hiddenCount} below · End to follow
 						</Text>
 					)}
