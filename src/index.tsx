@@ -134,16 +134,24 @@ const restoreScreen = enterAltScreen()
 
 let exitCode = 0
 
+let failure: Error | undefined
+
 try {
 	const { waitUntilExit } = render(<App options={options} />, { exitOnCtrlC: false })
 
 	// `App` rejects this (via Ink's `exit(error)`) on a fatal startup failure or when no
 	// workspaces match, so the CLI surfaces a non-zero status instead of a silent success.
 	await waitUntilExit()
-} catch {
+} catch (err) {
 	exitCode = 1
+
+	failure = err instanceof Error ? err : new Error('startup failed')
 } finally {
 	restoreScreen()
 }
+
+// Print the failure only after the primary screen is restored — a message written while the
+// alternate buffer was active would be discarded with it, exiting non-zero with no explanation.
+if (failure) console.error(failure.message)
 
 process.exit(exitCode)

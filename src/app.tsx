@@ -99,13 +99,13 @@ export function App({ options }: Props) {
 				if (started) {
 					setPhase('running')
 				} else {
-					console.error('No matching workspaces found.')
-					// Exit with an error so the CLI reports a non-zero status to its caller.
-					exit(new Error('no matching workspaces'))
+					// The CLI entry prints this after restoring the primary screen; a message written
+					// here lands on the alternate buffer and is erased on exit. Exit with an error so
+					// the CLI also reports a non-zero status to its caller.
+					exit(new Error('No matching workspaces found.'))
 				}
 			})
 			.catch((err) => {
-				console.error('Fatal:', err instanceof Error ? err.message : 'unexpected error')
 				exit(err instanceof Error ? err : new Error('startup failed'))
 			})
 
