@@ -89,16 +89,19 @@ describe('escalateKill', () => {
 		expect(kill).toHaveBeenCalledWith(-4321, 'SIGKILL')
 	})
 
-	it('does not signal a child that has already exited', () => {
+	it('SIGKILLs the group even when the direct child already exited by code', () => {
 		vi.useFakeTimers()
 
 		const kill = vi.spyOn(process, 'kill').mockImplementation(() => true)
 
+		// The direct child reported an exit code, but the caller only cancels this timer on
+		// `close`; its firing means the group hasn't finished exiting (a surviving grandchild
+		// still holds the pipes), so the whole group must be force-killed regardless.
 		escalateKill(fakeChild({ exitCode: 0 }))
 
 		vi.advanceTimersByTime(5000)
 
-		expect(kill).not.toHaveBeenCalled()
+		expect(kill).toHaveBeenCalledWith(-4321, 'SIGKILL')
 	})
 
 	it('returns a timer the caller can cancel before the grace period elapses', () => {
