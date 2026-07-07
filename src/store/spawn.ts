@@ -80,6 +80,12 @@ export function spawnWorkspace(ctx: StoreContext, workspace: Workspace): void {
 	child.stdout?.on('data', onData)
 	child.stderr?.on('data', onData)
 
+	// A stdio pipe can emit 'error' (EPIPE/EIO as the child's end tears down). With no listener
+	// Node re-throws it as an uncaught exception, killing hlidskjalf and orphaning every child
+	// group; the child's own 'close'/'error' handlers already drive teardown, so absorb it.
+	child.stdout?.on('error', () => {})
+	child.stderr?.on('error', () => {})
+
 	child.on('close', (code, signal) => {
 		const rest = lineBuffer.flush()
 
