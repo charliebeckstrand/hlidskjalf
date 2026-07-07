@@ -37,6 +37,26 @@ export interface LogWindow {
 }
 
 /**
+ * Reconcile a scroll offset (lines above the tail) for the same process when its buffer
+ * length changes. A follow-mode viewport (offset 0) stays following. A scrolled-up viewport
+ * that grew keeps the same lines in view by following the tail's downward shift; one that
+ * shrank — logs cleared, or the oldest lines evicted at the cap — clamps back within bounds
+ * so it can't strand above the new bottom, where it would never fall back to follow mode.
+ */
+export function reconcileScroll(
+	scroll: number,
+	prevTotal: number,
+	total: number,
+	height: number,
+): number {
+	if (scroll <= 0 || total === prevTotal) return scroll
+
+	if (total > prevTotal) return scroll + (total - prevTotal)
+
+	return Math.min(scroll, Math.max(0, total - height))
+}
+
+/**
  * Resolve the slice visible in a viewport of `height` lines, given a `scroll` offset
  * measured in lines above the tail. `scroll` 0 shows the newest `height` lines
  * (follow mode); larger values page back. Offsets are clamped to the buffer, so a

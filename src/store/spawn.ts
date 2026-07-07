@@ -1,4 +1,5 @@
 import { type ChildProcess, spawn } from 'node:child_process'
+import { StringDecoder } from 'node:string_decoder'
 import { appendLog, parseLine, sanitizeForDisplay, stripAnsi } from '../logs/index.js'
 import { safeEnv } from '../metrics/index.js'
 import type { Workspace } from '../types.js'
@@ -69,16 +70,32 @@ export function spawnWorkspace(ctx: StoreContext, workspace: Workspace): void {
 
 	const lineBuffer = createLineBuffer(MAX_BUFFER_SIZE)
 
-	const onData = (data: Buffer) => {
+	// A `data` chunk boundary can fall inside a multi-byte UTF-8 character. Buffer.toString()
+	// per chunk would decode the split halves to U+FFFD — garbling the log and, worse,
+	// defeating status parsing (a torn `⚡`/`➜` no longer matches its ready/watching pattern,
+	// so the process can stall at `building` and time out). A StringDecoder holds the trailing
+	// partial bytes until the rest arrives. stdout and stderr each get their own: they're
+	// independent byte streams whose chunks can interleave mid-character.
+	const decode = (decoder: StringDecoder, data: Buffer) => {
 		// Ignore a stale child's output: its teardown noise must not land in the new
 		// instance's log or drive its status.
 		if (isStaleChild(ctx, workspace.name, child)) return
 
-		for (const line of lineBuffer.push(data.toString())) handleLine(ctx, workspace.name, line)
+		for (const line of lineBuffer.push(decoder.write(data))) handleLine(ctx, workspace.name, line)
 	}
 
-	child.stdout?.on('data', onData)
-	child.stderr?.on('data', onData)
+	const stdoutDecoder = new StringDecoder('utf8')
+
+	const stderrDecoder = new StringDecoder('utf8')
+
+	child.stdout?.on('data', (data: Buffer) => decode(stdoutDecoder, data))
+	child.stderr?.on('data', (data: Buffer) => decode(stderrDecoder, data))
+
+	// A stdio pipe can emit 'error' (EPIPE/EIO as the child's end tears down). With no listener
+	// Node re-throws it as an uncaught exception, killing hlidskjalf and orphaning every child
+	// group; the child's own 'close'/'error' handlers already drive teardown, so absorb it.
+	child.stdout?.on('error', () => {})
+	child.stderr?.on('error', () => {})
 
 	child.on('close', (code, signal) => {
 		const rest = lineBuffer.flush()
@@ -95,6 +112,16 @@ export function spawnWorkspace(ctx: StoreContext, workspace: Workspace): void {
 
 		// A deliberate stop/restart handles its own teardown; don't treat it as a crash.
 		if (entry.intentionalExit) return
+
+		// The child is gone: cancel any startup or error-recovery timer still armed against
+		// it, so a stale deadline can't fire against the status we settle on now or against a
+		// later respawn. A clean exit settles to `stopped` below — a live startup timer would
+		// flip that to a phantom `timeout`; a give-up settles to `error` — a live error timer
+		// would resurrect the dead process to `ready`. Deliberate stops already cleared these
+		// via clearTimers; only the unexpected-exit path reaches here without having done so.
+		entry.startupTimer = clearTimer(entry.startupTimer)
+
+		entry.errorTimer = clearTimer(entry.errorTimer)
 
 		handleUnexpectedExit(ctx, workspace, code, signal)
 	})
@@ -231,7 +258,10 @@ function rebuildFsevents(ctx: StoreContext): Promise<void> {
 	return new Promise((resolve) => {
 		const child: ChildProcess = spawn('pnpm', ['rebuild', 'fsevents'], {
 			cwd: ctx.root,
-			stdio: 'pipe',
+			// Discard stdio rather than pipe it: nothing reads this child's output, and a piped
+			// node-gyp build that out-writes the OS pipe buffer (~64KB) would block on write and
+			// never exit, so `close` never fires and the SIGABRT recovery wedges at `error`.
+			stdio: 'ignore',
 			env: safeEnv(),
 		})
 

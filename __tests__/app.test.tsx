@@ -13,6 +13,7 @@ const mock = vi.hoisted(() => {
 		subscribe: vi.fn(() => () => {}),
 		start: vi.fn(async () => true),
 		shutdown: vi.fn(async () => {}),
+		killAllSync: vi.fn(),
 		stopProcess: vi.fn(),
 		restartProcess: vi.fn(),
 		pauseProcess: vi.fn(),
@@ -72,6 +73,10 @@ async function setup(processes: WorkspaceProcess[] = [proc('alpha'), proc('beta'
 
 beforeEach(() => {
 	mock.store.start.mockResolvedValue(true)
+
+	// Reset shutdown to a fast resolve each test — clearAllMocks keeps implementations, so a
+	// test that makes it hang (the force-quit case) must not leak that into the next.
+	mock.store.shutdown.mockImplementation(async () => {})
 })
 
 afterEach(() => {
@@ -100,6 +105,26 @@ describe('quit', () => {
 		await press(CTRL_C)
 
 		expect(mock.store.shutdown).toHaveBeenCalled()
+	})
+
+	it('force-kills every child group on a second quit while shutdown is still draining', async () => {
+		// Hold every shutdown open so the graceful drain never completes and the app stays
+		// mounted for the second quit. (beforeEach resets this to a fast resolve.)
+		mock.store.shutdown.mockImplementation(() => new Promise<void>(() => {}))
+
+		const { press } = await setup()
+
+		await press('q')
+
+		// The first quit initiates a graceful shutdown; it must not force-kill yet.
+		expect(mock.store.shutdown).toHaveBeenCalled()
+
+		expect(mock.store.killAllSync).not.toHaveBeenCalled()
+
+		// Second quit before the first shutdown resolves: don't wait it out, force the groups down.
+		await press('q')
+
+		expect(mock.store.killAllSync).toHaveBeenCalled()
 	})
 })
 

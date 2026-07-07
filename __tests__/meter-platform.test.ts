@@ -8,9 +8,15 @@ const exec = {
 	getconfThrows: false,
 	psThrows: false,
 	psOutput: '',
+	psCalls: 0,
+	// When set, ps callbacks queue here instead of firing, modelling a slow/in-flight sample
+	// the test releases manually.
+	defer: false,
+	pending: [] as (() => void)[],
 }
 
 vi.mock('node:child_process', () => ({
+	// `getconf` (page size) is still read synchronously at construction.
 	execFileSync: (cmd: string) => {
 		if (cmd === 'getconf') {
 			if (exec.getconfThrows) throw new Error('ENOENT')
@@ -18,13 +24,31 @@ vi.mock('node:child_process', () => ({
 			return '4096\n'
 		}
 
-		if (cmd === 'ps') {
-			if (exec.psThrows) throw new Error('ps failed')
+		throw new Error(`unexpected execFileSync: ${cmd}`)
+	},
+	// `ps` runs via async execFile now; drive its callback synchronously so the sample still
+	// lands within the same tick the test asserts on.
+	execFile: (
+		cmd: string,
+		_args: string[],
+		_opts: unknown,
+		cb: (error: Error | null, stdout: string) => void,
+	) => {
+		if (cmd !== 'ps') {
+			cb(new Error(`unexpected execFile: ${cmd}`), '')
 
-			return exec.psOutput
+			return
 		}
 
-		throw new Error(`unexpected command: ${cmd}`)
+		exec.psCalls += 1
+
+		const run = () => {
+			if (exec.psThrows) cb(new Error('ps failed'), '')
+			else cb(null, exec.psOutput)
+		}
+
+		if (exec.defer) exec.pending.push(run)
+		else run()
 	},
 }))
 
@@ -42,6 +66,12 @@ beforeEach(() => {
 	exec.psThrows = false
 
 	exec.psOutput = ''
+
+	exec.psCalls = 0
+
+	exec.defer = false
+
+	exec.pending = []
 })
 
 afterEach(() => {
@@ -84,6 +114,37 @@ describe('createMeter (ps path)', () => {
 
 		// A failed sample writes nothing rather than crashing the poll.
 		expect(setMetrics).not.toHaveBeenCalled()
+	})
+
+	it('does not start an overlapping ps sample while one is still in flight', async () => {
+		exec.defer = true
+
+		exec.psOutput = ['  PID  PPID    TIME    RSS', '100 1 0:01.00 1024'].join('\n')
+
+		const meter = createMeter({
+			roots: () => new Map([[100, 'web']]),
+			setMetrics: () => true,
+			onChange: () => {},
+		})
+
+		// Construction launched one sample; its ps hasn't answered yet (deferred).
+		expect(exec.psCalls).toBe(1)
+
+		// A request while that sample drains must not shell out to ps a second time.
+		meter.request()
+
+		await vi.advanceTimersByTimeAsync(1000)
+
+		expect(exec.psCalls).toBe(1)
+
+		// Release the in-flight sample and confirm the poll can sample again afterward.
+		exec.pending.shift()?.()
+
+		await vi.advanceTimersByTimeAsync(3000)
+
+		expect(exec.psCalls).toBeGreaterThan(1)
+
+		meter.stop()
 	})
 })
 

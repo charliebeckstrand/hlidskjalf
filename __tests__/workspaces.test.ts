@@ -219,6 +219,17 @@ describe('discoverWorkspaces', () => {
 		}
 	})
 
+	it('skips a workspace dir that exists as a plain file without throwing', () => {
+		// A file named `packages` passes existsSync but makes readdirSync throw ENOTDIR. The
+		// containing scan (reachable from a watcher-triggered rediscovery) must not propagate
+		// the throw; it should skip the bad dir and still discover the good ones.
+		fs.writeFileSync(join(tmpDir, 'packages'), 'not a directory')
+
+		createWorkspace('apps', 'web', { name: 'web', scripts: { dev: 'x' } })
+
+		expect(discoverWorkspaces(tmpDir)).toEqual([{ name: 'web', kind: 'app', deps: [] }])
+	})
+
 	it('handles missing directories and discovers across many', () => {
 		expect(discoverWorkspaces(tmpDir)).toEqual([])
 

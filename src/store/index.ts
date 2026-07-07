@@ -17,7 +17,7 @@ import {
 	resumeProcess,
 	stopProcess,
 } from './control.js'
-import { shutdown, start } from './lifecycle.js'
+import { killAllSync, shutdown, start } from './lifecycle.js'
 import { addWorkspace, removeWorkspace } from './reconcile.js'
 import { getSnapshot, subscribe } from './snapshot.js'
 import type { Store, StoreContext } from './types.js'
@@ -53,6 +53,7 @@ export function createStore(opts: Options): Store {
 		subscribe: (listener) => subscribe(ctx, listener),
 		start: () => start(ctx),
 		shutdown: () => shutdown(ctx),
+		killAllSync: () => killAllSync(ctx),
 		stopProcess: (name) => stopProcess(ctx, name),
 		restartProcess: (name) => restartProcess(ctx, name),
 		pauseProcess: (name) => pauseProcess(ctx, name),

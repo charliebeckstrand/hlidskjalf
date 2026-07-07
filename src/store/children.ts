@@ -34,11 +34,18 @@ export function killTree(child: ChildProcess, signal: NodeJS.Signals): void {
 }
 
 /**
- * Arm a force-kill: SIGKILL the group if the child hasn't exited within the grace period
+ * Arm a force-kill: SIGKILL the group if it hasn't fully closed within the grace period
  * after its SIGTERM. Returns the unref'd timer for the caller to cancel.
+ *
+ * The caller cancels this timer on the child's `close` event, so if it ever fires the group
+ * still hasn't finished exiting — and completion is keyed on `close` (stdio drain), not on
+ * the direct child's exit. A dev toolchain whose `pnpm` wrapper exits by code while the real
+ * server it spawned keeps the inherited pipes open leaves `child.exitCode` set but the group
+ * alive; gating on `exitCode === null` would skip the SIGKILL, so `close` would never fire
+ * and teardown/shutdown would wait forever. Force-kill the whole group unconditionally.
  */
 export function escalateKill(child: ChildProcess): ReturnType<typeof setTimeout> {
 	return createUnrefTimer(KILL_GRACE_MS, () => {
-		if (child.exitCode === null) killTree(child, 'SIGKILL')
+		killTree(child, 'SIGKILL')
 	})
 }

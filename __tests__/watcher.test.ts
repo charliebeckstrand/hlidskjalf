@@ -119,6 +119,54 @@ describe('watchWorkspaces', () => {
 		await expect(t.next()).resolves.toBeUndefined()
 	})
 
+	it('watches a parent dir created after startup', async () => {
+		const t = tracker()
+
+		// Only `packages` exists at construction (created in beforeEach); `apps` appears later.
+		watcher = watchWorkspaces(tmpDir, t.onChange)
+
+		fs.mkdirSync(join(tmpDir, 'apps'))
+
+		// The root watcher notices the new parent dir and starts watching it.
+		await expect(t.next()).resolves.toBeUndefined()
+
+		// A workspace created under the late parent is now observed.
+		const dir = join(tmpDir, 'apps', 'web')
+
+		fs.mkdirSync(dir)
+
+		fs.writeFileSync(
+			join(dir, 'package.json'),
+			JSON.stringify({ name: 'web', scripts: { dev: 'x' } }),
+		)
+
+		await expect(t.next()).resolves.toBeUndefined()
+	})
+
+	it('keeps watching after a parent dir is removed and recreated', async () => {
+		createWorkspace('web')
+
+		const t = tracker()
+
+		watcher = watchWorkspaces(tmpDir, t.onChange)
+
+		// Remove the whole parent dir; fs.watch binds to the inode, so the old parent watcher is
+		// now on a dead inode. The root watcher must notice and re-sync.
+		fs.rmSync(join(tmpDir, 'packages'), { recursive: true, force: true })
+
+		await expect(t.next()).resolves.toBeUndefined()
+
+		fs.mkdirSync(join(tmpDir, 'packages'))
+
+		await expect(t.next()).resolves.toBeUndefined()
+
+		// A workspace under the recreated parent is observed — the parent watcher was re-armed on
+		// the new inode rather than left silent on the old one.
+		createWorkspace('web')
+
+		await expect(t.next()).resolves.toBeUndefined()
+	})
+
 	it('does not watch a workspace dir symlinked outside the root', () => {
 		const outside = fs.mkdtempSync(join(fs.realpathSync(os.tmpdir()), 'hlidskjalf-outside-'))
 

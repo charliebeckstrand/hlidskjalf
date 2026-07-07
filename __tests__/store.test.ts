@@ -25,6 +25,11 @@ const hoisted = vi.hoisted(() => {
 
 		lastSignal: string | null = null
 
+		// When true, a terminating signal marks the child exited (sets signalCode) but defers
+		// `close` — modelling a surviving grandchild that keeps the stdio pipes open past the
+		// direct child's exit. The test then emits `close` explicitly via closeNow().
+		deferClose = false
+
 		args: string[]
 
 		options: Record<string, unknown>
@@ -47,6 +52,14 @@ const hoisted = vi.hoisted(() => {
 
 			this.killed = true
 
+			// Direct child exited (the exit event sets signalCode) but a grandchild is still
+			// draining stdio, so hold `close` back until the test emits it via closeNow().
+			if (this.deferClose) {
+				this.signalCode = this.lastSignal
+
+				return true
+			}
+
 			// Model the OS delivering the signal, then the process closing.
 			queueMicrotask(() => {
 				if (this.exitCode === null && this.signalCode === null) {
@@ -57,6 +70,11 @@ const hoisted = vi.hoisted(() => {
 			})
 
 			return true
+		}
+
+		// Emit the deferred `close` once the (already-exited) child's stdio finishes draining.
+		closeNow(): void {
+			this.emit('close', this.exitCode, this.signalCode)
 		}
 
 		out(text: string): void {
@@ -92,6 +110,14 @@ vi.mock('node:child_process', () => ({
 		return child
 	},
 	execFileSync: () => hoisted.psOutput.current,
+	// The meter now shells out to `ps` via async execFile; drive its callback synchronously
+	// with the controllable fixture so the sample lands within the tick the tests advance to.
+	execFile: (
+		_cmd: string,
+		_args: string[],
+		_opts: unknown,
+		cb: (error: Error | null, stdout: string) => void,
+	) => cb(null, hoisted.psOutput.current),
 }))
 
 // Keep real sort/filter logic; stub only discovery so tests control the workspace set.
@@ -584,6 +610,25 @@ describe('unexpected exit', () => {
 		expect(get('web')?.logs.some((l) => l.includes('giving up'))).toBe(true)
 	})
 
+	it('reassembles a multi-byte character split across stdout chunks', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		const child = childFor('web')
+
+		// tsup's "⚡ Build success" marks the process `watching`. ⚡ (U+26A1) is 3 UTF-8 bytes;
+		// split it across two chunks. A naive per-chunk toString would decode each half to
+		// U+FFFD, so the ready pattern wouldn't match and the process would stay `building`.
+		const bytes = Buffer.from('⚡ Build success\n', 'utf8')
+
+		child?.stdout.emit('data', bytes.subarray(0, 1))
+
+		child?.stdout.emit('data', bytes.subarray(1))
+
+		expect(get('web')?.status).toBe('watching')
+	})
+
 	it('rebuilds fsevents and respawns on a SIGABRT exit', async () => {
 		store = makeStore()
 
@@ -603,6 +648,63 @@ describe('unexpected exit', () => {
 		await flush()
 
 		expect(spawnCount('web')).toBe(2)
+	})
+
+	it('does not flip a cleanly-exited process to timeout when the startup deadline passes', async () => {
+		vi.useFakeTimers()
+
+		store = makeStore()
+
+		await store.start()
+
+		// Exits code 0 before ever reaching ready/watching — settles to `stopped`.
+		childFor('web')?.exit(0)
+
+		expect(get('web')?.status).toBe('stopped')
+
+		// The 120s startup timer armed at spawn must have been cancelled when the child closed;
+		// otherwise it fires here and marks the long-gone process a phantom `timeout`.
+		await vi.advanceTimersByTimeAsync(120_000)
+
+		expect(get('web')?.status).toBe('stopped')
+	})
+
+	it('does not resurrect a given-up process when its error-recovery timer would fire', async () => {
+		vi.useFakeTimers()
+
+		store = makeStore()
+
+		await store.start()
+
+		// Crash through the retry budget so the next exit gives up (backoff 1s, 2s, 4s).
+		childFor('web')?.exit(1)
+
+		vi.advanceTimersByTime(1000)
+
+		childFor('web')?.exit(1)
+
+		vi.advanceTimersByTime(2000)
+
+		childFor('web')?.exit(1)
+
+		vi.advanceTimersByTime(4000)
+
+		expect(spawnCount('web')).toBe(4)
+
+		// The live child logs an error (arming the 5s recovery timer), then dies for good.
+		childFor('web')?.out('[ERROR] fatal\n')
+
+		childFor('web')?.exit(1)
+
+		expect(get('web')?.status).toBe('error')
+
+		expect(get('web')?.logs.some((l) => l.includes('giving up'))).toBe(true)
+
+		// The recovery timer must have been cancelled on close; otherwise it fires and flips
+		// the dead, given-up process back to a healthy status.
+		await vi.advanceTimersByTimeAsync(5000)
+
+		expect(get('web')?.status).toBe('error')
 	})
 })
 
@@ -763,6 +865,42 @@ describe('manual stop and restart', () => {
 
 		await flush()
 
+		expect(spawnCount('web')).toBe(2)
+
+		expect(get('web')?.status).toBe('building')
+	})
+
+	it('does not double-spawn or orphan a child when restart races the exit→close window', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		const child = childFor('web')
+
+		if (!child) throw new Error('no child')
+
+		child.out('Watching for changes\n')
+
+		// Model the real exit→close gap: the direct child exits on SIGTERM but a grandchild
+		// keeps the stdio pipes open, so `close` is deferred. isRunning() reads exitCode/
+		// signalCode (set at exit), so the second restart sees the child as already gone.
+		child.deferClose = true
+
+		store.restartProcess('web')
+
+		// First restart's SIGTERM has now marked child #1 exited (signalCode set) with `close`
+		// still pending. A second restart in this window must not spawn a replacement the
+		// pending close handler then clobbers and orphans.
+		store.restartProcess('web')
+
+		child.closeNow()
+
+		await flush()
+
+		await flush()
+
+		// Exactly one respawn — child #1 plus its single replacement. The pre-fix bug spawned
+		// three (a synchronous respawn, orphaned, plus the stale close handler's respawn).
 		expect(spawnCount('web')).toBe(2)
 
 		expect(get('web')?.status).toBe('building')
@@ -1175,6 +1313,57 @@ describe('shutdown', () => {
 		await done
 
 		expect(childFor('web')).toBeUndefined()
+	})
+
+	it('killAllSync SIGKILLs every running child group synchronously', async () => {
+		// Two apps (no package gate) so both spawn before start() resolves.
+		hoisted.discovered.current = [
+			{ name: 'web', kind: 'app', deps: [] },
+			{ name: 'api', kind: 'app', deps: [] },
+		]
+
+		store = makeStore()
+
+		await store.start()
+
+		const web = childFor('web')
+
+		const api = childFor('api')
+
+		const webPid = web?.pid ?? 0
+
+		const apiPid = api?.pid ?? 0
+
+		// Synchronous backstop for a process-exit hook: no await, every group force-killed.
+		store.killAllSync()
+
+		expect(vi.mocked(process.kill)).toHaveBeenCalledWith(-webPid, 'SIGKILL')
+
+		expect(vi.mocked(process.kill)).toHaveBeenCalledWith(-apiPid, 'SIGKILL')
+
+		expect(web?.killed).toBe(true)
+
+		expect(api?.killed).toBe(true)
+	})
+
+	it('killAllSync skips an already-exited child so a reused pid is never signalled', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		const child = childFor('web')
+
+		const pid = child?.pid ?? 0
+
+		// The child has already exited (and been reaped); its pid may now belong to something
+		// else, so the backstop must not signal it.
+		child?.exit(0)
+
+		vi.mocked(process.kill).mockClear()
+
+		store.killAllSync()
+
+		expect(vi.mocked(process.kill)).not.toHaveBeenCalledWith(-pid, 'SIGKILL')
 	})
 })
 

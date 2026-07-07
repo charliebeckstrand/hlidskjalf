@@ -150,6 +150,31 @@ function waitForPackages(ctx: StoreContext, names: string[]): Promise<void> {
 	})
 }
 
+/**
+ * Best-effort synchronous SIGKILL of every child group. {@link shutdown} is the graceful
+ * path; this is the last-resort backstop for exit routes that bypass it — a fatal signal, an
+ * uncaught throw, a forced quit — so a detached dev-server group is never left orphaned
+ * holding its port. Safe to run inside a `process.on('exit')` handler, where only synchronous
+ * work is possible. Gated on `isRunning` (exit/signal codes still unset) so we never signal a
+ * pid the OS may have already reaped and reused; children caught mid-teardown are covered by
+ * the escalation timer in {@link ./entry.ts | beginTeardown} instead.
+ */
+export function killAllSync(ctx: StoreContext): void {
+	ctx.stopping = true
+
+	for (const entry of ctx.entries.values()) {
+		if (isRunning(entry.child)) killTree(entry.child, 'SIGKILL')
+	}
+
+	for (const child of ctx.pendingRebuilds) {
+		try {
+			child.kill('SIGKILL')
+		} catch {
+			// Already gone.
+		}
+	}
+}
+
 export async function shutdown(ctx: StoreContext): Promise<void> {
 	ctx.stopping = true
 

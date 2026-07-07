@@ -203,6 +203,21 @@ describe('sanitizeForDisplay', () => {
 
 		expect(sanitizeForDisplay('\x1b[31mred\x1b[0m\tdone\x07')).toBe('\x1b[31mred\x1b[0m\tdone')
 	})
+
+	it.each([
+		// A line cut mid-sequence leaves a fragment NON_SGR_ESCAPES (which needs a complete
+		// sequence) can't remove; written raw it would swallow the following frame.
+		['a lone trailing ESC', 'output\x1b', 'output'],
+		['an unterminated CSI/SGR', 'text\x1b[3', 'text'],
+		['an unterminated OSC hyperlink', 'link\x1b]8;;http://localhost:3000', 'link'],
+		['an incomplete charset selector', 'x\x1b(', 'x'],
+	])('drops %s at end of line', (_label, input, expected) => {
+		expect(sanitizeForDisplay(input)).toBe(expected)
+	})
+
+	it('keeps a complete trailing SGR sequence', () => {
+		expect(sanitizeForDisplay('\x1b[31mred\x1b[0m')).toBe('\x1b[31mred\x1b[0m')
+	})
 })
 
 describe('stripAnsi', () => {

@@ -65,6 +65,18 @@ export function beginTeardown(
 	const { child } = entry
 
 	if (!isRunning(child)) {
+		// The child has already exited. If a prior teardown's close handler is still pending —
+		// the direct child reported its exit but `close` hasn't fired because a surviving
+		// grandchild holds the stdio pipes — hand that handler the latest action instead of
+		// running one now. A synchronous respawn here would be clobbered when the pending
+		// handler fires (it nulls `entry.child` and runs its own action), leaking the child
+		// this call spawned and re-running a stale action. Let the single close handler win.
+		if (entry.teardownStarted) {
+			entry.onClose = onClosed
+
+			return
+		}
+
 		entry.child = null
 
 		entry.pausedFrom = null

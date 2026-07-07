@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { appendLog, MAX_LOGS, visibleLogRange } from '../src/logs/index.js'
+import { appendLog, MAX_LOGS, reconcileScroll, visibleLogRange } from '../src/logs/index.js'
 
 describe('appendLog', () => {
 	it('appends and retains every line under the trim threshold', () => {
@@ -56,5 +56,32 @@ describe('visibleLogRange', () => {
 
 	it('handles an empty buffer', () => {
 		expect(visibleLogRange(0, 10, 0)).toEqual({ start: 0, end: 0, maxScroll: 0 })
+	})
+})
+
+describe('reconcileScroll', () => {
+	it('leaves a following viewport (offset 0) following', () => {
+		expect(reconcileScroll(0, 60, 120, 10)).toBe(0)
+
+		expect(reconcileScroll(0, 60, 0, 10)).toBe(0)
+	})
+
+	it('anchors a scrolled-up viewport to the same lines as the buffer grows', () => {
+		// Scrolled 20 above the tail; 12 new lines arrive — follow the tail's shift to stay put.
+		expect(reconcileScroll(20, 60, 72, 10)).toBe(32)
+	})
+
+	it('clamps a scrolled-up viewport back within bounds when the buffer is cleared', () => {
+		// clearLogs drops total to 0; the offset must collapse to follow mode, not stay at 20.
+		expect(reconcileScroll(20, 60, 0, 10)).toBe(0)
+	})
+
+	it('clamps to the new maxScroll when the buffer shrinks but is non-empty', () => {
+		// total 12, height 10 → maxScroll 2; a stale offset of 20 must clamp to 2, not persist.
+		expect(reconcileScroll(20, 60, 12, 10)).toBe(2)
+	})
+
+	it('is a no-op when the length is unchanged', () => {
+		expect(reconcileScroll(15, 60, 60, 10)).toBe(15)
 	})
 })

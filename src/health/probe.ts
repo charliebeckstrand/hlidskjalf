@@ -10,7 +10,10 @@ export async function probe(url: string): Promise<boolean> {
 	try {
 		const res = await fetch(url, { signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) })
 
-		await res.body?.cancel()
+		// Any response means alive. Drain the body so the socket frees, but don't await it or
+		// let a cancel rejection propagate: the server already answered, so a hiccup tearing
+		// down an unread stream must not flip a live process to "dead" (and idle it).
+		void res.body?.cancel().catch(() => {})
 
 		return true
 	} catch {

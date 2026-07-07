@@ -1,4 +1,4 @@
-import { useApp, useInput } from 'ink'
+import { useApp, useInput, useStdin } from 'ink'
 import {
 	useCallback,
 	useDeferredValue,
@@ -21,6 +21,11 @@ type Phase = 'loading' | 'running'
 
 export function App({ options }: Props) {
 	const { exit } = useApp()
+
+	// Piped or redirected stdin (CI, `hlidskjalf < /dev/null`, no PTY) can't enter raw mode;
+	// an unconditional useInput would throw at mount and crash the app. Gate every key handler
+	// on support so the dashboard still renders read-only instead.
+	const { isRawModeSupported } = useStdin()
 
 	const [store] = useState(() => createStore(options))
 
@@ -69,7 +74,16 @@ export function App({ options }: Props) {
 	const stopping = useRef(false)
 
 	const stop = useCallback(() => {
-		if (stopping.current) return
+		if (stopping.current) {
+			// A second quit while the graceful shutdown is still draining — a child ignoring
+			// SIGTERM through the kill grace, say. Don't keep waiting: synchronously SIGKILL
+			// every child group and unmount now.
+			store.killAllSync()
+
+			exit()
+
+			return
+		}
 
 		stopping.current = true
 
@@ -90,13 +104,13 @@ export function App({ options }: Props) {
 				if (started) {
 					setPhase('running')
 				} else {
-					console.error('No matching workspaces found.')
-					// Exit with an error so the CLI reports a non-zero status to its caller.
-					exit(new Error('no matching workspaces'))
+					// The CLI entry prints this after restoring the primary screen; a message written
+					// here lands on the alternate buffer and is erased on exit. Exit with an error so
+					// the CLI also reports a non-zero status to its caller.
+					exit(new Error('No matching workspaces found.'))
 				}
 			})
 			.catch((err) => {
-				console.error('Fatal:', err instanceof Error ? err.message : 'unexpected error')
 				exit(err instanceof Error ? err : new Error('startup failed'))
 			})
 
@@ -107,74 +121,99 @@ export function App({ options }: Props) {
 		}
 	}, [store, exit])
 
-	// SIGTERM wiring is kept out of the lifecycle effect above: a change to `stop`
-	// re-binds the handler here, but can never tear down and restart the store.
+	// Termination-signal wiring is kept out of the lifecycle effect above: a change to `stop`
+	// re-binds the handlers here, but can never tear down and restart the store. SIGINT and
+	// SIGHUP join SIGTERM so a real Ctrl+C (delivered as a signal when stdin isn't a raw-mode
+	// TTY, e.g. piped input) and a closed terminal both shut the store down gracefully instead
+	// of letting Node's default handler exit and orphan every detached child group.
 	useEffect(() => {
 		process.on('SIGTERM', stop)
+		process.on('SIGINT', stop)
+		process.on('SIGHUP', stop)
 
 		return () => {
 			process.off('SIGTERM', stop)
+			process.off('SIGINT', stop)
+			process.off('SIGHUP', stop)
 		}
 	}, [stop])
+
+	// Last-resort backstop: if the process is torn down without the graceful shutdown finishing
+	// — an uncaught throw, or a fatal signal Node handles by exiting — synchronously SIGKILL
+	// every child group from the `exit` hook so a detached dev server isn't left holding its
+	// port. The graceful path (and the forced quit above) kill children before this fires; this
+	// only catches the routes that skip them.
+	useEffect(() => {
+		const backstop = () => store.killAllSync()
+
+		process.on('exit', backstop)
+
+		return () => {
+			process.off('exit', backstop)
+		}
+	}, [store])
 
 	// Clamp to the live list length: a removed workspace shrinks the list under a
 	// stationary cursor, so the actionable and highlighted indices can't diverge.
 	const cursor = clampIndex(cursorState, processes.length)
 
-	useInput((input, key) => {
-		if (input === 'q' || (key.ctrl && input === 'c')) {
-			stop()
+	useInput(
+		(input, key) => {
+			if (input === 'q' || (key.ctrl && input === 'c')) {
+				stop()
 
-			return
-		}
+				return
+			}
 
-		if (input === '?') {
-			setShowHelp((open) => !open)
+			if (input === '?') {
+				setShowHelp((open) => !open)
 
-			return
-		}
+				return
+			}
 
-		// While help is open it captures all other input; Esc closes it.
-		if (showHelp) {
-			if (key.escape) setShowHelp(false)
+			// While help is open it captures all other input; Esc closes it.
+			if (showHelp) {
+				if (key.escape) setShowHelp(false)
 
-			return
-		}
+				return
+			}
 
-		if (processes.length === 0) return
+			if (processes.length === 0) return
 
-		if (key.upArrow || input === 'k') {
-			setCursor((i) => Math.max(0, i - 1))
+			if (key.upArrow || input === 'k') {
+				setCursor((i) => Math.max(0, i - 1))
 
-			return
-		}
+				return
+			}
 
-		if (key.downArrow || input === 'j') {
-			setCursor((i) => Math.min(processes.length - 1, i + 1))
+			if (key.downArrow || input === 'j') {
+				setCursor((i) => Math.min(processes.length - 1, i + 1))
 
-			return
-		}
+				return
+			}
 
-		const selected = processes[cursor]
+			const selected = processes[cursor]
 
-		if (!selected) return
+			if (!selected) return
 
-		const { name } = selected.workspace
+			const { name } = selected.workspace
 
-		if (input === 's') {
-			if (selected.status === 'stopped') store.restartProcess(name)
-			else store.stopProcess(name)
-		} else if (input === 'p') {
-			if (selected.status === 'paused') store.resumeProcess(name)
-			else store.pauseProcess(name)
-		} else if (input === 'x') {
-			store.killProcess(name)
-		} else if (input === 'r') {
-			store.restartProcess(name)
-		} else if (input === 'c') {
-			store.clearLogs(name)
-		}
-	})
+			if (input === 's') {
+				if (selected.status === 'stopped') store.restartProcess(name)
+				else store.stopProcess(name)
+			} else if (input === 'p') {
+				if (selected.status === 'paused') store.resumeProcess(name)
+				else store.pauseProcess(name)
+			} else if (input === 'x') {
+				store.killProcess(name)
+			} else if (input === 'r') {
+				store.restartProcess(name)
+			} else if (input === 'c') {
+				store.clearLogs(name)
+			}
+		},
+		{ isActive: isRawModeSupported },
+	)
 
 	if (phase === 'loading') return <Loading title={options.title} />
 
