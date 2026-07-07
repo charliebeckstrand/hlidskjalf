@@ -4,6 +4,12 @@
  * viewport maths. Both are pure and unit-testable without spawning a child.
  */
 
-export { appendLog, type LogWindow, MAX_LOGS, visibleLogRange } from './buffer.js'
+export {
+	appendLog,
+	type LogWindow,
+	MAX_LOGS,
+	reconcileScroll,
+	visibleLogRange,
+} from './buffer.js'
 export { type LogRow, logRowKeys } from './keys.js'
 export { parseLine, sanitizeForDisplay, stripAnsi } from './parse.js'

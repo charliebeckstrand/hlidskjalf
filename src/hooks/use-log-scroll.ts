@@ -1,6 +1,6 @@
 import { useInput } from 'ink'
 import { useState } from 'react'
-import { visibleLogRange } from '../logs/index.js'
+import { reconcileScroll, visibleLogRange } from '../logs/index.js'
 
 // Home/End aren't surfaced as named keys by Ink's `useInput` (both collapse to an
 // empty `key.*`), but the raw decoded bytes still arrive as the `input` argument.
@@ -50,13 +50,15 @@ export function useLogScroll(
 
 		setScroll(0)
 	} else if (total !== prevTotal) {
-		// Same process, buffer grew: keep a scrolled-up viewport anchored to the same lines as
-		// new output arrives rather than letting it scroll out from under the reader.
-		const delta = total - prevTotal
-
+		// Same process, buffer length changed. A scrolled-up viewport that grew stays anchored to
+		// the same lines as new output arrives; one that shrank (logs cleared, or oldest lines
+		// evicted at the cap) clamps back within bounds instead of stranding above the new bottom,
+		// where it could never fall back to follow mode.
 		setPrevTotal(total)
 
-		if (scroll > 0 && delta > 0) setScroll((s) => s + delta)
+		const next = reconcileScroll(scroll, prevTotal, total, height)
+
+		if (next !== scroll) setScroll(next)
 	}
 
 	// visibleLogRange owns the bound formula; reuse the value it returns rather than recomputing it.
