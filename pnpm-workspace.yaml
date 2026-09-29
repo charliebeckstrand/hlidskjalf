@@ -1,5 +1,6 @@
-ignoredBuiltDependencies:
-  - esbuild
+allowBuilds:
+  esbuild: false
+  lefthook: true
 
-onlyBuiltDependencies:
-  - lefthook
+overrides:
+  'ws@>=8.0.0 <8.20.1': '>=8.20.1'

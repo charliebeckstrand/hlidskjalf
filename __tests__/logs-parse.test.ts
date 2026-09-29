@@ -24,13 +24,12 @@ describe('parseLine', () => {
 	})
 
 	describe('watching status', () => {
-		it.each([
-			'⚡ Build success',
-			'⚡️ Build success',
-			'Watching for changes...',
-		])('detects watching in %j', (line) => {
-			expect(parseLine(line)).toEqual({ status: 'watching' })
-		})
+		it.each(['⚡ Build success', '⚡️ Build success', 'Watching for changes...'])(
+			'detects watching in %j',
+			(line) => {
+				expect(parseLine(line)).toEqual({ status: 'watching' })
+			},
+		)
 	})
 
 	it('detects "Build start" as building', () => {
@@ -49,19 +48,19 @@ describe('parseLine', () => {
 			expect(parseLine(line)).toEqual({ status: 'error' })
 		})
 
-		it.each([
-			'TypeError: undefined is not a function',
-			'ReferenceError: x is not defined',
-		])('detects a suffixed *Error in %j', (line) => {
-			expect(parseLine(line)).toEqual({ status: 'error' })
-		})
+		it.each(['TypeError: undefined is not a function', 'ReferenceError: x is not defined'])(
+			'detects a suffixed *Error in %j',
+			(line) => {
+				expect(parseLine(line)).toEqual({ status: 'error' })
+			},
+		)
 
-		it.each([
-			'GET /error 200 12ms',
-			'127.0.0.1 - GET /error 304',
-		])('does not flag a /error url path in an access log: %j', (line) => {
-			expect(parseLine(line)).toEqual({})
-		})
+		it.each(['GET /error 200 12ms', '127.0.0.1 - GET /error 304'])(
+			'does not flag a /error url path in an access log: %j',
+			(line) => {
+				expect(parseLine(line)).toEqual({})
+			},
+		)
 	})
 
 	describe('URL extraction', () => {
