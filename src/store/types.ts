@@ -7,10 +7,11 @@ import type { Watcher } from '../watcher.js'
 export interface WorkspaceEntry {
 	process: WorkspaceProcess
 	child: ChildProcess | null
-	errorTimer: ReturnType<typeof setTimeout> | null
 	restartTimer: ReturnType<typeof setTimeout> | null
 	startupTimer: ReturnType<typeof setTimeout> | null
 	lastGoodStatus: Status | null
+	/** When the latest error line arrived, while a log line holds the process in `error`. */
+	errorLineAt: number | null
 	restartRetries: number
 	lastOutputAt: number
 	/** Set when stop/restart deliberately kills the child, so its close isn't a crash. */
