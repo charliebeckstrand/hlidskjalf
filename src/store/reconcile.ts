@@ -48,8 +48,6 @@ export function rediscover(ctx: StoreContext): void {
 		withEntry(ctx, workspace.name, (entry) => {
 			entry.process.workspace = workspace
 		})
-
-		ctx.allWorkspaces = ctx.allWorkspaces.map((w) => (w.name === workspace.name ? workspace : w))
 	}
 
 	ctx.order = sortForDisplay(ctx, fresh).map((w) => w.name)
@@ -66,8 +64,6 @@ export function addWorkspace(ctx: StoreContext, workspace: Workspace): void {
 	if (ctx.stopping) return
 
 	if (ctx.entries.has(workspace.name)) return
-
-	ctx.allWorkspaces.push(workspace)
 
 	ctx.entries.set(workspace.name, createEntry(workspace))
 
@@ -93,8 +89,6 @@ export function removeWorkspace(ctx: StoreContext, name: string): void {
 		ctx.entries.delete(name)
 
 		ctx.order = ctx.order.filter((n) => n !== name)
-
-		ctx.allWorkspaces = ctx.allWorkspaces.filter((w) => w.name !== name)
 
 		ctx.meter?.reset(name)
 

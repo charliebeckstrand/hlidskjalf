@@ -36,7 +36,6 @@ function createContext(opts: Options): StoreContext {
 		heartbeat: null,
 		meter: null,
 		watcher: null,
-		allWorkspaces: [],
 		stopping: false,
 		root: opts.root,
 		sortOrder: opts.order,

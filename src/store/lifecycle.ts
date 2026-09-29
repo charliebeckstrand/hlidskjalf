@@ -3,9 +3,9 @@ import { createHeartbeat } from '../health/index.js'
 import { createMeter } from '../metrics/index.js'
 import type { Workspace } from '../types.js'
 import { watchWorkspaces } from '../watcher.js'
-import { sortByDeps, sortByName } from '../workspaces.js'
+import { sortByDeps } from '../workspaces.js'
 import { escalateKill, isRunning, killTree } from './children.js'
-import { discoverFiltered } from './discovery.js'
+import { discoverFiltered, sortForDisplay } from './discovery.js'
 import { clearTimers, createEntry, note } from './entry.js'
 import { rediscover } from './reconcile.js'
 import { markChanged } from './snapshot.js'
@@ -18,12 +18,7 @@ export async function start(ctx: StoreContext): Promise<boolean> {
 
 	if (workspaces.length === 0) return false
 
-	const startOrder = sortByDeps(workspaces)
-
-	// In run order `sortForDisplay` is `sortByDeps`; reuse startOrder instead of sorting twice.
-	const sorted = ctx.sortOrder === 'run' ? startOrder : sortByName(workspaces)
-
-	ctx.order = sorted.map((w) => w.name)
+	ctx.order = sortForDisplay(ctx, workspaces).map((w) => w.name)
 
 	for (const workspace of workspaces) {
 		ctx.entries.set(workspace.name, createEntry(workspace))
@@ -36,14 +31,12 @@ export async function start(ctx: StoreContext): Promise<boolean> {
 	}
 
 	// Spawn in the background; the dashboard already renders the pending list.
-	void spawnAll(ctx, startOrder)
+	void spawnAll(ctx, sortByDeps(workspaces))
 
 	return true
 }
 
 async function spawnAll(ctx: StoreContext, workspaces: Workspace[]): Promise<void> {
-	ctx.allWorkspaces = workspaces
-
 	const packages = workspaces.filter((w) => w.kind === 'package')
 	const apps = workspaces.filter((w) => w.kind !== 'package')
 

@@ -73,7 +73,6 @@ export interface StoreContext {
 	heartbeat: Heartbeat | null
 	meter: Meter | null
 	watcher: Watcher | null
-	allWorkspaces: Workspace[]
 	stopping: boolean
 
 	readonly root: string
