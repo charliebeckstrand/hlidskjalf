@@ -20,6 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Watch mode picks up a workspace's changed dependencies** — rediscovery only noticed
+  workspaces appearing or disappearing, so editing an existing workspace's `workspace:`
+  dependencies left its dependency warnings on the old graph while run order used the new
+  one. Changed workspaces now adopt their new kind and dependencies (the running process is
+  left alone).
 - **Watch mode survives a directory swapped out in one step** — deleting and recreating
   `packages/` (or a workspace dir) faster than the watcher handled the event, as a branch
   switch does, left its watcher bound to the deleted directory, so new workspaces under it

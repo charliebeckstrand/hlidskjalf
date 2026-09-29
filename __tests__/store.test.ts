@@ -1635,6 +1635,31 @@ describe('edge cases and guards', () => {
 		expect(get('web')?.status).toBe('stopped')
 	})
 
+	it('adopts changed dependencies of an existing workspace on a watch event', async () => {
+		hoisted.discovered.current = [LIB, APP]
+
+		store = makeStore({ watch: true })
+
+		await store.start()
+
+		childFor('lib')?.out('Watching for changes\n')
+
+		await flush()
+
+		hoisted.discovered.current = [LIB, { name: 'web', kind: 'app', deps: ['lib'] }]
+
+		hoisted.watchOnChange.current?.()
+
+		expect(get('web')?.workspace.deps).toEqual(['lib'])
+
+		// Dependency warnings follow the new graph.
+		childFor('lib')?.exit(1)
+
+		expect(get('web')?.logs.some((l) => l.includes('dependency lib entered error state'))).toBe(
+			true,
+		)
+	})
+
 	it('re-sorts in dependency order on a watch event when order is "run"', async () => {
 		hoisted.discovered.current = [APP]
 
