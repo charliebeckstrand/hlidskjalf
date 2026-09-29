@@ -14,7 +14,7 @@ export default defineConfig({
 	// incompatible with Ink 5's React-18 reconciler. react-reconciler is pulled
 	// in transitively with ink. Only affects the `index` bin — the `config`
 	// entry doesn't touch React.
-	noExternal: ['react', 'ink', 'ink-spinner'],
+	noExternal: ['react', 'ink'],
 	// Ink lazily requires react-devtools-core only in dev; it isn't a runtime
 	// dependency here, so keep it external rather than failing to resolve it.
 	external: ['react-devtools-core'],

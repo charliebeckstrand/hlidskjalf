@@ -27,6 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Building spinners share one timer** — every building workspace ran its own 80 ms
+  spinner interval, each a separate re-render source during startup. All spinners now
+  animate from one shared clock (in step), and the `ink-spinner` dependency is gone.
 - **Metrics polling on Linux no longer reads every process on the machine** — each sample
   synchronously read `/proc/<pid>/stat` for every process on the host to find the
   workspace trees, stalling input and rendering on a busy workstation. It now walks down
