@@ -8,10 +8,10 @@ export function createEntry(workspace: Workspace): WorkspaceEntry {
 	return {
 		process: { workspace, status: 'pending', logs: [] },
 		child: null,
-		errorTimer: null,
 		restartTimer: null,
 		startupTimer: null,
 		lastGoodStatus: null,
+		errorLineAt: null,
 		restartRetries: 0,
 		lastOutputAt: 0,
 		intentionalExit: false,
@@ -41,8 +41,6 @@ export function withEntry(
 
 export function clearTimers(entry: WorkspaceEntry): void {
 	entry.restartTimer = clearTimer(entry.restartTimer)
-
-	entry.errorTimer = clearTimer(entry.errorTimer)
 
 	entry.startupTimer = clearTimer(entry.startupTimer)
 }

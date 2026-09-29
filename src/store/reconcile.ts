@@ -5,9 +5,17 @@ import { markChanged } from './snapshot.js'
 import { spawnWorkspace } from './spawn.js'
 import type { StoreContext } from './types.js'
 
+/** Whether discovery still describes `a` as `b`: same kind, same dependency list. */
+function sameWorkspace(a: Workspace, b: Workspace): boolean {
+	return (
+		a.kind === b.kind && a.deps.length === b.deps.length && a.deps.every((d, i) => d === b.deps[i])
+	)
+}
+
 /**
  * Re-run discovery after a package.json change: start workspaces that appeared, drop ones
- * that vanished, re-sort the display order.
+ * that vanished, adopt the new kind and dependencies of ones that changed, and re-sort the
+ * display order.
  */
 export function rediscover(ctx: StoreContext): void {
 	if (ctx.stopping) return
@@ -22,11 +30,27 @@ export function rediscover(ctx: StoreContext): void {
 
 	const removed = [...currentNames].filter((name) => !freshNames.has(name))
 
-	if (added.length === 0 && removed.length === 0) return
+	const changed = fresh.filter((w) => {
+		const entry = ctx.entries.get(w.name)
+
+		return entry !== undefined && !sameWorkspace(entry.process.workspace, w)
+	})
+
+	if (added.length === 0 && removed.length === 0 && changed.length === 0) return
 
 	for (const name of removed) removeWorkspace(ctx, name)
 
 	for (const workspace of added) addWorkspace(ctx, workspace)
+
+	// A running process keeps running; only what hlidskjalf knows about it — its dependency
+	// warnings and its place in run order — follows the new package.json.
+	for (const workspace of changed) {
+		withEntry(ctx, workspace.name, (entry) => {
+			entry.process.workspace = workspace
+		})
+
+		ctx.allWorkspaces = ctx.allWorkspaces.map((w) => (w.name === workspace.name ? workspace : w))
+	}
 
 	ctx.order = sortForDisplay(ctx, fresh).map((w) => w.name)
 

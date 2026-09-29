@@ -20,6 +20,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A workspace that stays broken stays red** — an error line put a process in `error`
+  for only five seconds before a timer reverted it to its last good status, so a server
+  with a persistent failure (a compile error, a missing module) flashed back to green
+  "watching" and then red again each time the error was re-logged. Recovery now needs
+  evidence: ordinary output arriving after a quiet spell since the last error line. A
+  good status line (build success, ready, watching) still clears the error at once.
+- **A crashed process stops showing its last CPU/memory reading** — metrics were cleared
+  only for a stopped process, so one that crashed and was waiting on its restart kept
+  displaying the numbers of a process that no longer existed.
+- **A slow liveness probe can't change a different process** — the heartbeat's HTTP probe
+  settles asynchronously and then updated the process by name; if the workspace had been
+  removed and re-added meanwhile, the result landed on the new process.
+- **Watch mode picks up a workspace's changed dependencies** — rediscovery only noticed
+  workspaces appearing or disappearing, so editing an existing workspace's `workspace:`
+  dependencies left its dependency warnings on the old graph while run order used the new
+  one. Changed workspaces now adopt their new kind and dependencies (the running process is
+  left alone).
+- **Watch mode survives a directory swapped out in one step** — deleting and recreating
+  `packages/` (or a workspace dir) faster than the watcher handled the event, as a branch
+  switch does, left its watcher bound to the deleted directory, so new workspaces under it
+  were never discovered. Neither existence nor the inode number can tell the two apart (the
+  new directory often reuses the old inode), so a watcher is now re-armed whenever an event
+  names its directory.
+- **`--order=run` lists workspaces in real dependency order** — run order sorted by how
+  many internal dependencies a workspace had, not by the graph, so an app could appear
+  before a dependency with more dependencies of its own. It is now a topological order
+  within each start tier (packages, then apps and services), ties broken by name.
+- **Alphabetical order no longer depends on discovery order** — apps and services shared a
+  sort bucket that compared as equal across kinds but by name within one, an inconsistent
+  comparator that could list `c` before `a`. Packages, apps, and services now each sort
+  by name, in that order.
 - **Quitting no longer orphans a dev server that outlived its wrapper or its workspace** —
   shutdown and the exit backstop only signalled workspaces whose `pnpm` process was
   still running and still listed. A server whose wrapper had already exited (it keeps the

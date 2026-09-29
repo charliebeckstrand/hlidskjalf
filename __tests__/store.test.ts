@@ -526,7 +526,51 @@ describe('log handling', () => {
 })
 
 describe('error recovery', () => {
-	it('returns to the last good status if no further errors arrive', async () => {
+	it('holds an error through silence instead of flashing back to healthy', async () => {
+		vi.useFakeTimers()
+
+		store = makeStore()
+
+		await store.start()
+
+		const child = childFor('web')
+
+		child?.out('Watching for changes\n')
+
+		child?.out('error: Cannot find module ./missing\n')
+
+		// The server stays broken and says nothing more; it must not turn green meanwhile.
+		vi.advanceTimersByTime(30_000)
+
+		expect(get('web')?.status).toBe('error')
+
+		// Re-logging the same error (a rebuild, a reload) keeps it red, with no healthy flash.
+		child?.out('error: Cannot find module ./missing\n')
+
+		expect(get('web')?.status).toBe('error')
+	})
+
+	it('treats output right after the error as its continuation, not recovery', async () => {
+		vi.useFakeTimers()
+
+		store = makeStore()
+
+		await store.start()
+
+		const child = childFor('web')
+
+		child?.out('Watching for changes\n')
+
+		child?.out('TypeError: x is not a function\n    at handler (server.js:1:1)\n')
+
+		vi.advanceTimersByTime(100)
+
+		child?.out('    at next (router.js:2:2)\n')
+
+		expect(get('web')?.status).toBe('error')
+	})
+
+	it('returns to the last good status on ordinary output after a quiet spell', async () => {
 		vi.useFakeTimers()
 
 		store = makeStore()
@@ -542,6 +586,8 @@ describe('error recovery', () => {
 		expect(get('web')?.status).toBe('error')
 
 		vi.advanceTimersByTime(5000)
+
+		child?.out('GET / 200 in 12ms\n')
 
 		expect(get('web')?.status).toBe('watching')
 	})
@@ -691,7 +737,7 @@ describe('unexpected exit', () => {
 
 		expect(spawnCount('web')).toBe(4)
 
-		// The live child logs an error (arming the 5s recovery timer), then dies for good.
+		// The live child logs an error, then dies for good.
 		childFor('web')?.out('[ERROR] fatal\n')
 
 		childFor('web')?.exit(1)
@@ -700,8 +746,7 @@ describe('unexpected exit', () => {
 
 		expect(get('web')?.logs.some((l) => l.includes('giving up'))).toBe(true)
 
-		// The recovery timer must have been cancelled on close; otherwise it fires and flips
-		// the dead, given-up process back to a healthy status.
+		// Nothing may flip the dead, given-up process back to a healthy status.
 		await vi.advanceTimersByTimeAsync(5000)
 
 		expect(get('web')?.status).toBe('error')
@@ -1635,6 +1680,31 @@ describe('edge cases and guards', () => {
 		expect(get('web')?.status).toBe('stopped')
 	})
 
+	it('adopts changed dependencies of an existing workspace on a watch event', async () => {
+		hoisted.discovered.current = [LIB, APP]
+
+		store = makeStore({ watch: true })
+
+		await store.start()
+
+		childFor('lib')?.out('Watching for changes\n')
+
+		await flush()
+
+		hoisted.discovered.current = [LIB, { name: 'web', kind: 'app', deps: ['lib'] }]
+
+		hoisted.watchOnChange.current?.()
+
+		expect(get('web')?.workspace.deps).toEqual(['lib'])
+
+		// Dependency warnings follow the new graph.
+		childFor('lib')?.exit(1)
+
+		expect(get('web')?.logs.some((l) => l.includes('dependency lib entered error state'))).toBe(
+			true,
+		)
+	})
+
 	it('re-sorts in dependency order on a watch event when order is "run"', async () => {
 		hoisted.discovered.current = [APP]
 
@@ -1728,6 +1798,30 @@ describe('metrics', () => {
 		await vi.advanceTimersByTimeAsync(10)
 
 		expect(get('web')?.status).toBe('stopped')
+
+		expect(get('web')?.metrics).toBeUndefined()
+	})
+
+	it('clears stale metrics once a process crashes', async () => {
+		vi.useFakeTimers()
+
+		store = makeStore({ showMetrics: true })
+
+		await store.start()
+
+		const pid = childFor('web')?.pid ?? 0
+
+		hoisted.psOutput.current = psTree(pid, '0:01.00', 100_000)
+
+		childFor('web')?.out('Watching for changes\n')
+
+		await vi.advanceTimersByTimeAsync(1200)
+
+		expect(get('web')?.metrics).toBeDefined()
+
+		childFor('web')?.exit(1)
+
+		expect(get('web')?.status).toBe('error')
 
 		expect(get('web')?.metrics).toBeUndefined()
 	})
@@ -1903,6 +1997,8 @@ describe('guards and races', () => {
 		expect(get('web')?.status).toBe('error')
 
 		vi.advanceTimersByTime(5000)
+
+		childFor('web')?.out('still serving\n')
 
 		expect(get('web')?.status).toBe('ready')
 	})

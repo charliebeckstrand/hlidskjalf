@@ -23,8 +23,6 @@ describe('createEntry', () => {
 
 		expect(entry.restartTimer).toBeNull()
 
-		expect(entry.errorTimer).toBeNull()
-
 		expect(entry.startupTimer).toBeNull()
 
 		expect(entry.pausedFrom).toBeNull()
@@ -70,28 +68,22 @@ describe('clearTimers', () => {
 		vi.useFakeTimers()
 
 		const restart = vi.fn()
-		const error = vi.fn()
 		const startup = vi.fn()
 
 		const entry = createEntry(WS)
 
 		entry.restartTimer = createUnrefTimer(1000, restart)
-		entry.errorTimer = createUnrefTimer(1000, error)
 		entry.startupTimer = createUnrefTimer(1000, startup)
 
 		clearTimers(entry)
 
 		expect(entry.restartTimer).toBeNull()
 
-		expect(entry.errorTimer).toBeNull()
-
 		expect(entry.startupTimer).toBeNull()
 
 		vi.advanceTimersByTime(2000)
 
 		expect(restart).not.toHaveBeenCalled()
-
-		expect(error).not.toHaveBeenCalled()
 
 		expect(startup).not.toHaveBeenCalled()
 	})

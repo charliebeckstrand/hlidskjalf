@@ -80,7 +80,17 @@ function workspaceDeps(pkg: PkgJson): string[] {
 		.map(([name]) => name)
 }
 
-const kindOrder = { package: 0, app: 1, service: 1 } satisfies Record<WorkspaceKind, number>
+/**
+ * Display rank for alphabetical order: packages, then apps, then services, each group sorted
+ * by name.
+ */
+const displayRank = { package: 0, app: 1, service: 2 } satisfies Record<WorkspaceKind, number>
+
+/**
+ * Start tier for run order, mirroring the spawn tiers: packages start first and gate apps and
+ * services, which then start together.
+ */
+const startTier = { package: 0, app: 1, service: 1 } satisfies Record<WorkspaceKind, number>
 
 export function discoverWorkspaces(root: string): Workspace[] {
 	const results: Workspace[] = []
@@ -141,38 +151,51 @@ export function discoverWorkspaces(root: string): Workspace[] {
 }
 
 /**
- * Order by kind bucket (packages before apps/services). Returns null only when the kinds are
- * equal so callers fall through to their tiebreaker — distinct kinds that share a bucket (app
- * vs service) still short-circuit to 0, keeping them in discovery order.
+ * Dependency ("run") order: start tier first, then a topological order within each tier, so
+ * a workspace is listed after every in-set dependency that starts in the same tier (earlier
+ * tiers are already ahead of it). Among workspaces that are ready at the same time the name
+ * decides, so the order is deterministic. A dependency cycle is broken at the
+ * alphabetically-first workspace still waiting.
  */
-function compareByKind(a: Workspace, b: Workspace): number | null {
-	return a.kind === b.kind ? null : kindOrder[a.kind] - kindOrder[b.kind]
-}
-
 export function sortByDeps(workspaces: Workspace[]): Workspace[] {
-	const names = new Set(workspaces.map((w) => w.name))
+	const byName = new Map(workspaces.map((w) => [w.name, w]))
 
-	// Precompute each workspace's internal dependency count once; doing it inside the
-	// comparator would re-filter both operands' deps on every O(n log n) comparison.
-	const depCount = new Map<Workspace, number>()
+	const remaining = [...workspaces].sort(
+		(a, b) => startTier[a.kind] - startTier[b.kind] || a.name.localeCompare(b.name),
+	)
 
-	for (const workspace of workspaces) {
-		let count = 0
+	const placed = new Set<string>()
 
-		for (const dep of workspace.deps) {
-			if (names.has(dep)) count++
-		}
+	const ready = (w: Workspace) =>
+		w.deps.every((name) => {
+			const dep = byName.get(name)
 
-		depCount.set(workspace, count)
+			return !dep || dep === w || placed.has(name) || startTier[dep.kind] > startTier[w.kind]
+		})
+
+	const sorted: Workspace[] = []
+
+	while (remaining.length > 0) {
+		const tier = startTier[(remaining[0] as Workspace).kind]
+
+		let index = remaining.findIndex((w) => startTier[w.kind] === tier && ready(w))
+
+		if (index === -1) index = 0
+
+		const [next] = remaining.splice(index, 1) as [Workspace]
+
+		sorted.push(next)
+
+		placed.add(next.name)
 	}
 
-	return [...workspaces].sort(
-		(a, b) => compareByKind(a, b) ?? (depCount.get(a) ?? 0) - (depCount.get(b) ?? 0),
-	)
+	return sorted
 }
 
 export function sortByName(workspaces: Workspace[]): Workspace[] {
-	return [...workspaces].sort((a, b) => compareByKind(a, b) ?? a.name.localeCompare(b.name))
+	return [...workspaces].sort(
+		(a, b) => displayRank[a.kind] - displayRank[b.kind] || a.name.localeCompare(b.name),
+	)
 }
 
 export function filterWorkspaces(workspaces: Workspace[], patterns: string[]): Workspace[] {

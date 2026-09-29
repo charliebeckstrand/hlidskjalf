@@ -267,4 +267,72 @@ describe('createHeartbeat', () => {
 
 		expect(setStatus).not.toHaveBeenCalled()
 	})
+
+	it('does not act on a workspace replaced while its probe was in flight', async () => {
+		vi.useFakeTimers()
+
+		let answer: (value: unknown) => void = () => {}
+
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(
+				() =>
+					new Promise((resolve) => {
+						answer = resolve
+					}),
+			),
+		)
+
+		const entries = new Map([
+			['web', entry('idle', { url: 'http://localhost:3000', lastGoodStatus: 'watching' })],
+		])
+
+		const setStatus = run(entries)
+
+		await vi.advanceTimersByTimeAsync(10_000)
+
+		// Removed and re-added under the same name before the probe answers.
+		entries.set('web', entry('idle', { url: 'http://localhost:3001' }))
+
+		answer({ body: { cancel: async () => {} } })
+
+		await vi.advanceTimersByTimeAsync(0)
+
+		expect(setStatus).not.toHaveBeenCalled()
+	})
+
+	it('does not act on a workspace removed while its probe was in flight', async () => {
+		vi.useFakeTimers()
+
+		let fail: (err: Error) => void = () => {}
+
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(
+				() =>
+					new Promise((_resolve, reject) => {
+						fail = reject
+					}),
+			),
+		)
+
+		const quiet = entry('ready', { url: 'http://localhost:3000', lastOutputAt: 1 })
+
+		const entries = new Map([['web', quiet]])
+
+		const setStatus = run(entries)
+
+		vi.setSystemTime(400_000)
+
+		await vi.advanceTimersByTimeAsync(10_000)
+
+		// The tick already probed; drop the workspace before the failed probe is handled.
+		entries.delete('web')
+
+		fail(new Error('refused'))
+
+		await vi.advanceTimersByTimeAsync(0)
+
+		expect(setStatus).not.toHaveBeenCalled()
+	})
 })

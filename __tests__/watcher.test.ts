@@ -167,6 +167,44 @@ describe('watchWorkspaces', () => {
 		await expect(t.next()).resolves.toBeUndefined()
 	})
 
+	it('re-arms a parent dir replaced before the watcher could observe it gone', async () => {
+		const t = tracker()
+
+		watcher = watchWorkspaces(tmpDir, t.onChange)
+
+		// Delete and recreate in one go, as a branch switch or `rm -rf && mkdir` does: by the
+		// time the root event is handled the parent exists again, on a new inode.
+		fs.rmSync(join(tmpDir, 'packages'), { recursive: true, force: true })
+
+		fs.mkdirSync(join(tmpDir, 'packages'))
+
+		await expect(t.next()).resolves.toBeUndefined()
+
+		createWorkspace('web')
+
+		await expect(t.next()).resolves.toBeUndefined()
+	})
+
+	it('re-arms a workspace dir replaced before the watcher could observe it gone', async () => {
+		createWorkspace('web')
+
+		const t = tracker()
+
+		watcher = watchWorkspaces(tmpDir, t.onChange)
+
+		const dir = join(tmpDir, 'packages', 'web')
+
+		fs.rmSync(dir, { recursive: true, force: true })
+
+		fs.mkdirSync(dir)
+
+		await expect(t.next()).resolves.toBeUndefined()
+
+		fs.writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'web', scripts: {} }))
+
+		await expect(t.next()).resolves.toBeUndefined()
+	})
+
 	it('does not watch a workspace dir symlinked outside the root', () => {
 		const outside = fs.mkdtempSync(join(fs.realpathSync(os.tmpdir()), 'hlidskjalf-outside-'))
 
