@@ -27,6 +27,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Metrics polling on Linux no longer reads every process on the machine** — each sample
+  synchronously read `/proc/<pid>/stat` for every process on the host to find the
+  workspace trees, stalling input and rendering on a busy workstation. It now walks down
+  from each workspace's root through the kernel's per-thread `children` lists, reading only
+  the processes it reports on, and falls back to the full scan only on kernels without them.
 - **A crashed process stops showing its last CPU/memory reading** — metrics were cleared
   only for a stopped process, so one that crashed and was waiting on its restart kept
   displaying the numbers of a process that no longer existed.

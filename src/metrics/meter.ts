@@ -47,6 +47,26 @@ function resolvePageSize(): number {
 	}
 }
 
+/** Parent→children links and per-pid CPU/RSS, as read from `/proc`. */
+interface ProcTree {
+	children: Map<number, number[]>
+	stats: Map<number, { utime: number; stime: number; rss: number }>
+}
+
+/**
+ * Whether the kernel exposes `/proc/<pid>/task/<tid>/children` (CONFIG_PROC_CHILDREN, on in
+ * mainstream distro kernels), probed once against this process.
+ */
+function hasChildrenFiles(): boolean {
+	try {
+		fs.readFileSync(`/proc/${process.pid}/task/${process.pid}/children`, 'utf8')
+
+		return true
+	} catch {
+		return false
+	}
+}
+
 export interface MeterDeps {
 	/** Running root PIDs mapped to workspace name (stopped/dead children excluded). */
 	roots(): Map<number, string>
@@ -76,8 +96,12 @@ export function createMeter(deps: MeterDeps): Meter {
 
 	const numCpus = os.availableParallelism()
 
+	const linux = process.platform === 'linux'
+
 	// Only the Linux `/proc` reader converts pages to bytes; elsewhere `ps` already reports KB.
-	const pageSize = process.platform === 'linux' ? resolvePageSize() : DEFAULT_PAGE_SIZE
+	const pageSize = linux ? resolvePageSize() : DEFAULT_PAGE_SIZE
+
+	const childrenFiles = linux && hasChildrenFiles()
 
 	let timer: ReturnType<typeof setTimeout> | null = null
 
@@ -123,20 +147,37 @@ export function createMeter(deps: MeterDeps): Meter {
 		return deps.setMetrics(name, { cpu, mem: totalMem })
 	}
 
-	const readProcTree = (): {
-		children: Map<number, number[]>
-		stats: Map<number, { utime: number; stime: number; rss: number }>
-	} => {
-		const children = new Map<number, number[]>()
+	/** Record one pid's stat line in `tree` and return its ppid, or null if it's gone. */
+	const readStat = (pid: number, tree: ProcTree): number | null => {
+		try {
+			const parsed = parseProcStat(fs.readFileSync(`/proc/${pid}/stat`, 'utf8'), pageSize)
 
-		const stats = new Map<number, { utime: number; stime: number; rss: number }>()
+			if (!parsed) return null
+
+			const { ppid, utime, stime, rss } = parsed
+
+			tree.stats.set(pid, { utime, stime, rss })
+
+			return ppid
+		} catch {
+			// process vanished mid-read
+			return null
+		}
+	}
+
+	/**
+	 * Fallback reader: every process on the system, linked by ppid. Thousands of synchronous
+	 * reads on a busy host, so it only runs where the kernel lacks per-task `children` files.
+	 */
+	const readWholeProcTree = (): ProcTree => {
+		const tree: ProcTree = { children: new Map(), stats: new Map() }
 
 		let entries: string[]
 
 		try {
 			entries = fs.readdirSync('/proc')
 		} catch {
-			return { children, stats }
+			return tree
 		}
 
 		for (const entry of entries) {
@@ -144,29 +185,69 @@ export function createMeter(deps: MeterDeps): Meter {
 
 			const pid = Number.parseInt(entry, 10)
 
-			try {
-				const parsed = parseProcStat(fs.readFileSync(`/proc/${pid}/stat`, 'utf8'), pageSize)
+			const ppid = readStat(pid, tree)
 
-				if (!parsed) continue
+			if (ppid === null) continue
 
-				const { ppid, utime, stime, rss } = parsed
+			let kids = tree.children.get(ppid)
 
-				stats.set(pid, { utime, stime, rss })
+			if (!kids) {
+				kids = []
 
-				let kids = children.get(ppid)
-
-				if (!kids) {
-					kids = []
-
-					children.set(ppid, kids)
-				}
-
-				kids.push(pid)
-			} catch {
-				// process vanished between readdir and readFile
+				tree.children.set(ppid, kids)
 			}
+
+			kids.push(pid)
 		}
-		return { children, stats }
+		return tree
+	}
+
+	/**
+	 * Read only the trees under `roots`, walking down through each thread's
+	 * `/proc/<pid>/task/<tid>/children` list: a few dozen reads for a handful of dev servers
+	 * instead of one per process on the machine, on the event loop every poll.
+	 */
+	const readOwnedProcTrees = (roots: Iterable<number>): ProcTree => {
+		const tree: ProcTree = { children: new Map(), stats: new Map() }
+
+		const stack = [...roots]
+
+		while (stack.length > 0) {
+			const pid = stack.pop() as number
+
+			if (tree.stats.has(pid) || readStat(pid, tree) === null) continue
+
+			let tids: string[]
+
+			try {
+				tids = fs.readdirSync(`/proc/${pid}/task`)
+			} catch {
+				continue
+			}
+
+			const kids: number[] = []
+
+			for (const tid of tids) {
+				try {
+					for (const raw of fs
+						.readFileSync(`/proc/${pid}/task/${tid}/children`, 'utf8')
+						.split(' ')) {
+						const kid = Number.parseInt(raw, 10)
+
+						if (kid > 0) kids.push(kid)
+					}
+				} catch {
+					// thread exited mid-walk
+				}
+			}
+
+			if (kids.length === 0) continue
+
+			tree.children.set(pid, kids)
+
+			for (const kid of kids) stack.push(kid)
+		}
+		return tree
 	}
 
 	/**
@@ -195,7 +276,7 @@ export function createMeter(deps: MeterDeps): Meter {
 	}
 
 	const collectProc = (roots: Map<number, string>): void => {
-		const tree = readProcTree()
+		const tree = childrenFiles ? readOwnedProcTrees(roots.keys()) : readWholeProcTree()
 
 		collectFrom(roots, tree.children, (pid) => {
 			const stat = tree.stats.get(pid)
