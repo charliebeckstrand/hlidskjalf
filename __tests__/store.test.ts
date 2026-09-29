@@ -1367,6 +1367,185 @@ describe('shutdown', () => {
 	})
 })
 
+describe('process-group ownership', () => {
+	const GATED_WEB: Workspace = { name: 'web', kind: 'app', deps: ['lib'] }
+
+	it('does not spawn an app removed while the package gate is closed', async () => {
+		hoisted.discovered.current = [LIB, GATED_WEB]
+
+		store = makeStore()
+
+		await store.start()
+
+		store.removeWorkspace('web')
+
+		childFor('lib')?.out('Watching for changes\n')
+
+		await flush()
+
+		// A child spawned here would have no entry, so nothing would ever reap it.
+		expect(spawnCount('web')).toBe(0)
+	})
+
+	it('does not spawn an app twice when it is re-added while the package gate is closed', async () => {
+		hoisted.discovered.current = [LIB, GATED_WEB]
+
+		store = makeStore()
+
+		await store.start()
+
+		store.removeWorkspace('web')
+
+		store.addWorkspace(GATED_WEB)
+
+		childFor('lib')?.out('Watching for changes\n')
+
+		await flush()
+
+		expect(spawnCount('web')).toBe(1)
+	})
+
+	it('does not start an app stopped by hand while the package gate is closed', async () => {
+		hoisted.discovered.current = [LIB, GATED_WEB]
+
+		store = makeStore()
+
+		await store.start()
+
+		store.stopProcess('web')
+
+		childFor('lib')?.out('Watching for changes\n')
+
+		await flush()
+
+		expect(spawnCount('web')).toBe(0)
+
+		expect(get('web')?.status).toBe('stopped')
+	})
+
+	it('does not respawn after the fsevents rebuild when a restart already did', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		childFor('web')?.exit(1, 'SIGABRT')
+
+		const rebuild = hoisted.spawned.find((c) => c.args[0] === 'rebuild')
+
+		store.restartProcess('web')
+
+		expect(spawnCount('web')).toBe(2)
+
+		rebuild?.exit(0)
+
+		await flush()
+
+		expect(spawnCount('web')).toBe(2)
+	})
+
+	it('does not respawn after the fsevents rebuild when the process was stopped', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		childFor('web')?.exit(1, 'SIGABRT')
+
+		const rebuild = hoisted.spawned.find((c) => c.args[0] === 'rebuild')
+
+		store.stopProcess('web')
+
+		rebuild?.exit(0)
+
+		await flush()
+
+		expect(spawnCount('web')).toBe(1)
+
+		expect(get('web')?.status).toBe('stopped')
+	})
+
+	it('waits on and signals a group whose leader exited while its stdio is still open', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		const child = childFor('web')
+
+		if (!child) throw new Error('no child')
+
+		// The pnpm wrapper exits on SIGTERM but a grandchild keeps the pipes open.
+		child.deferClose = true
+
+		store.stopProcess('web')
+
+		vi.mocked(process.kill).mockClear()
+
+		let done = false
+
+		const shutdown = store.shutdown().then(() => {
+			done = true
+		})
+
+		await flush()
+
+		expect(vi.mocked(process.kill)).toHaveBeenCalledWith(-child.pid, 'SIGTERM')
+
+		expect(done).toBe(false)
+
+		child.closeNow()
+
+		await shutdown
+
+		expect(done).toBe(true)
+	})
+
+	it('reaches a removed workspace that is still draining on quit', async () => {
+		store = makeStore()
+
+		await store.start()
+
+		const child = childFor('web')
+
+		if (!child) throw new Error('no child')
+
+		child.deferClose = true
+
+		store.removeWorkspace('web')
+
+		vi.mocked(process.kill).mockClear()
+
+		store.killAllSync()
+
+		expect(vi.mocked(process.kill)).toHaveBeenCalledWith(-child.pid, 'SIGKILL')
+
+		child.closeNow()
+	})
+
+	it('releases the package gate when shutdown begins mid-startup', async () => {
+		hoisted.discovered.current = [LIB, GATED_WEB]
+
+		store = makeStore()
+
+		await store.start()
+
+		const lib = childFor('lib')
+
+		if (!lib) throw new Error('no child')
+
+		// Hold lib's close so its status stays `building` through the shutdown.
+		lib.deferClose = true
+
+		const done = store.shutdown()
+
+		lib.closeNow()
+
+		await done
+
+		await flush()
+
+		expect(spawnCount('web')).toBe(0)
+	})
+})
+
 describe('edge cases and guards', () => {
 	it('clears a pending error recovery when a good status follows', async () => {
 		vi.useFakeTimers()

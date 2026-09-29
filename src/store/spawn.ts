@@ -4,6 +4,7 @@ import { appendLog, parseLine, sanitizeForDisplay, stripAnsi } from '../logs/ind
 import { safeEnv } from '../metrics/index.js'
 import type { Workspace } from '../types.js'
 import { truncate } from '../utilities.js'
+import { isRunning } from './children.js'
 import {
 	MAX_BUFFER_SIZE,
 	MAX_LINE_LENGTH,
@@ -16,7 +17,7 @@ import { createLineBuffer } from './lines.js'
 import { cancelErrorRecovery, scheduleErrorRecovery } from './recovery.js'
 import { markChanged } from './snapshot.js'
 import { setStatus } from './status.js'
-import type { StoreContext } from './types.js'
+import type { StoreContext, WorkspaceEntry } from './types.js'
 import { clearTimer, createUnrefTimer } from './utilities.js'
 
 /**
@@ -29,6 +30,13 @@ function isStaleChild(ctx: StoreContext, name: string, child: ChildProcess): boo
 }
 
 export function spawnWorkspace(ctx: StoreContext, workspace: Workspace): void {
+	const entry = ctx.entries.get(workspace.name)
+
+	// Spawn only into a tracked entry with no live child. A child with no entry is owned by
+	// nothing — shutdown walks the entries, so it would outlive hlidskjalf holding its port —
+	// and a second child beside a live one strands the first as a stale, never-reaped group.
+	if (ctx.stopping || !entry || isRunning(entry.child)) return
+
 	const child = spawn('pnpm', ['--filter', workspace.name, 'run', 'dev'], {
 		cwd: ctx.root,
 		stdio: 'pipe',
@@ -40,15 +48,16 @@ export function spawnWorkspace(ctx: StoreContext, workspace: Workspace): void {
 		detached: true,
 	})
 
-	const entry = ctx.entries.get(workspace.name)
+	// Owned until its stdio closes, independent of the entry: see `StoreContext.groups`.
+	ctx.groups.add(child)
 
-	if (entry) {
-		entry.child = child
+	child.on('close', () => ctx.groups.delete(child))
 
-		entry.intentionalExit = false
+	entry.child = child
 
-		entry.pausedFrom = null
-	}
+	entry.intentionalExit = false
+
+	entry.pausedFrom = null
 
 	setStatus(ctx, workspace.name, 'building')
 
@@ -66,7 +75,7 @@ export function spawnWorkspace(ctx: StoreContext, workspace: Workspace): void {
 		}
 	})
 
-	if (entry) entry.startupTimer = startupTimer
+	entry.startupTimer = startupTimer
 
 	const lineBuffer = createLineBuffer(MAX_BUFFER_SIZE)
 
@@ -123,10 +132,13 @@ export function spawnWorkspace(ctx: StoreContext, workspace: Workspace): void {
 
 		entry.errorTimer = clearTimer(entry.errorTimer)
 
-		handleUnexpectedExit(ctx, workspace, code, signal)
+		handleUnexpectedExit(ctx, workspace, child, code, signal)
 	})
 
 	child.on('error', () => {
+		// A spawn that failed outright (no pid) never ran, so there is no group to own.
+		if (child.pid === undefined) ctx.groups.delete(child)
+
 		// Ignore an error surfacing from a stale child the live entry has already replaced.
 		if (isStaleChild(ctx, workspace.name, child)) return
 
@@ -197,9 +209,29 @@ function handleLine(ctx: StoreContext, name: string, raw: string): void {
 	markChanged(ctx)
 }
 
+/**
+ * Respawn after an unexpected exit — unless something claimed the entry while the backoff or
+ * fsevents rebuild was pending: a manual stop/restart/kill (which replaces or clears
+ * `entry.child`), a removal or re-add (a different entry), or shutdown. Without this, a
+ * restart pressed during the rebuild spawns a second server and strands the first.
+ */
+function respawnAfterCrash(
+	ctx: StoreContext,
+	entry: WorkspaceEntry,
+	crashed: ChildProcess,
+	workspace: Workspace,
+): void {
+	if (ctx.entries.get(workspace.name) !== entry) return
+
+	if (entry.child !== crashed || entry.intentionalExit) return
+
+	spawnWorkspace(ctx, workspace)
+}
+
 function handleUnexpectedExit(
 	ctx: StoreContext,
 	workspace: Workspace,
+	crashed: ChildProcess,
 	code: number | null,
 	signal: string | null,
 ): void {
@@ -236,12 +268,7 @@ function handleUnexpectedExit(
 
 	if (signal === 'SIGABRT') {
 		rebuildFsevents(ctx)
-			.then(() => {
-				// Respawn only if still tracked and no deliberate exit intervened during the rebuild.
-				const liveEntry = ctx.entries.get(workspace.name)
-
-				if (!ctx.stopping && liveEntry && !liveEntry.intentionalExit) spawnWorkspace(ctx, workspace)
-			})
+			.then(() => respawnAfterCrash(ctx, entry, crashed, workspace))
 			.catch(() => setStatus(ctx, workspace.name, 'error'))
 
 		return
@@ -250,7 +277,7 @@ function handleUnexpectedExit(
 	entry.restartTimer = createUnrefTimer(delay, () => {
 		entry.restartTimer = null
 
-		if (!ctx.stopping) spawnWorkspace(ctx, workspace)
+		respawnAfterCrash(ctx, entry, crashed, workspace)
 	})
 }
 

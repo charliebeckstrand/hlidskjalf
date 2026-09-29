@@ -61,6 +61,13 @@ export interface StoreContext {
 	snapshot: WorkspaceProcess[]
 	dirty: boolean
 
+	/**
+	 * Every dev child we've spawned whose stdio hasn't closed yet — the process groups we own.
+	 * Membership outlives the entry (a removed workspace still draining) and the leader's own
+	 * exit (a wrapper that exited while its server keeps the pipes open), so shutdown and the
+	 * exit backstop reach every group that can still hold a port.
+	 */
+	groups: Set<ChildProcess>
 	pendingRebuilds: Set<ChildProcess>
 	heartbeat: Heartbeat | null
 	meter: Meter | null
