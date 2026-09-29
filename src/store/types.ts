@@ -25,7 +25,11 @@ export interface WorkspaceEntry {
 }
 
 export interface Store {
-	/** Immutable, referentially stable between changes — for `useSyncExternalStore`. */
+	/**
+	 * The processes in display order, for `useSyncExternalStore`. The array is referentially
+	 * stable between changes and replaced on each; its elements are the store's live process
+	 * records, mutated in place, so readers compare their fields rather than their identity.
+	 */
 	getSnapshot(): WorkspaceProcess[]
 	subscribe(listener: () => void): () => void
 	/** Discover, register, and begin spawning. Resolves false if no workspaces matched. */
