@@ -54,6 +54,18 @@ describe('sortByName', () => {
 		expect(sortByName(ws).map((w) => w.name)).toEqual(['alpha', 'charlie', 'web', 'api'])
 	})
 
+	it('gives the same order whatever order the workspaces were discovered in', () => {
+		const ws: Workspace[] = [
+			{ name: 'c', kind: 'app', deps: [] },
+			{ name: 'b', kind: 'service', deps: [] },
+			{ name: 'a', kind: 'app', deps: [] },
+		]
+
+		expect(sortByName(ws).map((w) => w.name)).toEqual(['a', 'c', 'b'])
+
+		expect(sortByName([...ws].reverse()).map((w) => w.name)).toEqual(['a', 'c', 'b'])
+	})
+
 	it('does not mutate the original array', () => {
 		const ws: Workspace[] = [
 			{ name: 'b', kind: 'package', deps: [] },
@@ -67,14 +79,45 @@ describe('sortByName', () => {
 })
 
 describe('sortByDeps', () => {
-	it('orders fewer-internal-deps first, counting only in-set deps', () => {
+	it('lists dependencies first, ties by name, ignoring out-of-set deps', () => {
 		const ws: Workspace[] = [
 			{ name: 'app', kind: 'package', deps: ['external-lib', 'utils', 'config'] },
 			{ name: 'utils', kind: 'package', deps: [] },
 			{ name: 'config', kind: 'package', deps: [] },
 		]
 
-		expect(sortByDeps(ws).map((w) => w.name)).toEqual(['utils', 'config', 'app'])
+		expect(sortByDeps(ws).map((w) => w.name)).toEqual(['config', 'utils', 'app'])
+	})
+
+	it('orders by the dependency graph, not by how many deps each has', () => {
+		// a depends on b, which has more deps than a: a count-based order lists a first.
+		const ws: Workspace[] = [
+			{ name: 'a', kind: 'app', deps: ['b'] },
+			{ name: 'b', kind: 'app', deps: ['c', 'd'] },
+			{ name: 'c', kind: 'app', deps: [] },
+			{ name: 'd', kind: 'app', deps: [] },
+		]
+
+		expect(sortByDeps(ws).map((w) => w.name)).toEqual(['c', 'd', 'b', 'a'])
+	})
+
+	it('orders apps and services as one start tier', () => {
+		const ws: Workspace[] = [
+			{ name: 'web', kind: 'app', deps: ['api'] },
+			{ name: 'api', kind: 'service', deps: [] },
+		]
+
+		expect(sortByDeps(ws).map((w) => w.name)).toEqual(['api', 'web'])
+	})
+
+	it('breaks a dependency cycle instead of dropping or looping', () => {
+		const ws: Workspace[] = [
+			{ name: 'b', kind: 'package', deps: ['a'] },
+			{ name: 'a', kind: 'package', deps: ['b'] },
+			{ name: 'c', kind: 'package', deps: ['b'] },
+		]
+
+		expect(sortByDeps(ws).map((w) => w.name)).toEqual(['a', 'b', 'c'])
 	})
 
 	it('groups packages before apps regardless of deps, without mutating input', () => {

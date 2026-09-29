@@ -20,6 +20,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`--order=run` lists workspaces in real dependency order** — run order sorted by how
+  many internal dependencies a workspace had, not by the graph, so an app could appear
+  before a dependency with more dependencies of its own. It is now a topological order
+  within each start tier (packages, then apps and services), ties broken by name.
+- **Alphabetical order no longer depends on discovery order** — apps and services shared a
+  sort bucket that compared as equal across kinds but by name within one, an inconsistent
+  comparator that could list `c` before `a`. Packages, apps, and services now each sort
+  by name, in that order.
 - **Quitting no longer orphans a dev server that outlived its wrapper or its workspace** —
   shutdown and the exit backstop only signalled workspaces whose `pnpm` process was
   still running and still listed. A server whose wrapper had already exited (it keeps the
