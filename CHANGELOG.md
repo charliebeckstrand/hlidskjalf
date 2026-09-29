@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **An unknown `--order` value is reported, not silently replaced** — like an unknown
+  `--theme`, it now prints a warning and falls back to the configured order (previously it
+  forced `alphabetical`, overriding a configured `run`).
 - **CPU is reported per core, like `top`** — the CPU column was a share of the whole
   machine, so a single-threaded dev server pegging its core read 12.5% on an eight-core
   machine and the red over-80% highlight could never trip. It now reads 100% per saturated
@@ -27,6 +30,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Redirected stdin really no longer crashes the launch** — `hlidskjalf < /dev/null` (or
+  any non-TTY stdin) still died with Ink's "Raw mode is not supported" error: Ink reports
+  raw-mode support as `stdin.isTTY`, which is `undefined` rather than `false` there, and an
+  undefined `isActive` enables the key handlers. Support is now compared explicitly, so the
+  dashboard renders read-only as intended.
 - **Building spinners share one timer** — every building workspace ran its own 80 ms
   spinner interval, each a separate re-render source during startup. All spinners now
   animate from one shared clock (in step), and the `ink-spinner` dependency is gone.

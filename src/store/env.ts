@@ -1,4 +1,4 @@
-/** Allowlisted environment variable names passed to child processes. */
+/** Allowlisted environment variable names passed to spawned dev processes. */
 export const ENV_ALLOWLIST = new Set([
 	'HOME',
 	'USER',

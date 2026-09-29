@@ -1,7 +1,6 @@
 import { type ChildProcess, spawn } from 'node:child_process'
 import { StringDecoder } from 'node:string_decoder'
 import { appendLog, parseLine, sanitizeForDisplay, stripAnsi } from '../logs/index.js'
-import { safeEnv } from '../metrics/index.js'
 import type { Workspace } from '../types.js'
 import { truncate } from '../utilities.js'
 import { isRunning } from './children.js'
@@ -14,6 +13,7 @@ import {
 	STARTUP_TIMEOUT_MS,
 } from './constants.js'
 import { note } from './entry.js'
+import { safeEnv } from './env.js'
 import { createLineBuffer } from './lines.js'
 import { markChanged } from './snapshot.js'
 import { setStatus } from './status.js'

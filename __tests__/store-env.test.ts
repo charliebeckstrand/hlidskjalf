@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { safeEnv } from '../src/metrics/index.js'
+import { safeEnv } from '../src/store/env.js'
 
 describe('safeEnv', () => {
 	it('keeps only allowlisted variables and drops secrets', () => {

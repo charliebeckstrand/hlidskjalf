@@ -1,4 +1,4 @@
-import { type Dirent, existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs'
+import { type Dirent, readdirSync, readFileSync, realpathSync } from 'node:fs'
 import { join, resolve, sep } from 'node:path'
 import { sanitizeForDisplay } from './logs/index.js'
 import type { Workspace, WorkspaceKind } from './types.js'
@@ -106,13 +106,10 @@ export function discoverWorkspaces(root: string): Workspace[] {
 	for (const [dir, kind] of dirs) {
 		const base = join(resolvedRoot, dir)
 
-		if (!existsSync(base)) continue
-
-		// existsSync passing doesn't guarantee readdirSync succeeds: `base` may be a plain file
-		// (ENOTDIR), unreadable (EACCES), or vanish between the two calls (ENOENT) — the last is
-		// exactly the TOCTOU window a watcher-triggered rediscovery races against while a tree is
-		// being rewritten. An uncaught throw here would escape the debounced watcher callback and
-		// take down the process without shutdown, orphaning every child group; skip the dir.
+		// `base` may be missing (ENOENT), a plain file (ENOTDIR), unreadable (EACCES), or vanish
+		// mid-read while a watcher-triggered rediscovery races a tree being rewritten. An uncaught
+		// throw here would escape the debounced watcher callback and take down the process
+		// without shutdown, orphaning every child group; skip the dir.
 		let dirEntries: Dirent[]
 
 		try {

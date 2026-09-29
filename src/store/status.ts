@@ -27,11 +27,9 @@ export function setStatus(ctx: StoreContext, name: string, status: Status): void
 }
 
 export function notifyDependents(ctx: StoreContext, failedName: string): void {
-	for (const workspace of ctx.allWorkspaces) {
-		if (!workspace.deps.includes(failedName)) continue
-
-		const entry = ctx.entries.get(workspace.name)
-
-		if (entry) note(entry, `warning: dependency ${failedName} entered error state`)
+	for (const entry of ctx.entries.values()) {
+		if (entry.process.workspace.deps.includes(failedName)) {
+			note(entry, `warning: dependency ${failedName} entered error state`)
+		}
 	}
 }

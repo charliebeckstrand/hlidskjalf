@@ -1,3 +1,5 @@
+import { EventEmitter } from 'node:events'
+import { render as inkRender } from 'ink'
 import { cleanup, render } from 'ink-testing-library'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from '../src/app.js'
@@ -305,5 +307,51 @@ describe('empty process list', () => {
 		expect(mock.store.stopProcess).not.toHaveBeenCalled()
 
 		expect(mock.store.killProcess).not.toHaveBeenCalled()
+	})
+})
+
+describe('non-TTY stdin', () => {
+	it('renders read-only instead of crashing when stdin has no isTTY at all', async () => {
+		mock.store.getSnapshot.mockReturnValue([proc('alpha')])
+
+		// Redirected stdin (`hlidskjalf < /dev/null`) leaves `isTTY` undefined rather than false,
+		// and Ink throws the moment any input handler asks it for raw mode.
+		const stdin = Object.assign(new EventEmitter(), {
+			isTTY: undefined,
+			setEncoding: () => {},
+			setRawMode: () => {},
+			read: () => null,
+			ref: () => {},
+			unref: () => {},
+		})
+
+		const stdout = Object.assign(new EventEmitter(), {
+			columns: 100,
+			rows: 40,
+			write: () => true,
+		})
+
+		const instance = inkRender(<App options={options} />, {
+			stdin: stdin as unknown as NodeJS.ReadStream,
+			stdout: stdout as unknown as NodeJS.WriteStream,
+			stderr: stdout as unknown as NodeJS.WriteStream,
+			patchConsole: false,
+			exitOnCtrlC: false,
+		})
+
+		let failure: unknown
+
+		instance.waitUntilExit().catch((err: unknown) => {
+			failure = err
+		})
+
+		// Past the loading phase, so the dashboard (and its log-scroll keys) has mounted too.
+		await flush()
+
+		await flush()
+
+		expect(failure).toBeUndefined()
+
+		instance.unmount()
 	})
 })
