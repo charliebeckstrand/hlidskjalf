@@ -1,6 +1,7 @@
 /**
- * How long a process flagged `error` by a log line stays in that state before reverting
- * to its last good status, so a transient error message doesn't pin it red.
+ * Quiet spell after a process's last error line beyond which ordinary output counts as
+ * evidence it recovered, reverting it from `error` to its last good status. Output sooner
+ * than this is the error's own continuation (a stack trace), not recovery.
  */
 export const ERROR_RECOVERY_MS = 5000
 

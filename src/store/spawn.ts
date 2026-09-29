@@ -6,6 +6,7 @@ import type { Workspace } from '../types.js'
 import { truncate } from '../utilities.js'
 import { isRunning } from './children.js'
 import {
+	ERROR_RECOVERY_MS,
 	MAX_BUFFER_SIZE,
 	MAX_LINE_LENGTH,
 	MAX_RESTART_RETRIES,
@@ -14,7 +15,6 @@ import {
 } from './constants.js'
 import { note } from './entry.js'
 import { createLineBuffer } from './lines.js'
-import { cancelErrorRecovery, scheduleErrorRecovery } from './recovery.js'
 import { markChanged } from './snapshot.js'
 import { setStatus } from './status.js'
 import type { StoreContext, WorkspaceEntry } from './types.js'
@@ -58,6 +58,8 @@ export function spawnWorkspace(ctx: StoreContext, workspace: Workspace): void {
 	entry.intentionalExit = false
 
 	entry.pausedFrom = null
+
+	entry.errorLineAt = null
 
 	setStatus(ctx, workspace.name, 'building')
 
@@ -122,15 +124,12 @@ export function spawnWorkspace(ctx: StoreContext, workspace: Workspace): void {
 		// A deliberate stop/restart handles its own teardown; don't treat it as a crash.
 		if (entry.intentionalExit) return
 
-		// The child is gone: cancel any startup or error-recovery timer still armed against
-		// it, so a stale deadline can't fire against the status we settle on now or against a
-		// later respawn. A clean exit settles to `stopped` below — a live startup timer would
-		// flip that to a phantom `timeout`; a give-up settles to `error` — a live error timer
-		// would resurrect the dead process to `ready`. Deliberate stops already cleared these
-		// via clearTimers; only the unexpected-exit path reaches here without having done so.
+		// The child is gone: cancel the startup timer still armed against it, so a stale
+		// deadline can't fire against the status we settle on now or against a later respawn —
+		// a clean exit settles to `stopped` below, which it would flip to a phantom `timeout`.
+		// Deliberate stops already cleared it via clearTimers; only the unexpected-exit path
+		// reaches here without having done so.
 		entry.startupTimer = clearTimer(entry.startupTimer)
-
-		entry.errorTimer = clearTimer(entry.errorTimer)
 
 		handleUnexpectedExit(ctx, workspace, child, code, signal)
 	})
@@ -165,11 +164,13 @@ function handleLine(ctx: StoreContext, name: string, raw: string): void {
 
 	const line = truncate(raw, MAX_LINE_LENGTH)
 
+	const now = Date.now()
+
 	const { process: proc } = entry
 
 	appendLog(proc.logs, sanitizeForDisplay(line))
 
-	entry.lastOutputAt = Date.now()
+	entry.lastOutputAt = now
 
 	// Output draining from a paused child's pipe must not flip its status out of
 	// `paused`. Keep logging, leave the status alone.
@@ -185,22 +186,32 @@ function handleLine(ctx: StoreContext, name: string, raw: string): void {
 
 	const { status, url } = parseLine(stripAnsi(line))
 
-	if (status) {
-		if (status === 'error') {
-			scheduleErrorRecovery(ctx, name)
-		} else {
-			entry.lastGoodStatus = status
+	if (status === 'error') {
+		entry.errorLineAt = now
 
-			cancelErrorRecovery(ctx, name)
+		proc.status = 'error'
+	} else if (status) {
+		entry.lastGoodStatus = status
 
-			entry.restartRetries = 0
+		entry.errorLineAt = null
 
-			if (status === 'watching' || status === 'ready') {
-				entry.startupTimer = clearTimer(entry.startupTimer)
-			}
+		entry.restartRetries = 0
+
+		if (status === 'watching' || status === 'ready') {
+			entry.startupTimer = clearTimer(entry.startupTimer)
 		}
+
 		proc.status = status
+	} else if (entry.errorLineAt !== null && now - entry.errorLineAt >= ERROR_RECOVERY_MS) {
+		// Ordinary output after a quiet spell: the process is carrying on, so the error was
+		// transient (a failed request, say). Recovery needs this evidence rather than a timer: a
+		// process that stays broken and silent, or keeps re-logging its error, stays red instead
+		// of flashing back to healthy between repeats.
+		entry.errorLineAt = null
+
+		proc.status = entry.lastGoodStatus ?? 'ready'
 	}
+
 	if (url) proc.url = url
 
 	// A parsed status shift brackets a burst of CPU; refresh metrics now, not next poll.

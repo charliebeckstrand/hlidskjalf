@@ -35,6 +35,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   workspace trees, stalling input and rendering on a busy workstation. It now walks down
   from each workspace's root through the kernel's per-thread `children` lists, reading only
   the processes it reports on, and falls back to the full scan only on kernels without them.
+- **A workspace that stays broken stays red** — an error line put a process in `error`
+  for only five seconds before a timer reverted it to its last good status, so a server
+  with a persistent failure (a compile error, a missing module) flashed back to green
+  "watching" and then red again each time the error was re-logged. Recovery now needs
+  evidence: ordinary output arriving after a quiet spell since the last error line. A
+  good status line (build success, ready, watching) still clears the error at once.
 - **A crashed process stops showing its last CPU/memory reading** — metrics were cleared
   only for a stopped process, so one that crashed and was waiting on its restart kept
   displaying the numbers of a process that no longer existed.
