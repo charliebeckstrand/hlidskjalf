@@ -145,7 +145,11 @@ describe('help overlay', () => {
 
 		await press(ESC)
 
-		expect(lastFrame()).not.toContain('Keybindings')
+		// Ink holds a lone ESC briefly in case it opens an escape sequence, then flushes it as
+		// the Esc key, so the close lands after a short delay rather than on the next macrotask.
+		await vi.waitFor(() => {
+			expect(lastFrame()).not.toContain('Keybindings')
+		})
 
 		// Closed again: the same key now dispatches.
 		await press('s')

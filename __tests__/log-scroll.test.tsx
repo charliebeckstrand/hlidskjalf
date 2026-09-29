@@ -3,9 +3,8 @@ import { render } from 'ink-testing-library'
 import { describe, expect, it } from 'vitest'
 import { useLogScroll } from '../src/hooks/use-log-scroll.js'
 
-// Drive the hook through Ink's real input pipeline: a fake stdin write flows through the same
-// internal emitter useInput and the hook read from, so both the Home/End (emitter) and PgUp
-// (useInput) paths are exercised end to end.
+// Drive the hook through Ink's real input pipeline: a fake stdin write is parsed into the same
+// keypress `useInput` hands the hook, so the Home/End and PgUp bindings are exercised end to end.
 function Harness({ total, height }: { total: number; height: number }) {
 	const { start, end, atBottom } = useLogScroll(total, height, 'sel', true)
 
@@ -22,7 +21,7 @@ describe('useLogScroll Home/End', () => {
 	it('jumps to the oldest lines on Home and back to follow on End', async () => {
 		const { stdin, lastFrame, unmount } = render(<Harness total={100} height={10} />)
 
-		// Let the input effects (raw mode + emitter subscription) mount before writing.
+		// Let the input effects (raw mode + input subscription) mount before writing.
 		await flush()
 
 		// Starts in follow mode: newest 10 lines, pinned to the bottom.
@@ -45,7 +44,7 @@ describe('useLogScroll Home/End', () => {
 		unmount()
 	})
 
-	it('still pages with PgUp (the useInput path is intact)', async () => {
+	it('pages back one viewport on PgUp', async () => {
 		const { stdin, lastFrame, unmount } = render(<Harness total={100} height={10} />)
 
 		// Let the input effects mount before writing (as the Home/End case does).
