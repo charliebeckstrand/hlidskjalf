@@ -2,7 +2,7 @@ pre-commit:
   commands:
     lint:
       glob: "*.{ts,tsx}"
-      run: npx biome check --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
+      run: pnpm exec biome check --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
     test:
       glob: "*.{ts,tsx}"
-      run: npx vitest related --run {staged_files}
+      run: pnpm exec vitest related --run {staged_files}
