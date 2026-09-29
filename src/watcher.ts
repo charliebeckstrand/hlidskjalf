@@ -1,4 +1,4 @@
-import { existsSync, type FSWatcher, readdirSync, realpathSync, statSync, watch } from 'node:fs'
+import { existsSync, type FSWatcher, readdirSync, realpathSync, watch } from 'node:fs'
 import { join, resolve, sep } from 'node:path'
 
 /** Parent directories Turborepo workspaces live under. */
@@ -23,9 +23,12 @@ export interface Watcher {
  *  - one per workspace dir to catch its own `package.json` being written.
  *
  * `fs.watch` binds to an inode, so a deleted-and-recreated directory strands its old
- * watcher on a dead inode delivering nothing. The parent and child layers are re-synced
- * on every event (and child watchers re-armed when a dir's inode changes), so a replaced
- * directory picks up a fresh watcher instead of going silent.
+ * watcher on a dead inode delivering nothing. Neither existence nor the inode number can
+ * spot that — the delete and recreate often land before the event is handled, and the
+ * filesystem readily hands the new directory the freed inode number. So any event that
+ * names a directory re-arms that directory's watcher outright: the root re-arms a named
+ * parent, a parent re-arms a named workspace dir. Re-arming a live watcher is one close and
+ * one open, and these events only fire when a directory entry itself changes.
  *
  * Recursive watching is deliberately avoided: on Linux it would register a watcher
  * for every nested `node_modules` directory.
@@ -35,7 +38,7 @@ export function watchWorkspaces(root: string, onChange: () => void): Watcher {
 
 	const parentWatchers = new Map<string, FSWatcher>()
 
-	const childWatchers = new Map<string, { watcher: FSWatcher; ino: number }>()
+	const childWatchers = new Map<string, FSWatcher>()
 
 	let timer: ReturnType<typeof setTimeout> | null = null
 
@@ -55,130 +58,120 @@ export function watchWorkspaces(root: string, onChange: () => void): Watcher {
 		timer.unref()
 	}
 
-	const watchChild = (dir: string) => {
+	/** Close and forget the watcher at `path` in `watchers`, if any. */
+	const drop = (watchers: Map<string, FSWatcher>, path: string) => {
+		watchers.get(path)?.close()
+
+		watchers.delete(path)
+	}
+
+	/** Watch `dir`, or return null if it's gone or watching is unsupported there. */
+	const open = (dir: string, listener: (filename: string | null) => void): FSWatcher | null => {
+		try {
+			const w = watch(dir, (_event, filename) => listener(filename?.toString() ?? null))
+
+			w.on('error', () => {})
+
+			return w
+		} catch {
+			return null
+		}
+	}
+
+	/** Watch a workspace dir for its `package.json`; `rearm` replaces an existing watcher. */
+	const watchChild = (dir: string, rearm: boolean) => {
 		if (closed) return
 
+		if (childWatchers.has(dir) && !rearm) return
+
+		drop(childWatchers, dir)
+
 		// Mirror discoverWorkspaces()'s containment check: a symlinked workspace dir must not place
-		// a watcher on a target outside the root. Capture the inode so a later sync can tell a
-		// same-named replacement (new inode) from the directory we're already watching.
-		let ino: number
-
+		// a watcher on a target outside the root.
 		try {
-			const real = realpathSync(dir)
-
-			if (!real.startsWith(resolvedRoot + sep)) return
-
-			ino = statSync(real).ino
+			if (!realpathSync(dir).startsWith(resolvedRoot + sep)) return
 		} catch {
 			return
 		}
 
-		const existing = childWatchers.get(dir)
+		// A null filename means the platform couldn't report which file changed, so re-discover
+		// to be safe.
+		const w = open(dir, (filename) => {
+			if (!filename || filename === 'package.json') schedule()
+		})
 
-		if (existing) {
-			// Same directory — keep the live watcher. A different inode means the dir was replaced
-			// (delete + recreate); the old watcher is bound to the dead inode, so re-arm.
-			if (existing.ino === ino) return
-
-			existing.watcher.close()
-
-			childWatchers.delete(dir)
-		}
-
-		try {
-			const w = watch(dir, (_event, filename) => {
-				// A null filename means the platform couldn't report which file changed,
-				// so re-discover to be safe.
-				if (!filename || filename.toString() === 'package.json') schedule()
-			})
-
-			w.on('error', () => {})
-
-			childWatchers.set(dir, { watcher: w, ino })
-		} catch {
-			// Directory vanished or watching is unsupported here — skip it.
-		}
+		if (w) childWatchers.set(dir, w)
 	}
 
-	// Add watchers for new workspace dirs, re-arm replaced ones, and drop watchers for removed ones.
-	const syncChildren = () => {
+	/**
+	 * Add watchers for new workspace dirs and drop ones for removed dirs. `replaced` names a
+	 * workspace dir an event just reported under `base` (every parent when `base` is omitted),
+	 * whose watcher is re-armed; null means the platform didn't say which, so every dir there
+	 * is re-armed.
+	 */
+	const syncChildren = (base?: string, replaced?: string | null) => {
 		if (closed) return
 
 		for (const dir of WORKSPACE_DIRS) {
-			const base = join(root, dir)
+			const parent = join(resolvedRoot, dir)
 
 			try {
-				for (const entry of readdirSync(base, { withFileTypes: true })) {
-					if (entry.isDirectory()) watchChild(join(base, entry.name))
+				for (const entry of readdirSync(parent, { withFileTypes: true })) {
+					if (!entry.isDirectory()) continue
+
+					const rearm =
+						(base === undefined || parent === base) &&
+						(replaced === null || replaced === entry.name)
+
+					watchChild(join(parent, entry.name), rearm)
 				}
 			} catch {
 				// Parent dir doesn't exist (yet) — nothing to watch under it.
 			}
 		}
 
-		for (const [dir, { watcher }] of childWatchers) {
-			if (!existsSync(dir)) {
-				watcher.close()
-
-				childWatchers.delete(dir)
-			}
+		for (const dir of childWatchers.keys()) {
+			if (!existsSync(dir)) drop(childWatchers, dir)
 		}
 	}
 
-	// Add watchers for parent dirs that now exist and drop ones that vanished. A parent dir
-	// deleted and recreated (a branch switch, a tooling step) ends up watched on its new inode.
-	const syncParents = () => {
+	/**
+	 * Add watchers for parent dirs that now exist and drop ones that vanished. `replaced` names
+	 * a parent the root just reported, whose watcher is re-armed; null re-arms every parent.
+	 */
+	const syncParents = (replaced?: string | null) => {
 		if (closed) return
 
 		for (const dir of WORKSPACE_DIRS) {
-			const base = join(root, dir)
+			const base = join(resolvedRoot, dir)
 
-			const exists = existsSync(base)
+			if (replaced === null || replaced === dir || !existsSync(base)) drop(parentWatchers, base)
 
-			const watching = parentWatchers.has(base)
+			if (parentWatchers.has(base)) continue
 
-			if (exists && !watching) {
-				try {
-					const w = watch(base, () => {
-						syncChildren()
+			const w = open(base, (filename) => {
+				syncChildren(base, filename)
 
-						schedule()
-					})
+				schedule()
+			})
 
-					w.on('error', () => {})
-
-					parentWatchers.set(base, w)
-				} catch {
-					// Watching unsupported for this dir — skip it.
-				}
-			} else if (!exists && watching) {
-				parentWatchers.get(base)?.close()
-
-				parentWatchers.delete(base)
-			}
+			if (w) parentWatchers.set(base, w)
 		}
 	}
 
 	// Watch the root itself so a parent dir created, removed, or swapped after startup is
 	// noticed. Filter to the workspace parents (and a null filename) so churn in `node_modules`
 	// or the root package.json doesn't trigger a re-discovery.
-	let rootWatcher: FSWatcher | null = null
+	const rootWatcher = open(resolvedRoot, (filename) => {
+		if (filename && !WORKSPACE_DIRS.includes(filename)) return
 
-	try {
-		rootWatcher = watch(resolvedRoot, (_event, filename) => {
-			if (filename && !WORKSPACE_DIRS.includes(filename.toString())) return
+		syncParents(filename)
 
-			syncParents()
+		// A replaced parent brings replaced workspace dirs with it: re-arm all of them.
+		syncChildren(filename ? join(resolvedRoot, filename) : undefined, null)
 
-			syncChildren()
-
-			schedule()
-		})
-
-		rootWatcher.on('error', () => {})
-	} catch {
-		// Root watching unsupported — the parent/child layers still cover in-place edits.
-	}
+		schedule()
+	})
 
 	syncParents()
 
@@ -196,7 +189,7 @@ export function watchWorkspaces(root: string, onChange: () => void): Watcher {
 
 			parentWatchers.clear()
 
-			for (const { watcher } of childWatchers.values()) watcher.close()
+			for (const w of childWatchers.values()) w.close()
 
 			childWatchers.clear()
 		},

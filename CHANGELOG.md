@@ -20,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Watch mode survives a directory swapped out in one step** — deleting and recreating
+  `packages/` (or a workspace dir) faster than the watcher handled the event, as a branch
+  switch does, left its watcher bound to the deleted directory, so new workspaces under it
+  were never discovered. Neither existence nor the inode number can tell the two apart (the
+  new directory often reuses the old inode), so a watcher is now re-armed whenever an event
+  names its directory.
 - **`--order=run` lists workspaces in real dependency order** — run order sorted by how
   many internal dependencies a workspace had, not by the graph, so an app could appear
   before a dependency with more dependencies of its own. It is now a topological order
