@@ -49,14 +49,14 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.14",
-		"@types/node": "^22.15.33",
-		"@types/react": "^18.3.23",
+		"@types/node": "^22.20.4",
+		"@types/react": "^18.3.31",
 		"@vitest/coverage-v8": "^5.0.2",
 		"ink-testing-library": "^4.0.0",
-		"lefthook": "^2.1.4",
-		"tinybench": "^6.0.2",
+		"lefthook": "^2.1.14",
+		"tinybench": "^6.2.0",
 		"tsdown": "^0.23.0",
-		"tsx": "^4.22.3",
+		"tsx": "^4.23.15",
 		"typescript": "^7.0.2",
 		"vitest": "^5.0.2"
 	}
