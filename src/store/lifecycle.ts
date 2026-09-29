@@ -1,3 +1,4 @@
+import type { ChildProcess } from 'node:child_process'
 import { createHeartbeat } from '../health/index.js'
 import { createMeter } from '../metrics/index.js'
 import type { Workspace } from '../types.js'
@@ -71,17 +72,21 @@ async function spawnAll(ctx: StoreContext, workspaces: Workspace[]): Promise<voi
 	}
 
 	for (const workspace of apps) {
+		const entry = ctx.entries.get(workspace.name)
+
+		// The gate was open long enough for the app to be claimed elsewhere: removed by a
+		// rediscovery (no entry), re-added and already spawned, or stopped by hand. Only a
+		// still-pending app is this loop's to start.
+		if (entry?.process.status !== 'pending') continue
+
 		const failedDeps = workspace.deps.filter((d) => failedPackages.has(d))
 
 		if (failedDeps.length > 0) {
-			const entry = ctx.entries.get(workspace.name)
+			note(entry, `warning: dependency ${failedDeps.join(', ')} failed — starting anyway`)
 
-			if (entry) {
-				note(entry, `warning: dependency ${failedDeps.join(', ')} failed — starting anyway`)
-
-				markChanged(ctx)
-			}
+			markChanged(ctx)
 		}
+
 		spawnWorkspace(ctx, workspace)
 	}
 
@@ -137,7 +142,9 @@ function waitForPackages(ctx: StoreContext, names: string[]): Promise<void> {
 				if (status !== 'pending' && status !== 'building') remaining.delete(name)
 			}
 
-			if (remaining.size === 0) {
+			// Shutdown kills the packages without settling their status, so release on it too
+			// rather than leave this listener (and spawnAll) pending forever.
+			if (remaining.size === 0 || ctx.stopping) {
 				ctx.listeners.delete(check)
 
 				resolve()
@@ -155,16 +162,17 @@ function waitForPackages(ctx: StoreContext, names: string[]): Promise<void> {
  * path; this is the last-resort backstop for exit routes that bypass it — a fatal signal, an
  * uncaught throw, a forced quit — so a detached dev-server group is never left orphaned
  * holding its port. Safe to run inside a `process.on('exit')` handler, where only synchronous
- * work is possible. Gated on `isRunning` (exit/signal codes still unset) so we never signal a
- * pid the OS may have already reaped and reused; children caught mid-teardown are covered by
- * the escalation timer in {@link ./entry.ts | beginTeardown} instead.
+ * work is possible.
+ *
+ * Walks the owned groups rather than the entries, so a removed workspace still draining and a
+ * group whose leader already exited (a wrapper whose server still holds the pipes) are both
+ * reached. Signalling `-pid` for such a group is safe: the kernel keeps a process-group id
+ * reserved while any member lives, and a group whose stdio has closed has left the set.
  */
 export function killAllSync(ctx: StoreContext): void {
 	ctx.stopping = true
 
-	for (const entry of ctx.entries.values()) {
-		if (isRunning(entry.child)) killTree(entry.child, 'SIGKILL')
-	}
+	for (const child of ctx.groups) killTree(child, 'SIGKILL')
 
 	for (const child of ctx.pendingRebuilds) {
 		try {
@@ -187,14 +195,19 @@ export async function shutdown(ctx: StoreContext): Promise<void> {
 
 	for (const child of ctx.pendingRebuilds) child.kill('SIGTERM')
 
-	const waiting: Promise<void>[] = []
+	// Wake waiters (the package gate) so they observe `stopping` and release.
+	markChanged(ctx)
+
+	const paused = new Set<ChildProcess>()
+
 	for (const entry of ctx.entries.values()) {
-		const { child } = entry
+		if (entry.child && entry.pausedFrom !== null) paused.add(entry.child)
+	}
 
-		if (!isRunning(child)) continue
-
-		waiting.push(
-			new Promise((resolve) => {
+	// Every owned group, not just entries with a running leader: see killAllSync.
+	const waiting = [...ctx.groups].map(
+		(child) =>
+			new Promise<void>((resolve) => {
 				const escalate = escalateKill(child)
 
 				child.on('close', () => {
@@ -206,11 +219,11 @@ export async function shutdown(ctx: StoreContext): Promise<void> {
 				// A SIGSTOP'd child ignores SIGTERM until continued, so wake it first; otherwise
 				// the terminate only lands after the SIGKILL grace period elapses — matching the
 				// per-process teardown in beginTeardown.
-				if (entry.pausedFrom !== null) killTree(child, 'SIGCONT')
+				if (paused.has(child)) killTree(child, 'SIGCONT')
 
 				killTree(child, 'SIGTERM')
 			}),
-		)
-	}
+	)
+
 	await Promise.all(waiting)
 }

@@ -20,6 +20,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Quitting no longer orphans a dev server that outlived its wrapper or its workspace** —
+  shutdown and the exit backstop only signalled workspaces whose `pnpm` process was
+  still running and still listed. A server whose wrapper had already exited (it keeps the
+  stdio pipes open) or whose workspace had just been removed by a rediscovery was skipped,
+  left running and holding its port. Every spawned process group is now tracked until its
+  output closes, and quitting reaches all of them.
+- **No duplicate or unowned dev servers from startup and crash-recovery races** — an app
+  removed, re-added, or stopped while its package dependencies were still starting was
+  spawned anyway (untracked, twice, or against the stop), and pressing restart during the
+  fsevents rebuild that follows a SIGABRT crash left two servers running. Spawns now require
+  a tracked workspace with no live process, and crash recovery stands down if anything else
+  claimed the workspace in the meantime.
 - **An unrecognized CLI argument no longer crashes the launch** — a repo's `dev`
   script controls argv, and an extra flag or positional it appended made
   `parseArgs` throw a stack trace before the dashboard could start. Parsing is now

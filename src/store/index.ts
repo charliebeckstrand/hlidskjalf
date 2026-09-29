@@ -31,6 +31,7 @@ function createContext(opts: Options): StoreContext {
 		listeners: new Set(),
 		snapshot: [],
 		dirty: true,
+		groups: new Set(),
 		pendingRebuilds: new Set(),
 		heartbeat: null,
 		meter: null,
