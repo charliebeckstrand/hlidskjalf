@@ -24,8 +24,10 @@ export function App({ options }: Props) {
 
 	// Piped or redirected stdin (CI, `hlidskjalf < /dev/null`, no PTY) can't enter raw mode;
 	// an unconditional useInput would throw at mount and crash the app. Gate every key handler
-	// on support so the dashboard still renders read-only instead.
-	const { isRawModeSupported } = useStdin()
+	// on support so the dashboard still renders read-only instead. Ink reports support as
+	// `stdin.isTTY`, which is undefined (not false) on redirected stdin, and `useInput` treats an
+	// undefined `isActive` as active — so coerce it.
+	const isRawModeSupported = useStdin().isRawModeSupported === true
 
 	const [store] = useState(() => createStore(options))
 

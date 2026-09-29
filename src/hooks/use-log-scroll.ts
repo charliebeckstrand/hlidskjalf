@@ -68,8 +68,9 @@ export function useLogScroll(
 	const { internal_eventEmitter: inputEmitter, isRawModeSupported } = useStdin()
 
 	// Non-TTY stdin (piped/CI) can't enter raw mode; activating any key handler there would
-	// throw at mount, so the panel stays read-only.
-	const active = enabled && isRawModeSupported
+	// throw at mount, so the panel stays read-only. Support is `stdin.isTTY`, undefined rather
+	// than false when redirected, so compare explicitly.
+	const active = enabled && isRawModeSupported === true
 
 	// Ink re-subscribes this handler every render (its inputHandler is in the effect deps), so
 	// the closure always reads the latest committed bound — no ref needed to dodge a stale one.

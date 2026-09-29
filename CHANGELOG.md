@@ -30,6 +30,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Redirected stdin really no longer crashes the launch** — `hlidskjalf < /dev/null` (or
+  any non-TTY stdin) still died with Ink's "Raw mode is not supported" error: Ink reports
+  raw-mode support as `stdin.isTTY`, which is `undefined` rather than `false` there, and an
+  undefined `isActive` enables the key handlers. Support is now compared explicitly, so the
+  dashboard renders read-only as intended.
 - **Building spinners share one timer** — every building workspace ran its own 80 ms
   spinner interval, each a separate re-render source during startup. All spinners now
   animate from one shared clock (in step), and the `ink-spinner` dependency is gone.
