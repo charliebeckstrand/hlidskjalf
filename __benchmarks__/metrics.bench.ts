@@ -3,12 +3,11 @@ import { Bench } from 'tinybench'
 import {
 	collectDescendants,
 	cpuPercentFromTicks,
-	ENV_ALLOWLIST,
 	parseCpuTime,
 	parseProcStat,
 	parsePsOutput,
-	safeEnv,
 } from '../src/metrics/index.js'
+import { ENV_ALLOWLIST, safeEnv } from '../src/store/env.js'
 import { makePsOutput, PROC_STAT } from './fixtures.js'
 
 /**
