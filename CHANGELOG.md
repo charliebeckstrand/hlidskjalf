@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Node 22.18 or newer is required** — `engines` said `>=22`, but a `hlidskjalf.config.ts`
+  is loaded through Node's type stripping, which is only on by default from 22.18.
 - **An unknown `--order` value is reported, not silently replaced** — like an unknown
   `--theme`, it now prints a warning and falls back to the configured order (previously it
   forced `alphabetical`, overriding a configured `run`).
