@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A crashed process stops showing its last CPU/memory reading** — metrics were cleared
+  only for a stopped process, so one that crashed and was waiting on its restart kept
+  displaying the numbers of a process that no longer existed.
 - **A slow liveness probe can't change a different process** — the heartbeat's HTTP probe
   settles asynchronously and then updated the process by name; if the workspace had been
   removed and re-added meanwhile, the result landed on the new process.

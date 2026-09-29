@@ -1756,6 +1756,30 @@ describe('metrics', () => {
 
 		expect(get('web')?.metrics).toBeUndefined()
 	})
+
+	it('clears stale metrics once a process crashes', async () => {
+		vi.useFakeTimers()
+
+		store = makeStore({ showMetrics: true })
+
+		await store.start()
+
+		const pid = childFor('web')?.pid ?? 0
+
+		hoisted.psOutput.current = psTree(pid, '0:01.00', 100_000)
+
+		childFor('web')?.out('Watching for changes\n')
+
+		await vi.advanceTimersByTimeAsync(1200)
+
+		expect(get('web')?.metrics).toBeDefined()
+
+		childFor('web')?.exit(1)
+
+		expect(get('web')?.status).toBe('error')
+
+		expect(get('web')?.metrics).toBeUndefined()
+	})
 })
 
 describe('discovery filtering', () => {

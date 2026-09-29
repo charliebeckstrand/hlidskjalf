@@ -1,4 +1,5 @@
 import type { Status } from '../types.js'
+import { isRunning } from './children.js'
 import { note, withEntry } from './entry.js'
 import { markChanged } from './snapshot.js'
 import type { StoreContext } from './types.js'
@@ -9,9 +10,10 @@ export function setStatus(ctx: StoreContext, name: string, status: Status): void
 
 		entry.process.status = status
 
-		// A stopped process has no child to meter; drop its last reading so the dashboard
-		// doesn't show stale CPU/memory for something that's gone.
-		if (status === 'stopped') entry.process.metrics = undefined
+		// A process with no live child — stopped, or crashed and awaiting its restart — has
+		// nothing to meter; drop its last reading so the dashboard doesn't show stale CPU/memory
+		// for something that's gone.
+		if (!isRunning(entry.child)) entry.process.metrics = undefined
 
 		if (status === 'error' && entry.process.workspace.kind === 'package') {
 			notifyDependents(ctx, name)
