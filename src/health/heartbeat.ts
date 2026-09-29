@@ -41,6 +41,15 @@ export interface Heartbeat {
  * when unreachable and restoring it when output or a successful probe shows it's alive.
  */
 export function createHeartbeat(deps: HeartbeatDeps): Heartbeat {
+	// A probe settles asynchronously, and `setStatus` addresses a process by name. If the
+	// workspace was removed (and maybe re-added) meanwhile, the name now belongs to someone
+	// else — act only while it still maps to the entry that was probed.
+	const tracked = (name: string, entry: Monitored): boolean => {
+		for (const [n, e] of deps.entries()) if (n === name) return e === entry
+
+		return false
+	}
+
 	const tick = () => {
 		const now = Date.now()
 
@@ -51,7 +60,7 @@ export function createHeartbeat(deps: HeartbeatDeps): Heartbeat {
 				probe(url).then((alive) => {
 					// The probe is async; bail if the process was stopped/restarted meanwhile
 					// so we don't resurrect it to a running status.
-					if (alive && entry.process.status === 'idle') {
+					if (alive && entry.process.status === 'idle' && tracked(name, entry)) {
 						entry.lastOutputAt = Date.now()
 
 						deps.setStatus(name, entry.lastGoodStatus ?? 'ready')
@@ -71,7 +80,7 @@ export function createHeartbeat(deps: HeartbeatDeps): Heartbeat {
 						// neither refreshing its activity nor idling it once it's no longer live.
 						const live = entry.process.status === 'watching' || entry.process.status === 'ready'
 
-						if (!live) return
+						if (!live || !tracked(name, entry)) return
 
 						if (alive) entry.lastOutputAt = Date.now()
 						else deps.setStatus(name, 'idle')

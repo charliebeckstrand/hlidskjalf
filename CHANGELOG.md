@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A slow liveness probe can't change a different process** — the heartbeat's HTTP probe
+  settles asynchronously and then updated the process by name; if the workspace had been
+  removed and re-added meanwhile, the result landed on the new process.
 - **Watch mode picks up a workspace's changed dependencies** — rediscovery only noticed
   workspaces appearing or disappearing, so editing an existing workspace's `workspace:`
   dependencies left its dependency warnings on the old graph while run order used the new
