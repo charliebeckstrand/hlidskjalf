@@ -13,15 +13,12 @@ import {
 } from '../src/workspaces.js'
 
 describe('isValidPackageName', () => {
-	it.each([
-		'my-package',
-		'@scope/my-package',
-		'my.package_name',
-		'my~package',
-		'a'.repeat(214),
-	])('accepts %j', (name) => {
-		expect(isValidPackageName(name)).toBe(true)
-	})
+	it.each(['my-package', '@scope/my-package', 'my.package_name', 'my~package', 'a'.repeat(214)])(
+		'accepts %j',
+		(name) => {
+			expect(isValidPackageName(name)).toBe(true)
+		},
+	)
 
 	it.each([
 		'MyPackage',
