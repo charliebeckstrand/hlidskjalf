@@ -192,12 +192,13 @@ export function parseProcStat(content: string, pageSize = 4096): ProcStat | null
 }
 
 /**
- * Convert a CPU-tick delta over an elapsed window into a percentage of total CPU capacity,
- * clamped to 0–100. `ticksPerSec` is the kernel's USER_HZ, conventionally 100. A negative
- * delta (PID reuse) floors at 0; an overshoot caps at 100. The window can run a touch short
- * of the ticks accrued against it — timer jitter near the meter's sub-second sample floor,
- * or whole-tick granularity over a brief interval — which would otherwise report an
- * impossible >100% of total capacity.
+ * Convert a CPU-tick delta over an elapsed window into a percentage of one core, as `top`
+ * and Activity Monitor report it: a single-threaded server pegging its core reads 100%, and
+ * a tree spread across cores can read past it, up to `numCpus × 100`. `ticksPerSec` is the
+ * kernel's USER_HZ, conventionally 100. A negative delta (PID reuse) floors at 0. The upper
+ * clamp absorbs a window that runs a touch short of the ticks accrued against it — timer
+ * jitter near the meter's sub-second sample floor, or whole-tick granularity over a brief
+ * interval — which would otherwise report more than every core could deliver.
  */
 export function cpuPercentFromTicks(
 	tickDelta: number,
@@ -209,7 +210,7 @@ export function cpuPercentFromTicks(
 
 	const elapsedSec = elapsedMs / 1000
 
-	const percent = (tickDelta / ticksPerSec / elapsedSec / numCpus) * 100
+	const percent = (tickDelta / ticksPerSec / elapsedSec) * 100
 
-	return clamp(percent, 0, 100)
+	return clamp(percent, 0, numCpus * 100)
 }

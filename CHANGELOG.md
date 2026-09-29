@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **CPU is reported per core, like `top`** — the CPU column was a share of the whole
+  machine, so a single-threaded dev server pegging its core read 12.5% on an eight-core
+  machine and the red over-80% highlight could never trip. It now reads 100% per saturated
+  core, and a tree busy across several cores can read past 100%.
+
 ### Security
 
 - **Terminal escapes scrubbed from the CLI `--title` and `--theme` flags** — a
@@ -20,6 +27,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Building spinners share one timer** — every building workspace ran its own 80 ms
+  spinner interval, each a separate re-render source during startup. All spinners now
+  animate from one shared clock (in step), and the `ink-spinner` dependency is gone.
+- **Metrics polling on Linux no longer reads every process on the machine** — each sample
+  synchronously read `/proc/<pid>/stat` for every process on the host to find the
+  workspace trees, stalling input and rendering on a busy workstation. It now walks down
+  from each workspace's root through the kernel's per-thread `children` lists, reading only
+  the processes it reports on, and falls back to the full scan only on kernels without them.
 - **A workspace that stays broken stays red** — an error line put a process in `error`
   for only five seconds before a timer reverted it to its last good status, so a server
   with a persistent failure (a compile error, a missing module) flashed back to green

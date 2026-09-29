@@ -3,6 +3,7 @@ import type { Status } from '../src/types.js'
 import {
 	colors,
 	cpuColor,
+	createSpinnerClock,
 	enterAltScreen,
 	every,
 	formatCpu,
@@ -10,6 +11,7 @@ import {
 	hyperlink,
 	memColor,
 	parseTheme,
+	SPINNER_FRAMES,
 	setTheme,
 	statusDisplay,
 	THEME_ALIASES,
@@ -110,6 +112,9 @@ describe('themes', () => {
 describe('formatters', () => {
 	it('formats CPU as a right-aligned percentage', () => {
 		expect(formatCpu(12.34)).toBe('12.3%'.padStart(6))
+
+		// Past one core the decimal is dropped so the figure stays within the field.
+		expect(formatCpu(1250.4)).toBe(' 1250%')
 	})
 
 	it('formats memory with K/M/G units', () => {
@@ -264,5 +269,59 @@ describe('timers', () => {
 		vi.advanceTimersByTime(3000)
 
 		expect(fn).toHaveBeenCalledTimes(3)
+	})
+})
+
+describe('createSpinnerClock', () => {
+	it('runs one timer for any number of spinners and stops it when the last leaves', () => {
+		vi.useFakeTimers()
+
+		const clock = createSpinnerClock(80)
+
+		const a = vi.fn()
+
+		const b = vi.fn()
+
+		const offA = clock.subscribe(a)
+
+		const offB = clock.subscribe(b)
+
+		expect(vi.getTimerCount()).toBe(1)
+
+		expect(clock.frame()).toBe(SPINNER_FRAMES[0])
+
+		vi.advanceTimersByTime(80)
+
+		expect(clock.frame()).toBe(SPINNER_FRAMES[1])
+
+		expect(a).toHaveBeenCalledTimes(1)
+
+		expect(b).toHaveBeenCalledTimes(1)
+
+		offA()
+
+		expect(vi.getTimerCount()).toBe(1)
+
+		offB()
+
+		expect(vi.getTimerCount()).toBe(0)
+
+		vi.useRealTimers()
+	})
+
+	it('wraps back to the first frame', () => {
+		vi.useFakeTimers()
+
+		const clock = createSpinnerClock(80)
+
+		const off = clock.subscribe(() => {})
+
+		vi.advanceTimersByTime(80 * SPINNER_FRAMES.length)
+
+		expect(clock.frame()).toBe(SPINNER_FRAMES[0])
+
+		off()
+
+		vi.useRealTimers()
 	})
 })

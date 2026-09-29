@@ -1,8 +1,11 @@
 import { colors } from './theme.js'
 
-/** Right-align a CPU percentage in a fixed six-column field. */
+/**
+ * Right-align a CPU percentage (of one core) in a fixed six-column field. Readings past one
+ * core drop the decimal so a multi-core figure like `1250%` still fits.
+ */
 export function formatCpu(cpu: number): string {
-	return `${cpu.toFixed(1)}%`.padStart(6)
+	return `${cpu.toFixed(cpu >= 100 ? 0 : 1)}%`.padStart(6)
 }
 
 /** Format a byte count as a right-aligned K/M/G value in a seven-column field. */
@@ -25,7 +28,7 @@ export function memColor(bytes: number): string {
 	return colors.muted
 }
 
-/** Colour for a CPU cell, flipping to error once a workspace saturates a core. */
+/** Colour for a CPU cell, flipping to error once a workspace nears a full core. */
 export function cpuColor(cpu: number): string {
 	return cpu > 80 ? colors.error : colors.muted
 }

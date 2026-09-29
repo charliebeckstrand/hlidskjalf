@@ -6,7 +6,9 @@ import { createMeter } from '../src/metrics/index.js'
 const proc = {
 	entries: [] as string[],
 	stat: new Map<string, string>(),
+	tasks: new Map<string, string[]>(),
 	readdirThrows: false,
+	reads: [] as string[],
 }
 
 vi.mock('node:fs', () => ({
@@ -14,11 +16,19 @@ vi.mock('node:fs', () => ({
 		readdirSync: (path: string) => {
 			if (proc.readdirThrows) throw new Error('EACCES')
 
+			proc.reads.push(path)
+
 			if (path === '/proc') return proc.entries
+
+			const tasks = proc.tasks.get(path)
+
+			if (tasks) return tasks
 
 			throw new Error('ENOENT')
 		},
 		readFileSync: (path: string) => {
+			proc.reads.push(path)
+
 			const content = proc.stat.get(path)
 
 			if (content === undefined) throw new Error('ENOENT')
@@ -65,7 +75,11 @@ beforeEach(() => {
 
 	proc.stat.clear()
 
+	proc.tasks.clear()
+
 	proc.readdirThrows = false
+
+	proc.reads = []
 
 	// The /proc reader is the Linux path; ensure it's the one selected.
 	Object.defineProperty(process, 'platform', { value: 'linux', configurable: true })
@@ -246,6 +260,98 @@ describe('createMeter (/proc path)', () => {
 		await vi.advanceTimersByTimeAsync(3000)
 
 		expect(setMetrics.mock.calls.at(-1)?.[1].cpu).toBe(0)
+
+		meter.stop()
+	})
+})
+
+describe('createMeter (/proc path, per-task children files)', () => {
+	/** Model a kernel with CONFIG_PROC_CHILDREN: our own children file reads, so the meter walks. */
+	function enableChildrenFiles(): void {
+		proc.stat.set(`/proc/${process.pid}/task/${process.pid}/children`, '')
+	}
+
+	/** Give `pid` the threads `tids`, each listing the given children. */
+	function setTasks(pid: number, tids: Record<number, number[]>): void {
+		proc.tasks.set(`/proc/${pid}/task`, Object.keys(tids))
+
+		for (const [tid, kids] of Object.entries(tids)) {
+			proc.stat.set(`/proc/${pid}/task/${tid}/children`, kids.map((k) => `${k} `).join(''))
+		}
+	}
+
+	it('walks only the owned trees, across every thread, without scanning /proc', () => {
+		enableChildrenFiles()
+
+		// 1234 spawned 5678 from its main thread and 5679 from a worker thread; 9999 is unrelated.
+		proc.entries = ['1234', '5678', '5679', '9999']
+
+		setStat(1234, { ppid: 1, utime: 0, stime: 0, rssPages: 100 })
+
+		setStat(5678, { ppid: 1234, utime: 0, stime: 0, rssPages: 40 })
+
+		setStat(5679, { ppid: 1234, utime: 0, stime: 0, rssPages: 10 })
+
+		setStat(9999, { ppid: 1, utime: 0, stime: 0, rssPages: 1000 })
+
+		setTasks(1234, { 1234: [5678], 1240: [5679] })
+
+		setTasks(5678, { 5678: [] })
+
+		const setMetrics = vi.fn((_name: string, _metrics: { cpu: number; mem: number }) => true)
+
+		const meter = createMeter({
+			roots: () => new Map([[1234, 'web']]),
+			setMetrics,
+			onChange: () => {},
+		})
+
+		expect(setMetrics).toHaveBeenCalledWith('web', { cpu: 0, mem: (100 + 40 + 10) * 4096 })
+
+		expect(proc.reads).not.toContain('/proc')
+
+		expect(proc.reads).not.toContain('/proc/9999/stat')
+
+		meter.stop()
+	})
+
+	it('skips a root that exited before it was read', () => {
+		enableChildrenFiles()
+
+		const setMetrics = vi.fn((_name: string, _metrics: { cpu: number; mem: number }) => true)
+
+		const meter = createMeter({
+			roots: () => new Map([[4321, 'web']]),
+			setMetrics,
+			onChange: () => {},
+		})
+
+		expect(setMetrics).toHaveBeenCalledWith('web', { cpu: 0, mem: 0 })
+
+		meter.stop()
+	})
+
+	it('survives a process whose task list vanished or whose threads exited mid-walk', () => {
+		enableChildrenFiles()
+
+		setStat(1234, { ppid: 1, utime: 0, stime: 0, rssPages: 100 })
+
+		setStat(5678, { ppid: 1234, utime: 0, stime: 0, rssPages: 40 })
+
+		// 1234's second thread is listed but its children file is gone; 5678 has no task dir.
+		proc.tasks.set('/proc/1234/task', ['1234', '1250'])
+
+		proc.stat.set('/proc/1234/task/1234/children', '5678 ')
+
+		const setMetrics = vi.fn((_name: string, _metrics: { cpu: number; mem: number }) => true)
+
+		const meter = createMeter({
+			roots: () => new Map([[1234, 'web']]),
+			setMetrics,
+			onChange: () => {},
+		})
+
+		expect(setMetrics).toHaveBeenCalledWith('web', { cpu: 0, mem: (100 + 40) * 4096 })
 
 		meter.stop()
 	})
