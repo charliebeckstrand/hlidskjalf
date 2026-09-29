@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **An unknown `--order` value is reported, not silently replaced** — like an unknown
+  `--theme`, it now prints a warning and falls back to the configured order (previously it
+  forced `alphabetical`, overriding a configured `run`).
 - **CPU is reported per core, like `top`** — the CPU column was a share of the whole
   machine, so a single-threaded dev server pegging its core read 12.5% on an eight-core
   machine and the red over-80% highlight could never trip. It now reads 100% per saturated
