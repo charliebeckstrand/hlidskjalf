@@ -110,6 +110,9 @@ describe('themes', () => {
 describe('formatters', () => {
 	it('formats CPU as a right-aligned percentage', () => {
 		expect(formatCpu(12.34)).toBe('12.3%'.padStart(6))
+
+		// Past one core the decimal is dropped so the figure stays within the field.
+		expect(formatCpu(1250.4)).toBe(' 1250%')
 	})
 
 	it('formats memory with K/M/G units', () => {

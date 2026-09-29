@@ -214,10 +214,13 @@ describe('parseProcStat', () => {
 })
 
 describe('cpuPercentFromTicks', () => {
-	it('computes a percentage of total capacity across cores', () => {
+	it('computes a percentage of one core, whatever the core count', () => {
 		expect(cpuPercentFromTicks(100, 1000, 1)).toBeCloseTo(100)
 
-		expect(cpuPercentFromTicks(100, 1000, 4)).toBeCloseTo(25)
+		// One saturated core on a four-core machine still reads 100%, not 25%.
+		expect(cpuPercentFromTicks(100, 1000, 4)).toBeCloseTo(100)
+
+		expect(cpuPercentFromTicks(250, 1000, 4)).toBeCloseTo(250)
 	})
 
 	it('returns 0 for negative deltas or degenerate windows/cpus', () => {
@@ -228,12 +231,12 @@ describe('cpuPercentFromTicks', () => {
 		expect(cpuPercentFromTicks(100, 1000, 0)).toBe(0)
 	})
 
-	it('caps at 100 when ticks overshoot a short window', () => {
+	it('caps at every core saturated when ticks overshoot a short window', () => {
 		// Whole-tick granularity or timer jitter can credit more ticks than the window ×
 		// cores can hold (100 ticks over 0.9s on one core computes to ~111%); the upper clamp
-		// reports a possible figure rather than an impossible >100% of total capacity.
+		// reports a possible figure rather than an impossible one.
 		expect(cpuPercentFromTicks(100, 900, 1)).toBe(100)
 
-		expect(cpuPercentFromTicks(200, 1000, 1)).toBe(100)
+		expect(cpuPercentFromTicks(900, 1000, 4)).toBe(400)
 	})
 })

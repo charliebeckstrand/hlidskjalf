@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **CPU is reported per core, like `top`** — the CPU column was a share of the whole
+  machine, so a single-threaded dev server pegging its core read 12.5% on an eight-core
+  machine and the red over-80% highlight could never trip. It now reads 100% per saturated
+  core, and a tree busy across several cores can read past 100%.
+
 ### Security
 
 - **Terminal escapes scrubbed from the CLI `--title` and `--theme` flags** — a
