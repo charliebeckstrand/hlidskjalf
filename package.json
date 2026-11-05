@@ -20,6 +20,8 @@
 	"bin": {
 		"hlidskjalf": "dist/index.js"
 	},
+	"main": "./dist/config.js",
+	"types": "./dist/config.d.ts",
 	"exports": {
 		".": {
 			"types": "./dist/config.d.ts",
