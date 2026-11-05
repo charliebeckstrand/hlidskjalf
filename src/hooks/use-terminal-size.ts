@@ -16,7 +16,13 @@ const FALLBACK: TerminalSize = { columns: 80, rows: 24 }
  */
 const RESIZE_SETTLE_MS = 120
 
-function readSize(stdout: NodeJS.WriteStream | undefined): TerminalSize {
+/**
+ * Ink 8 types `useStdout().stdout` as a plain `WritableStream`. The TTY `columns`/`rows`
+ * fields are declared optional on top of it: a piped stream has neither.
+ */
+type MaybeTTY = NodeJS.WritableStream & Partial<Pick<NodeJS.WriteStream, 'columns' | 'rows'>>
+
+function readSize(stdout: MaybeTTY | undefined): TerminalSize {
 	return {
 		columns: stdout?.columns ?? FALLBACK.columns,
 		rows: stdout?.rows ?? FALLBACK.rows,
