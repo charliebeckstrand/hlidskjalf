@@ -46,8 +46,8 @@
 		"bench": "tsx __benchmarks__/index.ts"
 	},
 	"dependencies": {
-		"ink": "^7.1.1",
-		"react": "^19.3.0"
+		"ink": "^8.0.0",
+		"react": "^19.3.1"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.6.5",
